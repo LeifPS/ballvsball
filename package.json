@@ -1,0 +1,16 @@
+{
+  "name": "ballvsball",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Ball gegen Ball - Sammel- und Kampfspiel im Handdrawn-Look",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "balance": "node tools/balance.js",
+    "test": "node test/engine.test.js && node test/boxsim.test.js"
+  },
+  "devDependencies": {
+    "wrangler": "^4.152.0"
+  }
+}

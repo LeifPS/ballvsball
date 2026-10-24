@@ -1,0 +1,30 @@
+{
+ "cell": 0.392,
+ "hp": {
+  "stachel": 82,
+  "turret": 69,
+  "ramm": 47,
+  "glas": 35,
+  "feuer": 99,
+  "bumerang": 73,
+  "magnet": 57,
+  "schwert": 111,
+  "zelle": 60,
+  "spinne": 51,
+  "schmied": 141,
+  "bombe": 187,
+  "schild": 104,
+  "echo": 79,
+  "gift": 130,
+  "vampir": 104,
+  "riese": 78,
+  "saege": 67,
+  "schwarm": 43,
+  "eis": 82,
+  "meteor": 43,
+  "spiegel": 95,
+  "wuchs": 38,
+  "drache": 72,
+  "phoenix": 60
+ }
+}

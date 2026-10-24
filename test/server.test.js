@@ -1,0 +1,90 @@
+// Integrationstest gegen "wrangler dev" (Port 8787): node test/server.test.js
+const B = 'http://localhost:8787';
+const tok = () => crypto.randomUUID() + crypto.randomUUID();
+async function api(path, token, body) {
+  const r = await fetch(B + path, { method: 'POST', headers: { 'x-token': token, 'content-type': 'application/json' }, body: JSON.stringify(body || {}) });
+  return r.json();
+}
+const ok = (c, m) => { if (!c) { console.log('FEHLER:', m); process.exitCode = 1; } else console.log('ok  ', m); };
+
+const t1 = tok(), t2 = tok();
+const n1 = 'Tst' + Math.floor(Math.random() * 1e6), n2 = 'Tsu' + Math.floor(Math.random() * 1e6);
+let r = await api('/api/login', t1, { name: n1 });
+ok(r.ok && r.me.balls.length === 5 && r.me.coins === 200, 'Konto anlegen: 5 Bälle, 200 Münzen');
+r = await api('/api/login', t2, { name: n1 });
+ok(r.err === 'name_taken', 'Name doppelt abgelehnt');
+r = await api('/api/login', t2, { name: n2 });
+ok(r.ok, 'zweites Konto');
+r = await api('/api/daily', t1);
+ok(r.ok && r.gain === 50, 'Tagesbelohnung 50');
+r = await api('/api/daily', t1);
+ok(r.err === 'daily_taken', 'Tagesbelohnung nur einmal');
+r = await api('/api/box', t1, {});
+ok(r.ok && r.cands.length === 10 && r.me.coins === 150, 'Ballbox geöffnet, 100 Münzen abgezogen, Ball ' + (r.ball && r.ball.type));
+const { simBox } = await import('../public/js/boxsim.js');
+ok(simBox(r.seed, 10).order[0] === r.win, 'Box-Seed liefert den Gewinner auf Platz 1');
+r = await api('/api/box', t1, {});
+ok(r.ok && r.me.coins === 50, 'zweite Box');
+r = await api('/api/box', t1, {});
+ok(r.err === 'no_coins', 'dritte Box: zu wenig Münzen');
+let me = (await api('/api/me', t1)).me;
+const b6 = me.balls[me.balls.length - 1];
+r = await api('/api/market/list', t1, { uid: b6.uid, price: 60 });
+ok(r.ok, 'Ball auf den Markt gestellt');
+r = await api('/api/market/browse', t2, {});
+ok(r.ok && r.items.some(i => i.uid === b6.uid), 'Zweiter Spieler sieht das Angebot');
+r = await api('/api/market/buy', t2, { uid: b6.uid });
+ok(r.ok && r.me.coins === 140, 'gekauft: 200-60 Münzen');
+me = (await api('/api/me', t1)).me;
+ok(me.coins === 50 + 57, 'Verkäufer bekommt 57 (5 % Gebühr): ' + me.coins);
+// Handel
+const p2 = (await api('/api/me', t2)).me;
+r = await api('/api/trade/create', t1, { to: n2, give: [me.balls[0].uid], want: [p2.balls[0].uid] });
+ok(r.ok, 'Tauschangebot');
+r = await api('/api/trades', t2);
+ok(r.incoming.length === 1, 'Angebot kommt an');
+r = await api('/api/trade/answer', t2, { id: r.incoming[0].id, action: 'accept' });
+ok(r.ok, 'Tausch angenommen');
+// Mindestanzahl
+me = (await api('/api/me', t1)).me;
+let free = me.balls.filter(b => b.lock === 0);
+for (let i = 0; i < free.length - 3; i++) await api('/api/market/list', t1, { uid: free[i].uid, price: 999 });
+r = await api('/api/market/list', t1, { uid: free[free.length - 1].uid, price: 999 });
+ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
+
+// Botkampf
+function connect(token) {
+  return new Promise(res => {
+    const ws = new WebSocket('ws://localhost:8787/api/ws');
+    const msgs = [];
+    ws.onmessage = e => { const m = JSON.parse(e.data); msgs.push(m); ws._h && ws._h(m); };
+    ws.onopen = () => { ws.send(JSON.stringify({ t: 'hello', token })); res(ws); };
+    ws.msgs = msgs;
+  });
+}
+const { runFight } = await import('../public/js/engine.js');
+const ws = await connect(t1);
+let rounds = 0, end = null, t0 = Date.now(), fightOk = true;
+ws._h = m => {
+  if (m.t === 'queued') console.log('  in Warteschlange');
+  if (m.t === 'pick_phase') ws.send(JSON.stringify({ t: 'pick', uid: m.hand[0].uid }));
+  if (m.t === 'reveal') ws.send(JSON.stringify({ t: 'dir', deg: 33 }));
+  if (m.t === 'fight') {
+    rounds++;
+    const rr = runFight(m.cfg);
+    if (rr.winner !== m.winner || rr.steps !== m.steps) fightOk = false;
+    ws.send(JSON.stringify({ t: 'ready' }));
+  }
+  if (m.t === 'match_end') end = m;
+};
+await new Promise(r => setTimeout(r, 300));
+const before = (await api('/api/me', t1)).me.coins;
+ws.send(JSON.stringify({ t: 'queue', mode: 1 }));
+while (!end && Date.now() - t0 < 120000) await new Promise(r => setTimeout(r, 200));
+ok(!!end, 'Match nach ' + Math.round((Date.now() - t0) / 1000) + ' s beendet (' + rounds + ' Runden, Bot-Fill ca. 15 s)');
+ok(fightOk, 'Client-Simulation stimmt mit Server-Ergebnis überein');
+if (end) {
+  const after = (await api('/api/me', t1)).me.coins;
+  ok(after - before === end.coins && end.coins === (end.win ? 20 : 3), 'Belohnung gebucht: ' + end.coins);
+}
+process.exit(process.exitCode || 0);

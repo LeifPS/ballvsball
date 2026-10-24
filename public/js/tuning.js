@@ -1,0 +1,2 @@
+// Automatisch erzeugt von tools/tune.js (Schadensfaktoren je Ball)
+export const DM = {"stachel":2.242,"turret":1.867,"ramm":1.041,"glas":1.831,"feuer":2.892,"bumerang":1.984,"magnet":1.56,"schwert":2.995,"zelle":0.895,"spinne":1.204,"schmied":2.995,"bombe":2.796,"schild":2.012,"echo":2.302,"gift":2.995,"vampir":2.408,"riese":0.781,"saege":1.681,"schwarm":1.05,"eis":1.899,"meteor":0.991,"spiegel":1.899,"wuchs":1.586,"drache":1.446,"phoenix":1.431};
