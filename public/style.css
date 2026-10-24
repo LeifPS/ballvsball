@@ -1,0 +1,71 @@
+@font-face { font-family: Hand; src: url(/fonts/gloria.woff2) format('woff2'); font-display: swap; }
+:root { --ink: #2b2118; --paper: #fffaf0; --yellow: #ffe08a; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { margin: 0; min-height: 100%; background: var(--paper); color: var(--ink); font-family: Hand, 'Comic Sans MS', cursive; -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+body { font-size: 16px; line-height: 1.3; overscroll-behavior: none; }
+#app { max-width: 480px; margin: 0 auto; min-height: 100vh; padding: 14px 16px 36px; position: relative; }
+button { font-family: inherit; font-size: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input { font-family: inherit; font-size: 17px; color: var(--ink); border: 0; background: transparent; outline: none; width: 100%; padding: 8px 10px; }
+h1, h2, h3, p { margin: 0; font-weight: normal; }
+h1 { font-size: 30px; text-align: center; }
+h2 { font-size: 22px; }
+h3 { font-size: 18px; }
+small, .small { font-size: 13px; }
+.mute { color: #7a6c5c; }
+.boot { text-align: center; margin-top: 40vh; }
+.center { text-align: center; }
+.col { display: flex; flex-direction: column; gap: 14px; }
+.row { display: flex; align-items: center; gap: 10px; }
+.row.sb { justify-content: space-between; }
+.wrap { flex-wrap: wrap; }
+.grow { flex: 1; min-width: 0; }
+.mt { margin-top: 14px; }
+.gap6 { gap: 6px; }
+
+[data-fr] { position: relative; }
+[data-fr] > *:not(.fr) { position: relative; z-index: 1; }
+canvas.fr { position: absolute; pointer-events: none; z-index: 0; }
+.btn { display: block; width: 100%; padding: 14px 12px; text-align: center; font-size: 20px; }
+.btn.sm { padding: 9px 12px; font-size: 16px; width: auto; display: inline-block; }
+.btn[disabled] { opacity: .45; }
+.card { padding: 12px; }
+.panel { padding: 14px; }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 3px 12px; font-size: 16px; }
+.inp { display: block; }
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+.row.gap6.wrap, .row.gap6 { flex-wrap: wrap; }
+.tab { padding: 6px 11px; font-size: 15px; display: inline-block; }
+.tabs { gap: 8px; }
+canvas.ico { display: inline-block; vertical-align: middle; }
+canvas.ball { display: block; }
+.rar { font-size: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.cell { padding: 6px 4px 8px; text-align: center; min-height: 118px; }
+.cell .nm { font-size: 13px; margin-top: 2px; }
+.cell .badge { position: absolute; right: 6px; top: 4px; font-size: 13px; z-index: 2; }
+.cell.locked canvas.ball { filter: brightness(0); opacity: .2; }
+.pickrow { display: flex; gap: 12px; align-items: center; text-align: left; width: 100%; padding: 10px 12px; }
+.pickrow .txt { display: flex; flex-direction: column; gap: 2px; }
+.bar { height: 14px; position: relative; }
+.timer { text-align: center; font-size: 18px; }
+.big { font-size: 40px; text-align: center; }
+.lives { display: flex; gap: 3px; align-items: center; }
+.vs { font-size: 18px; }
+.hero { display: flex; justify-content: center; }
+.stat { font-size: 15px; text-align: center; }
+.listrow { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+.fightwrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+canvas.view { display: block; touch-action: none; margin: 0 auto; }
+#overlay { position: fixed; inset: 0; background: rgba(255, 250, 240, .985); overflow-y: auto; z-index: 20; padding: 14px 16px 40px; }
+#overlay > div { max-width: 480px; margin: 0 auto; }
+#toast { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 30; padding: 12px 20px; max-width: 92vw; text-align: center; font-size: 17px; }
+.jit { animation: jit .43s steps(1) infinite; }
+@keyframes jit { 0% { transform: translate(0, 0) rotate(0); } 33% { transform: translate(.5px, -.4px) rotate(.12deg); } 66% { transform: translate(-.4px, .4px) rotate(-.1deg); } }
+.coinrow { display: inline-flex; align-items: center; gap: 4px; }
+.sel { }
+.err { color: #b02a2a; font-size: 15px; min-height: 20px; }
+.codebig { font-size: 44px; letter-spacing: 6px; text-align: center; }
+a { color: inherit; }
+
+.pickrow[data-strip] { padding-top: 28px; }
+.listrow[data-strip] { padding-top: 24px; }
