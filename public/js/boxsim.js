@@ -11,12 +11,12 @@ export const SEGS = [
   [0, 175, 126, 372], [BW, 175, BW - 126, 372]
 ];
 export const PEGS = [
-  // Nagelbrett oben
-  [50, 40, 6], [110, 40, 6], [170, 40, 6], [230, 40, 6], [270, 40, 6],
-  [80, 85, 6], [140, 85, 6], [200, 85, 6], [260, 85, 6], [20, 85, 6],
-  [50, 130, 6], [110, 130, 6], [170, 130, 6], [230, 130, 6], [270, 130, 6],
+  // Nagelbrett oben (Abstand zur Wand immer größer als ein Ball)
+  [60, 40, 6], [120, 40, 6], [180, 40, 6], [240, 40, 6],
+  [90, 85, 6], [150, 85, 6], [210, 85, 6],
+  [60, 130, 6], [120, 130, 6], [180, 130, 6], [240, 130, 6],
   // in der Schüssel
-  [150, 205, 7], [92, 255, 6], [208, 255, 6], [150, 300, 6], [58, 215, 6], [242, 215, 6]
+  [150, 205, 7], [92, 258, 6], [208, 258, 6], [150, 305, 6]
 ];
 
 export function createBox(seed, n) {
@@ -24,7 +24,7 @@ export function createBox(seed, n) {
   const balls = [];
   for (let i = 0; i < n; i++) {
     balls.push({
-      x: 40 + (i % 5) * 55 + (rng() - .5) * 18, y: -30 - Math.floor(i / 5) * 34 - rng() * 10,
+      x: 45 + (((i * 3) % 5) + .5) * 42 + (rng() - .5) * 20, y: -30 - Math.floor(i / 5) * 34 - rng() * 10,
       vx: (rng() - .5) * 70, vy: rng() * 30, rot: rng() * 6.28, vr: (rng() - .5) * 6,
       done: false
     });
@@ -57,7 +57,7 @@ export function stepBox(s) {
   const B = s.balls;
   // gelegentlicher kleiner Stoß gegen Verklemmen (deterministisch)
   if (s.step % 120 === 0) {
-    for (const b of B) if (!b.done && b.y > 150 && b.y < 380) { b.vx += (s.rng() - .5) * 50; b.vy -= s.rng() * 25; }
+    for (const b of B) if (!b.done && b.y > 100 && b.y < 380) { b.vx += (s.rng() - .5) * 50; b.vy -= s.rng() * 25; }
   }
   for (let i = 0; i < B.length; i++) {
     const b = B[i];
