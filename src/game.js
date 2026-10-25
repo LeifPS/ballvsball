@@ -355,8 +355,8 @@ export class Game extends DurableObject {
       p.last = Object.assign({ t: 'fight' }, m.fight);
       this.send(p.conn, p.last);
     }
-    m.deadline = Date.now() + res.steps * DT * 1000 + 9000;
-    m.timer = setTimeout(() => this.endFight(m), res.steps * DT * 1000 + 9000);
+    m.deadline = Date.now() + res.steps * DT * 1000 + 40000;
+    m.timer = setTimeout(() => this.endFight(m), res.steps * DT * 1000 + 40000);
     this.progress(m);
   }
   onReady(c) {
