@@ -275,7 +275,7 @@ function boxScreen() {
     '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle eine Box. Zehn Bälle fallen in die Schüssel, der erste durch die Öffnung gehört dir.</p>' +
     list.map(b => {
       const st = boxStats(b.id), ev = !!b.until;
-      return '<button class="panel boxcard' + (ev ? ' event' : '') + '" data-act="boxdetail" data-id="' + b.id + '"><div class="art hero bounce">' + gi('box', 78, b.col) + '</div><div class="grow"><h3>' + esc(b.name) + (ev ? ' <span class="tag">Begrenzt</span>' : '') + '</h3>' +
+      return '<button class="panel boxcard' + (ev ? ' event' : '') + '" data-act="boxdetail" data-id="' + b.id + '"><div class="art hero bounce">' + gi('bx_' + b.id, 78) + '</div><div class="grow"><h3>' + esc(b.name) + (ev ? ' <span class="tag">Begrenzt</span>' : '') + '</h3>' +
         '<div class="small mute">' + esc(b.desc) + '</div><div class="row sb small mt"><span>' + st.own + ' von ' + st.n + ' gesammelt</span><span style="font-size:21px">' + priceHTML(b) + '</span></div>' +
         (ev ? '<div class="small" style="color:var(--danger)">' + timeLeft(b.until - now()) + '</div>' : '') + '</div></button>';
     }).join('') + '</div>');
@@ -287,7 +287,7 @@ function boxDetail(id) {
   const st = boxStats(id), c = typeCounts(), have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price;
   const byR = SORT.map(r => [r, st.ids.filter(t => DEFS[t].rarity === r).length]).filter(x => x[1]);
   show('<div class="col">' + backBar(b.name, 'box') +
-    '<div class="hero bounce" style="margin-top:6px">' + gi('box', 130, b.col) + '</div>' +
+    '<div class="hero bounce" style="margin-top:6px">' + gi('bx_' + b.id, 130) + '</div>' +
     (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am 1. November. ' + timeLeft(b.until - now()) + '.<div class="small mt">Halloween-Marken bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Marken verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
     '<div class="panel"><h3>Das kann drin sein</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
     st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? '' : '') + esc(DEFS[t].name.replace('ball', '')) + '</div></button>').join('') +
