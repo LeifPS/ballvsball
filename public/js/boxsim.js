@@ -41,7 +41,7 @@ function hitPoint(b, px, py, rad, e) {
   if (vn < 0) {
     b.vx -= (1 + e) * vn * nx; b.vy -= (1 + e) * vn * ny;
     b.vx *= .985; b.vy *= .985;
-    b.vr += (b.vx * ny - b.vy * nx) * .02;
+    b.vr += (b.vx * ny - b.vy * nx) * .008;
   }
 }
 function hitSeg(b, s, e) {
@@ -64,7 +64,9 @@ export function stepBox(s) {
     if (b.done) { b.vy += GRAV * BDT; b.y += b.vy * BDT; continue; }
     b.vy += GRAV * BDT;
     if (b.vy > MAXV) b.vy = MAXV;
-    b.x += b.vx * BDT; b.y += b.vy * BDT; b.rot += b.vr * BDT;
+    b.x += b.vx * BDT; b.y += b.vy * BDT;
+    b.vr *= .985; if (b.vr > 4) b.vr = 4; else if (b.vr < -4) b.vr = -4;   // Drehung klingt ab, bleibt ruhig
+    b.rot += b.vr * BDT;
     for (const sg of SEGS) hitSeg(b, sg, .35);
     for (const p of PEGS) hitPoint(b, p[0], p[1], p[2], .45);
   }
