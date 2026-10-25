@@ -25,5 +25,5 @@ Handgezeichnetes Mobile-Browserspiel: Bälle sammeln, Ballboxen öffnen, online 
 Deployment: Push auf `main` (Cloudflare Worker Build). Keine weiteren Ressourcen nötig, die Datenbank liegt in Durable Objects.
 
 ## Seltenheit und Sterne
-- Selten: Schild (18 % Leben). Episch: Wut unter 50 % Leben. Legendär: Ultimative Fähigkeit unter 45 % Leben (siehe `perkStep` in `balls.js`).
+- Epische und legendäre Bälle haben eine zweite, stärkere Fähigkeit zusätzlich zur ersten (`public/js/balls3.js`). Es gibt keine gemeinsamen Seltenheits-Effekte.
 - Sterne: Duplikate verbessern einen Ball (+8 % Leben und Schaden je Stern, max. 5; Kosten in `boxes.js`, `UP_COST`).
