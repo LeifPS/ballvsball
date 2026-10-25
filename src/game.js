@@ -326,7 +326,7 @@ export class Game extends DurableObject {
     // Winkel auf 0,1 Grad runden, damit JSON-Zahlen sicher gleich bleiben
     const cfg = {
       seed: rint(2000000000) + 1,
-      balls: m.players.map(p => ({ type: p.pick.type, team: p.team, deg: Math.round(p.dir * 10) / 10 }))
+      balls: m.players.map(p => ({ type: p.pick.type, team: p.team, deg: Math.round(p.dir * 10) / 10, stars: p.pick.stars || 0 }))
     };
     const res = runFight(cfg);
     const loser = 1 - res.winner;

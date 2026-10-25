@@ -30,6 +30,7 @@ export default {
       case '/api/me': r = await store.me(tk); break;
       case '/api/rename': r = await store.rename(tk, b.name); break;
       case '/api/testcoins': r = b.key === 'leif-test' ? await store.testCoins(tk) : { err: 'bad' }; break;
+      case '/api/upgrade': r = await store.upgrade(tk, b.uid); break;
       case '/api/daily': r = await store.daily(tk); break;
       case '/api/box': r = await store.openBox(tk, b.box || 'standard'); break;
       case '/api/market/list': r = await store.marketList(tk, b.uid, b.price); break;

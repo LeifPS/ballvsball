@@ -1,7 +1,7 @@
 // Oberfläche: Anmeldung, Startseite, Sammlung, Ballboxen, Markt, Handel, Freunde und Kampfablauf.
-import { DEFS, BALL_IDS, RARITY, DT, BOX, createSim, stepSim, ballsInBox } from './engine.js';
+import { DEFS, BALL_IDS, RARITY, DT, BOX, MAX_STARS, STAR_BONUS, createSim, stepSim, ballsInBox } from './engine.js';
 import { createBox, stepBox, BW } from './boxsim.js';
-import { BOX_LIST, BOX_BY_ID, boxActive } from './boxes.js';
+import { BOX_LIST, BOX_BY_ID, boxActive, UP_COST } from './boxes.js';
 import { DPR, INK, gi, mkSprite } from './sk.js';
 import { drawBallIn, clearFx, fxState, burst, star } from './art.js';
 import { drawArena, drawBox, BOX_H, TEAM_COL } from './render.js';
@@ -32,7 +32,7 @@ const ERR = {
   gone: 'Das gibt es nicht mehr.', own: 'Das ist dein eigener Ball.', no_player: 'Spieler nicht gefunden.', self: 'Das bist du selbst.',
   empty: 'Das Angebot ist leer.', not_theirs: 'Der Ball gehört dem anderen nicht mehr.', too_many: 'Zu viele offene Angebote.',
   their_coins: 'Der andere hat nicht genug Münzen.', their_min: 'Der andere müsste zu wenig Bälle behalten.',
-  room_unknown: 'Raum nicht gefunden.', room_full: 'Raum ist voll.', box_unknown: 'Unbekannte Box.', bad: 'Ungültige Anfrage.'
+  max_stars: 'Schon auf der höchsten Stufe.', need_dupes: 'Dafür fehlen gleiche Bälle.', room_unknown: 'Raum nicht gefunden.', room_full: 'Raum ist voll.', box_unknown: 'Unbekannte Box.', bad: 'Ungültige Anfrage.'
 };
 const errText = c => ERR[c] || 'Etwas ist schiefgegangen (' + c + ').';
 const now = () => Date.now() + S.skew;
@@ -46,6 +46,13 @@ const priceHTML = b => b.cur === 'tokens' ? tokHTML(b.price) : coinHTML(b.price)
 const rarHTML = r => '<span class="rar" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
 const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
 
+const starsHTML = (n, size) => n ? '<span class="stars" style="white-space:nowrap">' + Array.from({ length: n }, () => gi('star', size || 15, '#ffd45a')).join('') + '</span>' : '';
+const PERK = {
+  gewoehnlich: null,
+  selten: 'Schild: fängt am Anfang 18 % des Lebens ab.',
+  episch: 'Wut: unter der Hälfte Leben +30 % Schaden und eine Druckwelle.',
+  legendaer: 'Ultimativ: unter 45 % Leben einmalig riesige Welle, betäubt Gegner, heilt 12 % und +25 % Schaden.'
+};
 function decorate(root) {
   root.querySelectorAll('canvas.ball').forEach(cv => {
     if (cv._init) return; cv._init = 1;
@@ -224,9 +231,10 @@ function colGrid() {
   if (!ids.length) return '<p class="center" style="grid-column:1/-1;color:#fff;text-shadow:1px 1px 0 var(--ink)">Nichts gefunden.</p>';
   return ids.map(id => {
     const d = DEFS[id], o = c[id];
-    return '<button class="card cell rbar' + (o ? '' : ' locked') + '" style="--rc:' + RARITY[d.rarity].color + '" data-act="detail" data-t="' + id + '">' +
+    const best = o ? Math.max(...o.list.map(x => x.stars)) : 0;
+    return '<button class="card cell rbar r-' + d.rarity + (o ? '' : ' locked') + '" style="--rc:' + RARITY[d.rarity].color + '" data-act="detail" data-t="' + id + '">' +
       (o && o.n > 1 ? '<span class="badge">x' + o.n + '</span>' : '') +
-      ball(id, 84, .62, o ? '' : 'data-dark="1"') + '<div class="nm">' + (o ? d.name : '???') + '</div></button>';
+      ball(id, 84, .62, o ? '' : 'data-dark="1"') + '<div class="nm">' + (o ? d.name : '???') + '</div>' + (best ? '<div style="line-height:0">' + starsHTML(best, 13) + '</div>' : '') + '</button>';
   }).join('');
 }
 function collection(keep) {
@@ -248,18 +256,27 @@ function detail(type) {
   const sugg = { gewoehnlich: 40, selten: 100, episch: 250, legendaer: 700 }[d.rarity];
   let own = '';
   if (c) {
-    own = '<h3>Du besitzt ' + c.n + 'x</h3>' + c.list.map(b => {
+    const freeN = S.me.balls.filter(x => !x.lock).length;
+    own = '<h3>Du besitzt ' + c.n + 'x</h3>' + c.list.slice().sort((a, z) => z.stars - a.stars || a.uid - z.uid).map(b => {
       let r;
       if (b.lock === 1) r = '<span class="small">Auf dem Markt für ' + coinHTML(b.price) + '</span><button class="btn sm" data-act="mkcancel" data-uid="' + b.uid + '">Zurückziehen</button>';
       else if (b.lock === 2) r = '<span class="small">' + gi('lock', 20) + ' Im Tausch</span>';
       else r = '<div class="inp" style="width:90px"><input type="number" inputmode="numeric" min="10" id="pr' + b.uid + '" value="' + sugg + '"></div><button class="btn sm pri" data-act="mklist" data-uid="' + b.uid + '">Verkaufen</button>';
-      return '<div class="listrow card"><span class="small grow">Ball Nr. ' + b.uid + '</span>' + r + '</div>';
-    }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Doppelte Bälle sind im Kampf nutzlos, aber du kannst sie verkaufen oder tauschen. Drei freie Bälle musst du immer behalten.</p>';
+      let up = '';
+      if (b.lock === 0) {
+        if (b.stars >= MAX_STARS) up = '<div class="small center" style="width:100%">Höchste Stufe erreicht!</div>';
+        else {
+          const cost = UP_COST[d.rarity][b.stars], have = c.list.filter(x => !x.lock && x.uid !== b.uid).length, ok = have >= cost && freeN - cost >= 3;
+          up = '<button class="btn sm ' + (ok ? 'green' : '') + '" style="width:100%" data-act="upgrade" data-uid="' + b.uid + '" ' + (ok ? '' : 'disabled') + '>' + gi('star', 20, '#ffd45a') + ' Verbessern auf ' + (b.stars + 1) + ' (' + Math.min(have, cost) + ' von ' + cost + ' Duplikaten)</button>';
+        }
+      }
+      return '<div class="card col" style="gap:6px"><div class="listrow" style="padding:0"><span class="small grow">Nr. ' + b.uid + ' ' + (b.stars ? starsHTML(b.stars, 17) : '<span class="mute">keine Sterne</span>') + '</span>' + r + '</div>' + up + '</div>';
+    }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden. Dafür werden gleiche Bälle verbraucht. Drei freie Bälle musst du immer behalten.</p>';
   } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.</p>';
   overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + esc(d.name) + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
     '<div class="hero pop">' + ball(type, 230, .66) + '</div>' +
     '<div class="panel"><div class="row sb wrap">' + rarHTML(d.rarity) + '<span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p>' +
-    (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
+    (PERK[d.rarity] ? '<p class="mt" style="color:' + RARITY[d.rarity].color + '"><b>' + PERK[d.rarity] + '</b></p>' : '') + (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
     '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' + own + '</div>');
 }
 
@@ -355,7 +372,7 @@ async function market(resetPage) {
       '<div class="tabs">' + [['low', 'Billigste'], ['high', 'Teuerste'], ['new', 'Neueste']].map(t => '<button class="tab' + (mk.sort === t[0] ? ' on' : '') + '" data-act="mksort" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
       (mk.items.length ? mk.items.map(it => {
         const d = DEFS[it.type];
-        return '<div class="listrow card rbar" style="--rc:' + RARITY[d.rarity].color + '">' + ball(it.type, 58, .7) + '<div class="grow"><b>' + esc(d.name) + '</b><br><span class="small mute">von ' + esc(it.seller) + '</span></div>' +
+        return '<div class="listrow card rbar" style="--rc:' + RARITY[d.rarity].color + '">' + ball(it.type, 58, .7) + '<div class="grow"><b>' + esc(d.name) + '</b> ' + starsHTML(it.stars, 14) + '<br><span class="small mute">von ' + esc(it.seller) + '</span></div>' +
           (it.mine ? '<span class="small">dein Angebot</span>' : '<button class="btn sm pri" data-act="mkbuy" data-uid="' + it.uid + '">' + coinHTML(it.price) + '</button>') + '</div>';
       }).join('') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Gerade keine Angebote.</p>') +
       '<div class="row sb">' + (mk.page > 0 ? '<button class="btn sm" data-act="mkprev">Zurück</button>' : '<span></span>') + (mk.total > (mk.page + 1) * 40 ? '<button class="btn sm" data-act="mknext">Weiter</button>' : '<span></span>') + '</div>';
@@ -363,7 +380,7 @@ async function market(resetPage) {
     const mine = S.me.balls.filter(b => b.lock === 1);
     body = mine.length ? mine.map(b => {
       const d = DEFS[b.type];
-      return '<div class="listrow card rbar" style="--rc:' + RARITY[d.rarity].color + '">' + ball(b.type, 58, .7) + '<div class="grow"><b>' + esc(d.name) + '</b><br>' + coinHTML(b.price) + '</div><button class="btn sm" data-act="mkcancel" data-uid="' + b.uid + '" data-back="market">Zurückziehen</button></div>';
+      return '<div class="listrow card rbar" style="--rc:' + RARITY[d.rarity].color + '">' + ball(b.type, 58, .7) + '<div class="grow"><b>' + esc(d.name) + '</b> ' + starsHTML(b.stars, 14) + '<br>' + coinHTML(b.price) + '</div><button class="btn sm" data-act="mkcancel" data-uid="' + b.uid + '" data-back="market">Zurückziehen</button></div>';
     }).join('') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast nichts zum Verkauf angeboten. Öffne in der Sammlung einen Ball, den du doppelt hast, und lege einen Preis fest.</p>';
   }
   show('<div class="col">' + backBar('Markt') + '<div class="tabs"><button class="tab' + (mk.tab === 'buy' ? ' on' : '') + '" data-act="mktab" data-v="buy">Kaufen</button><button class="tab' + (mk.tab === 'mine' ? ' on' : '') + '" data-act="mktab" data-v="mine">Meine Angebote</button></div>' + body + '<p class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Beim Verkauf werden 5 % Gebühr abgezogen.</p></div>');
@@ -376,7 +393,7 @@ async function trades() {
   let body = '';
   if (tab === 'new') {
     const t = S.tnew, myFree = S.me.balls.filter(b => !b.lock);
-    const chip = (b, set, act) => '<button class="tab' + (set.has(b.uid) ? ' on' : '') + '" data-act="' + act + '" data-uid="' + b.uid + '">' + esc(ballName(b.type)) + '</button>';
+    const chip = (b, set, act) => '<button class="tab' + (set.has(b.uid) ? ' on' : '') + '" data-act="' + act + '" data-uid="' + b.uid + '">' + esc(ballName(b.type)) + (b.stars ? ' ' + b.stars + '*' : '') + '</button>';
     body = '<div class="row gap6"><div class="inp grow"><input id="tname" placeholder="Spielername" value="' + esc(t.name) + '"></div><button class="btn sm pri" data-act="tfind">Suchen</button></div>' +
       '<div class="err" id="err"></div>' +
       (t.player ? '<div class="panel"><h3>Du gibst</h3><div class="tabs mt">' + (myFree.map(b => chip(b, t.give, 'tgive')).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
@@ -388,7 +405,7 @@ async function trades() {
     const r = await api('/api/trades');
     if (r.err) { toast(errText(r.err)); return; }
     const list = tab === 'in' ? r.incoming : tab === 'out' ? r.outgoing : r.history;
-    const bl = a => a.length ? a.map(b => esc(b.type ? ballName(b.type) : '?')).join(', ') : '-';
+    const bl = a => a.length ? a.map(b => esc(b.type ? ballName(b.type) : '?') + (b.stars ? ' ' + b.stars + '*' : '')).join(', ') : '-';
     body = list.length ? list.map(t => {
       const other = t.mine ? t.to : t.from;
       let acts = '';
@@ -465,7 +482,7 @@ function pickScreen(m) {
     m.hand.map(h => {
       const d = DEFS[h.type];
       return '<button class="card pickrow rbar slide" style="--rc:' + RARITY[d.rarity].color + '" data-act="pick" data-uid="' + h.uid + '">' + ball(h.type, 96, .66) +
-        '<div class="txt"><b style="font:400 25px var(--f-display)">' + esc(d.name) + '</b>' + rarHTML(d.rarity) + '<span class="small">' + gi('heart', 18) + ' ' + d.hp + '   ' + gi('sword', 18) + ' ' + d.dmg + '</span><span class="small mute">' + esc(d.desc.split('.')[0]) + '.</span></div></button>';
+        '<div class="txt"><b style="font:400 25px var(--f-display)">' + esc(d.name) + '</b>' + rarHTML(d.rarity) + (h.stars ? '<span>' + starsHTML(h.stars, 17) + '</span>' : '') + '<span class="small">' + gi('heart', 18) + ' ' + d.hp + '   ' + gi('sword', 18) + ' ' + d.dmg + '</span><span class="small mute">' + esc(d.desc.split('.')[0]) + '.</span></div></button>';
     }).join('') + '<div id="pickbtn">' + btn('Diesen Ball wählen', 'pickgo', 'disabled', 'pri') + '</div></div>');
   startCountdown(m.secs);
   if (pickSel) selectPick(pickSel, true);
@@ -635,6 +652,14 @@ const ACT = {
   cfilter(d) { S.col[d.k] = d.v; collection(); },
   cown() { S.col.own = !S.col.own; collection(); },
   detail(d) { detail(d.t); },
+  async upgrade(d) {
+    const t = (S.me.balls.find(b => b.uid === +d.uid) || {}).type;
+    const r = await api('/api/upgrade', { uid: +d.uid });
+    if (r.err) { toast(errText(r.err)); return; }
+    sfx('rare'); confetti(18); toast('Verbessert auf ' + r.stars + ' Stern' + (r.stars > 1 ? 'e' : '') + '!');
+    if (t) detail(t);
+    if (S.screen === 'collection') { const g = $('#cgrid'); if (g) { g.innerHTML = colGrid(); decorate(g); } }
+  },
   async mklist(d) {
     const price = parseInt(($('#pr' + d.uid) || {}).value, 10);
     const r = await api('/api/market/list', { uid: +d.uid, price });

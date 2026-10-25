@@ -71,6 +71,27 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
   ok(x.ok && x.me.tokens === (live ? 5 : 0), 'Tagesbelohnung gibt Halloween-Marken (Event ' + (live ? 'aktiv' : 'vorbei') + '): ' + x.me.tokens);
   if (live) { x = await api('/api/box', t3, { box: 'halloween' }); ok(x.err === 'no_tokens', 'Halloween-Box mit 5 Marken noch zu teuer'); }
 }
+// Sterne
+{
+  const t = tok();
+  let x = await api('/api/login', t, { name: 'Tst' + Math.floor(Math.random() * 1e6) });
+  x = await api('/api/testcoins', t, { key: 'leif-test' });
+  let me = x.me, dup = null;
+  for (let i = 0; i < 40 && !dup; i++) {
+    x = await api('/api/box', t, { box: 'standard' }); me = x.me;
+    const by = {}; for (const b of me.balls) (by[b.type] = by[b.type] || []).push(b);
+    dup = Object.values(by).find(l => l.length >= 3) || null;
+  }
+  ok(!!dup, 'Duplikate durch Boxen bekommen');
+  if (dup) {
+    x = await api('/api/upgrade', t, { uid: dup[0].uid });
+    ok(x.ok && x.stars === 1 && x.me.balls.length === me.balls.length - x.cost, 'Verbessern: 1 Stern, ' + x.cost + ' Duplikate verbraucht');
+    const b = x.me.balls.find(q => q.uid === dup[0].uid);
+    ok(b && b.stars === 1, 'Stern am Ball gespeichert');
+    x = await api('/api/upgrade', t, { uid: 999999999 });
+    ok(x.err === 'not_yours', 'fremder Ball nicht verbesserbar');
+  }
+}
 // Botkampf
 function connect(token) {
   return new Promise(res => {

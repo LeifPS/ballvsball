@@ -1,8 +1,8 @@
 // Datenhaltung: Konten, Bälle, Ballboxen, Markt, Handel (SQLite im Durable Object).
 // Alle Methoden sind synchron und damit atomar. Fehler werden als { err: 'code' } zurückgegeben.
 import { DurableObject } from 'cloudflare:workers';
-import { DEFS, BALL_IDS, RARITY, ballsInBox } from '../public/js/engine.js';
-import { BOX_BY_ID, boxActive, eventActive, EVENT_END } from '../public/js/boxes.js';
+import { DEFS, BALL_IDS, RARITY, ballsInBox, MAX_STARS } from '../public/js/engine.js';
+import { BOX_BY_ID, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
 import { simBox } from '../public/js/boxsim.js';
 
 const START_COINS = 200;
@@ -66,6 +66,8 @@ export class Store extends DurableObject {
     this.sql.exec('CREATE INDEX IF NOT EXISTS trades_to ON trades(to_id, status)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS trades_from ON trades(from_id, status)');
     const cols = this.q('PRAGMA table_info(users)').map(c => c.name);
+    const bcols = this.q('PRAGMA table_info(balls)').map(c => c.name);
+    if (!bcols.includes('stars')) this.sql.exec('ALTER TABLE balls ADD COLUMN stars INTEGER NOT NULL DEFAULT 0');
     if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
   }
 
@@ -79,7 +81,7 @@ export class Store extends DurableObject {
     return { uid: r[0].uid, type };
   }
   profile(u) {
-    const balls = this.q('SELECT uid,type,lock,price FROM balls WHERE owner=? ORDER BY uid', u.id);
+    const balls = this.q('SELECT uid,type,lock,price,stars FROM balls WHERE owner=? ORDER BY uid', u.id);
     const now = Date.now(), today = Math.floor(now / DAY);
     const live = eventActive(now);
     if (!live && u.tokens) this.q('UPDATE users SET tokens=0 WHERE id=?', u.id);
@@ -139,8 +141,23 @@ export class Store extends DurableObject {
     this.q('UPDATE users SET coins=999999, tokens=999999 WHERE id=?', u.id);
     return { ok: true, me: this.profile(this.userBy(tk)) };
   }
+  upgrade(tk, uid) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const b = this.q('SELECT * FROM balls WHERE uid=?', Number(uid))[0];
+    if (!b || b.owner !== u.id) return { err: 'not_yours' };
+    if (b.lock !== 0) return { err: 'locked' };
+    if (b.stars >= MAX_STARS) return { err: 'max_stars' };
+    const cost = UP_COST[DEFS[b.type].rarity][b.stars];
+    const fod = this.q('SELECT uid FROM balls WHERE owner=? AND type=? AND lock=0 AND uid<>? ORDER BY stars ASC, uid DESC LIMIT ?', u.id, b.type, b.uid, cost);
+    if (fod.length < cost) return { err: 'need_dupes' };
+    if (this.freeCount(u.id) - cost < 3) return { err: 'min_balls' };
+    for (const f of fod) this.q('DELETE FROM balls WHERE uid=?', f.uid);
+    this.q('UPDATE balls SET stars=stars+1 WHERE uid=?', b.uid);
+    return { ok: true, uid: b.uid, stars: b.stars + 1, cost, me: this.profile(this.userBy(tk)) };
+  }
   inventory(userId) {
-    return this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', userId);
+    return this.q('SELECT uid,type,stars FROM balls WHERE owner=? AND lock=0', userId);
   }
   reward(userId, coins, win, tokens) {
     const tk = eventActive(Date.now()) ? (tokens || 0) : 0;
@@ -242,10 +259,10 @@ export class Store extends DurableObject {
     const ph = types.map(() => '?').join(',');
     const order = o.sort === 'new' ? 'b.listed_at DESC' : o.sort === 'high' ? 'b.price DESC' : 'b.price ASC, b.listed_at DESC';
     const page = Math.max(0, int(o.page || 0, 0, 1000) || 0);
-    const items = this.q(`SELECT b.uid,b.type,b.price,b.owner,u.name seller FROM balls b JOIN users u ON u.id=b.owner
+    const items = this.q(`SELECT b.uid,b.type,b.stars,b.price,b.owner,u.name seller FROM balls b JOIN users u ON u.id=b.owner
       WHERE b.lock=1 AND b.type IN (${ph}) ORDER BY ${order} LIMIT 40 OFFSET ?`, ...types, page * 40);
     const total = this.q(`SELECT COUNT(*) c FROM balls WHERE lock=1 AND type IN (${ph})`, ...types)[0].c;
-    return { ok: true, items: items.map(i => ({ uid: i.uid, type: i.type, price: i.price, seller: i.seller, mine: i.owner === u.id })), total };
+    return { ok: true, items: items.map(i => ({ uid: i.uid, type: i.type, stars: i.stars, price: i.price, seller: i.seller, mine: i.owner === u.id })), total };
   }
 
   /* ---------- Handel ---------- */
@@ -254,12 +271,12 @@ export class Store extends DurableObject {
     if (!u) return { err: 'auth' };
     const p = this.userByName(String(name || '').trim());
     if (!p) return { err: 'no_player' };
-    const balls = this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0 ORDER BY uid', p.id);
+    const balls = this.q('SELECT uid,type,stars FROM balls WHERE owner=? AND lock=0 ORDER BY uid', p.id);
     return { ok: true, player: { name: p.name, wins: p.wins, losses: p.losses, balls }, self: p.id === u.id };
   }
   tradeView(t, meId) {
     const ids = s => JSON.parse(s);
-    const bt = list => list.map(uid => { const b = this.q('SELECT uid,type FROM balls WHERE uid=?', uid)[0]; return b || { uid, type: null }; });
+    const bt = list => list.map(uid => { const b = this.q('SELECT uid,type,stars FROM balls WHERE uid=?', uid)[0]; return b || { uid, type: null }; });
     const from = this.userById(t.from_id), to = this.userById(t.to_id);
     return {
       id: t.id, from: from ? from.name : '?', to: to ? to.name : '?', mine: t.from_id === meId,

@@ -3,9 +3,9 @@
 import fs from 'node:fs';
 import { runFight, BALL_IDS, DEFS } from '../public/js/engine.js';
 
-const TARGET = { gewoehnlich: .43, selten: .48, episch: .56, legendaer: .66 };
+const TARGET = { gewoehnlich: .40, selten: .50, episch: .60, legendaer: .70 };
 const ITER = Number(process.argv[2] || 14), N = Number(process.argv[3] || 10);
-const DMIN = .3, DMAX = 3;
+const DMIN = .3, DMAX = 4;
 for (const id of BALL_IDS) DEFS[id].dm = DEFS[id].dm || 1;
 
 function measure() {

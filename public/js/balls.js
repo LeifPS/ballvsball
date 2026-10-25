@@ -12,6 +12,22 @@ export const RARITY = {
   legendaer: { name: 'Legendär', color: '#e0a800', weight: 2, order: 3 }
 };
 
+// Fähigkeiten nach Seltenheit: selten = Schild (siehe core.js), episch = zweite Phase bei 50 % Leben,
+// legendär = Ultimative Fähigkeit bei 45 % Leben (einmal pro Kampf)
+export function perkStep(sim, b) {
+  if (b.phase) return;
+  const r = b.def.rarity;
+  if (r === 'episch' && b.hp <= b.maxHp * .5) {
+    b.phase = 1; b.pm *= 1.3;
+    fx(sim, 'phase', b.x, b.y, b.r);
+    newObj(sim, 'wave', b, b.x, b.y, { rad: 2, hit: {}, sp: 190, maxR: 95, dmg: 7, r: 2, push: 1, vis: 'phase' });
+  } else if (r === 'legendaer' && b.hp <= b.maxHp * .45) {
+    b.phase = 1; b.pm *= 1.25;
+    heal(sim, b, b.maxHp * .12);
+    fx(sim, 'ult', b.x, b.y, b.r, b.type);
+    newObj(sim, 'wave', b, b.x, b.y, { rad: 2, hit: {}, sp: 260, maxR: 170, dmg: 15, r: 2, push: 1, stun: .8, vis: 'ult' });
+  }
+}
 export function postHit(sim, o, e, d, ow) {
   if (o.stun) stun(sim, e, o.stun);
   if (o.burnS) burn(sim, e, ow, o.burnS, o.burnD);

@@ -6,6 +6,8 @@ export const MAX_T = 90;
 export const ENRAGE_T = 45;
 export const PI = 3.141592653589793;
 export const TAU = PI * 2;
+export const STAR_BONUS = .08;   // je Stern +8 % Leben und Schaden
+export const MAX_STARS = 5;
 
 export function mulberry(a) {
   return function () {
@@ -49,7 +51,7 @@ export function makeSim(cfg, DEFS, OBJS) {
   const POS = n <= 2 ? [[.22, .5], [.78, .5]] : [[.25, .28], [.25, .72], [.75, .28], [.75, .72]];
   cfg.balls.forEach((c, i) => {
     const p = POS[i];
-    addBall(sim, c.type, c.team, i, p[0] * BOX, p[1] * BOX, c.deg || 0, {});
+    addBall(sim, c.type, c.team, i, p[0] * BOX, p[1] * BOX, c.deg || 0, { stars: Math.max(0, Math.min(MAX_STARS, c.stars | 0)) });
   });
   for (const b of sim.balls) sim.teamMax[b.team] = (sim.teamMax[b.team] || 0) + b.maxHp;
   return sim;
@@ -61,8 +63,11 @@ export function addBall(sim, type, team, slot, x, y, deg, opt) {
   const b = {
     id: sim.nextId++, type, def, team, slot, x, y, vx: 0, vy: 0, speed: def.speed, r: def.r,
     hp: def.hp, maxHp: def.hp, dead: false, stun: 0, stunImm: 0, flash: 0, hitCd: {}, st: {}, age: 0,
-    lvl: 0, noMove: false, burn: 0, burnDps: 0, burnSrc: 0
+    lvl: 0, noMove: false, burn: 0, burnDps: 0, burnSrc: 0, stars: 0, pm: 1, shield: 0, phase: 0
   };
+  const stars = (opt && opt.stars) || 0;
+  if (stars) { b.stars = stars; const k = 1 + STAR_BONUS * stars; b.hp *= k; b.maxHp *= k; b.pm = k; }
+  if (def.rarity === 'selten') b.shield = b.maxHp * .18;
   b.vx = d[0] * b.speed; b.vy = d[1] * b.speed;
   if (def.init) def.init(b, sim, opt || {});
   const l0 = len(b.vx, b.vy) || 1;
@@ -118,10 +123,16 @@ export function ownerOf(sim, o) { return sim.byId[o.owner]; }
 export function hurt(sim, t, amt, src, kind) {
   if (t.dead || amt <= 0) return 0;
   const d = t.def;
-  if (src && src.def.dm && kind !== 'reflect') amt *= src.def.dm;
+  if (src && src.def.dm && kind !== 'reflect') amt *= src.def.dm * src.pm;
   // Anlaufphase: am Anfang wird weniger Schaden gemacht, damit kein Kampf unter ca. 8 s endet
   if (sim.t < 8 && kind !== 'reflect') amt *= .3 + .7 * (sim.t / 8);
   if (d.takes) amt *= d.takes(t, sim, kind);
+  if (t.shield > 0) {
+    const ab = Math.min(t.shield, amt); t.shield -= ab; amt -= ab;
+    if (t.shield <= 0) { t.shield = 0; fx(sim, 'shieldbreak', t.x, t.y, t.r); }
+    else if (kind !== 'dot') fx(sim, 'block', t.x, t.y, 0);
+    if (amt <= 0) return 0;
+  }
   t.hp -= amt;
   if (kind !== 'dot') t.flash = .12;
   if (src) sim.dealt[src.team] = (sim.dealt[src.team] || 0) + amt;
@@ -191,6 +202,7 @@ export function stepSim(sim) {
     if (b.dead) continue;
     b.age += DT;
     if (b.flash > 0) b.flash -= DT;
+    if (sim.perk) sim.perk(sim, b);
     if (b.burn > 0) { b.burn -= DT; hurt(sim, b, b.burnDps * DT, sim.byId[b.burnSrc] || null, 'dot'); }
     if (b.stun > 0) { b.stun -= DT; if (b.stun <= 0) { b.stun = 0; b.stunImm = 1.5; } }
     else if (b.stunImm > 0) b.stunImm -= DT;
