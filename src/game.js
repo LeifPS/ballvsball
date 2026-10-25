@@ -23,7 +23,7 @@ function shuffle(a) {
 }
 const BOT_W = { gewoehnlich: 52, selten: 30, episch: 14, legendaer: 4 };
 function botType() {
-  const ids = BALL_IDS;
+  const ids = BALL_IDS.filter(id => DEFS[id].box === 'standard');   // Bots haben nur Standardbälle
   const w = ids.map(id => BOT_W[DEFS[id].rarity] / ids.filter(x => DEFS[x].rarity === DEFS[id].rarity).length);
   let s = 0; for (const x of w) s += x;
   let r = rnd() * s;
