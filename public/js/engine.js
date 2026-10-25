@@ -1,8 +1,9 @@
 // Öffentliche Schnittstelle der Kampf-Engine (Browser und Worker)
 import { makeSim, stepSim, runToEnd, DT, BOX, MAX_T, ENRAGE_T } from './core.js';
 import { DEFS, OBJS, BALL_IDS, RARITY, ballsByRarity } from './balls.js';
+import { BOX_IDS, ballsInBox } from './balls2.js';
 
-export { DT, BOX, MAX_T, ENRAGE_T, DEFS, OBJS, BALL_IDS, RARITY, ballsByRarity, stepSim };
+export { DT, BOX, MAX_T, ENRAGE_T, DEFS, OBJS, BALL_IDS, RARITY, ballsByRarity, stepSim, BOX_IDS, ballsInBox };
 
 // cfg: { seed, balls: [{type, team, deg}], noFx? }
 export function createSim(cfg) { return makeSim(cfg, DEFS, OBJS); }

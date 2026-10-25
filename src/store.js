@@ -1,10 +1,10 @@
 // Datenhaltung: Konten, Bälle, Ballboxen, Markt, Handel (SQLite im Durable Object).
 // Alle Methoden sind synchron und damit atomar. Fehler werden als { err: 'code' } zurückgegeben.
 import { DurableObject } from 'cloudflare:workers';
-import { DEFS, BALL_IDS, RARITY, ballsByRarity } from '../public/js/engine.js';
+import { DEFS, BALL_IDS, RARITY, ballsInBox } from '../public/js/engine.js';
+import { BOX_BY_ID, boxActive, eventActive, EVENT_END } from '../public/js/boxes.js';
 import { simBox } from '../public/js/boxsim.js';
 
-export const BOX_PRICE = 100;
 const START_COINS = 200;
 const STARTER = ['stachel', 'turret', 'ramm', 'glas', 'feuer'];
 const MIN_FREE = 3;          // mindestens so viele freie Bälle müssen bleiben
@@ -24,8 +24,9 @@ function pickWeighted(weights) {
   return weights.length - 1;
 }
 const RAR_KEYS = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
-function randType(rarity) {
-  const list = ballsByRarity(rarity);
+function randType(rarity, box) {
+  let list = ballsInBox(box).filter(id => DEFS[id].rarity === rarity);
+  if (!list.length) list = ballsInBox(box);
   return list[Math.floor(rnd() * list.length)];
 }
 function cleanName(n) {
@@ -64,6 +65,8 @@ export class Store extends DurableObject {
       status TEXT NOT NULL DEFAULT 'pending', created INTEGER NOT NULL, closed INTEGER NOT NULL DEFAULT 0)`);
     this.sql.exec('CREATE INDEX IF NOT EXISTS trades_to ON trades(to_id, status)');
     this.sql.exec('CREATE INDEX IF NOT EXISTS trades_from ON trades(from_id, status)');
+    const cols = this.q('PRAGMA table_info(users)').map(c => c.name);
+    if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
   }
 
   /* ---------- Hilfen ---------- */
@@ -77,10 +80,12 @@ export class Store extends DurableObject {
   }
   profile(u) {
     const balls = this.q('SELECT uid,type,lock,price FROM balls WHERE owner=? ORDER BY uid', u.id);
-    const today = Math.floor(Date.now() / DAY);
+    const now = Date.now(), today = Math.floor(now / DAY);
+    const live = eventActive(now);
+    if (!live && u.tokens) this.q('UPDATE users SET tokens=0 WHERE id=?', u.id);
     return {
-      id: u.id, name: u.name, coins: u.coins, wins: u.wins, losses: u.losses, boxes: u.boxes, streak: u.streak,
-      dailyReady: u.last_daily < today, boxPrice: BOX_PRICE, balls
+      id: u.id, name: u.name, coins: u.coins, tokens: live ? u.tokens : 0, wins: u.wins, losses: u.losses, boxes: u.boxes, streak: u.streak,
+      dailyReady: u.last_daily < today, balls, now, eventEnd: EVENT_END
     };
   }
 
@@ -124,29 +129,34 @@ export class Store extends DurableObject {
     if (u.last_daily >= today) return { err: 'daily_taken' };
     const streak = u.last_daily === today - 1 ? u.streak + 1 : 1;
     const gain = 50 + 10 * Math.min(streak - 1, 5);
-    this.q('UPDATE users SET coins=coins+?, last_daily=?, streak=? WHERE id=?', gain, today, streak, u.id);
-    return { ok: true, gain, streak, me: this.profile(this.userBy(tk)) };
+    const tk5 = eventActive(Date.now()) ? 5 : 0;
+    this.q('UPDATE users SET coins=coins+?, tokens=tokens+?, last_daily=?, streak=? WHERE id=?', gain, tk5, today, streak, u.id);
+    return { ok: true, gain, tokens: tk5, streak, me: this.profile(this.userBy(tk)) };
   }
   inventory(userId) {
     return this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', userId);
   }
-  reward(userId, coins, win) {
-    this.q('UPDATE users SET coins=coins+?, wins=wins+?, losses=losses+? WHERE id=?', coins, win ? 1 : 0, win ? 0 : 1, userId);
-    return true;
+  reward(userId, coins, win, tokens) {
+    const tk = eventActive(Date.now()) ? (tokens || 0) : 0;
+    this.q('UPDATE users SET coins=coins+?, tokens=tokens+?, wins=wins+?, losses=losses+? WHERE id=?', coins, tk, win ? 1 : 0, win ? 0 : 1, userId);
+    return tk;
   }
 
   /* ---------- Ballbox ---------- */
   openBox(tk, boxId) {
     const u = this.userBy(tk);
     if (!u) return { err: 'auth' };
-    if (boxId !== 'standard') return { err: 'box_unknown' };
-    if (u.coins < BOX_PRICE) return { err: 'no_coins' };
+    const cfg = BOX_BY_ID[boxId];
+    if (!cfg) return { err: 'box_unknown' };
+    if (!boxActive(boxId, Date.now())) return { err: 'box_over' };
+    const have = cfg.cur === 'tokens' ? u.tokens : u.coins;
+    if (have < cfg.price) return { err: cfg.cur === 'tokens' ? 'no_tokens' : 'no_coins' };
     const rIdx = pickWeighted(RAR_KEYS.map(k => RARITY[k].weight));
-    const reward = randType(RAR_KEYS[rIdx]);
+    const reward = randType(RAR_KEYS[rIdx], boxId);
     // Mitspieler in der Schüssel: auch mal seltene, damit man "knapp daneben" erlebt
     const decoyRar = () => RAR_KEYS[pickWeighted([40, 30, 20, 10])];
     const cands = [];
-    for (let i = 0; i < 10; i++) cands.push(randType(decoyRar()));
+    for (let i = 0; i < 10; i++) cands.push(randType(decoyRar(), boxId));
     const winIdx = Math.floor(rnd() * 10);
     cands[winIdx] = reward;
     // Bait: ein besserer Ball soll knapp Zweiter oder Dritter werden
@@ -154,7 +164,7 @@ export class Store extends DurableObject {
     if (rIdx < 3 && rnd() < .7) {
       const higher = RAR_KEYS.slice(rIdx + 1);
       const w = higher.map((k, i) => i === 0 ? 55 : 30 / i);
-      const bt = randType(higher[pickWeighted(w)]);
+      const bt = randType(higher[pickWeighted(w)], boxId);
       do { baitIdx = Math.floor(rnd() * 10); } while (baitIdx === winIdx);
       cands[baitIdx] = bt;
     }
@@ -173,9 +183,10 @@ export class Store extends DurableObject {
         if (simBox(s, 10).order[0] === winIdx) seed = s;
       }
     }
-    this.q('UPDATE users SET coins=coins-?, boxes=boxes+1 WHERE id=?', BOX_PRICE, u.id);
+    if (cfg.cur === 'tokens') this.q('UPDATE users SET tokens=tokens-?, boxes=boxes+1 WHERE id=?', cfg.price, u.id);
+    else this.q('UPDATE users SET coins=coins-?, boxes=boxes+1 WHERE id=?', cfg.price, u.id);
     const ball = this.giveBall(u.id, reward);
-    return { ok: true, seed, cands, win: winIdx, ball, rarity: DEFS[reward].rarity, me: this.profile(this.userBy(tk)) };
+    return { ok: true, box: boxId, seed, cands, win: winIdx, ball, rarity: DEFS[reward].rarity, me: this.profile(this.userBy(tk)) };
   }
 
   /* ---------- Markt ---------- */

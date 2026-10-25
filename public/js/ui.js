@@ -1,17 +1,20 @@
-// Oberfläche: Anmeldung, Startseite, Sammlung, Ballbox, Markt, Handel, Freunde, Kampfablauf.
-import { DEFS, BALL_IDS, RARITY, DT, BOX, createSim, stepSim } from './engine.js';
+// Oberfläche: Anmeldung, Startseite, Sammlung, Ballboxen, Markt, Handel, Freunde und Kampfablauf.
+import { DEFS, BALL_IDS, RARITY, DT, BOX, createSim, stepSim, ballsInBox } from './engine.js';
 import { createBox, stepBox, BW } from './boxsim.js';
-import { DPR, INK, setTarget, frameSet, mkSprite, marker, spr, line, poly, T, drawText, mulberry } from './pen.js';
-import { drawBallIn, bodySprite, SPARK, STAR, COIN, HEART, HEART0, SWORD, CROWN, LOCK, CHECK, CROSS, ARROW, PLUS, SKIP, BOXART, clearFx, R0 } from './art.js';
-import { drawArena, drawHud, drawBox, drawFrame, BOX_H, TEAM_COL } from './render.js';
+import { BOX_LIST, BOX_BY_ID, boxActive } from './boxes.js';
+import { DPR, INK, gi, mkSprite } from './sk.js';
+import { drawBallIn, clearFx, fxState, burst, star } from './art.js';
+import { drawArena, drawBox, BOX_H, TEAM_COL } from './render.js';
+import { unlock, sfx, getMode, setMode, setScene } from './audio.js';
 
 const $ = s => document.querySelector(s);
 const SCREEN = $('#screen'), OVER = $('#overlay'), TOAST = $('#toast');
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 const S = {
-  token: null, me: null, ws: null, wsOK: false, wsQueue: [], screen: '', match: null, view: null,
-  filter: 'all', mk: { tab: 'buy', rarity: '', q: '', sort: 'low', page: 0, items: [], total: 0 },
+  token: null, me: null, ws: null, wsOK: false, screen: '', match: null, view: null, skew: 0,
+  col: { q: '', rar: 'all', box: 'all', sort: 'rar', own: false },
+  mk: { tab: 'buy', rarity: '', q: '', sort: 'low', page: 0, items: [], total: 0 },
   tr: { tab: 'in' }, tnew: { name: '', player: null, give: new Set(), want: new Set() }, room: null, timers: [], kicked: false
 };
 let store = null;
@@ -23,7 +26,8 @@ const lset = (k, v) => { try { if (store) store.setItem(k, v); else mem[k] = v; 
 const ERR = {
   net: 'Keine Verbindung zum Server.', auth: 'Anmeldung fehlgeschlagen.', need_name: 'Bitte wähle einen Namen.',
   name_invalid: 'Name: 3 bis 16 Zeichen, nur Buchstaben, Zahlen, Leerzeichen, - und _.', name_taken: 'Dieser Name ist schon vergeben.',
-  daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
+  daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
+  price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
   not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 freie Bälle behalten.',
   gone: 'Das gibt es nicht mehr.', own: 'Das ist dein eigener Ball.', no_player: 'Spieler nicht gefunden.', self: 'Das bist du selbst.',
   empty: 'Das Angebot ist leer.', not_theirs: 'Der Ball gehört dem anderen nicht mehr.', too_many: 'Zu viele offene Angebote.',
@@ -31,96 +35,45 @@ const ERR = {
   room_unknown: 'Raum nicht gefunden.', room_full: 'Raum ist voll.', box_unknown: 'Unbekannte Box.', bad: 'Ungültige Anfrage.'
 };
 const errText = c => ERR[c] || 'Etwas ist schiefgegangen (' + c + ').';
+const now = () => Date.now() + S.skew;
+const eventLive = () => !!S.me && now() < S.me.eventEnd;
 
 /* ================= Zeichen-Infrastruktur ================= */
-const KIND = {
-  btn: ['#ffe08a', '#f2b64a', 2.9], btn2: ['#fffdf6', null, 2.6], btnr: ['#ffc9c0', '#e88a7a', 2.6], card: ['#fffaf0', null, 2.7],
-  panel: ['#fffdf6', null, 3], pill: ['#fffdf6', null, 2], inp: ['#ffffff', null, 2.2], tab: ['#fffdf6', null, 2.2], tabon: ['#ffe08a', '#f2b64a', 2.4],
-  toast: ['#fff1c2', null, 2.6]
-};
-const FR = new Set(), BALLS = new Set(), ICOS = new Set();
-const ICON = { coin: COIN, heart: HEART, heart0: HEART0, sword: SWORD, star: STAR, crown: CROWN, lock: LOCK, check: CHECK, cross: CROSS, arrow: ARROW, plus: PLUS, skip: SKIP };
-const stripCache = new Map();
-function strip(w, col) {
-  const k = Math.round(w) + col; let s = stripCache.get(k);
-  if (!s) { s = mkSprite(950 + stripCache.size, Math.round(w) + 10, 18, 5, 9, Z => marker(Z, 0, 8, Math.round(w), 8, 7, col)); stripCache.set(k, s); }
-  return s;
-}
-function ico(name, size) { return '<canvas class="ico" data-ico="' + name + '" data-size="' + (size || 22) + '"></canvas>'; }
-const coinHTML = n => '<span class="coinrow"><b>' + n + '</b>' + ico('coin', 22) + '</span>';
+const BALLS = new Set();
+const coinHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('coin', 22) + '</span>';
+const tokHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('token', 22) + '</span>';
+const priceHTML = b => b.cur === 'tokens' ? tokHTML(b.price) : coinHTML(b.price);
 const rarHTML = r => '<span class="rar" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
+const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
 
 function decorate(root) {
-  root.querySelectorAll('[data-fr]').forEach(el => {
-    if (el._fr) return;
-    const cv = document.createElement('canvas'); cv.className = 'fr'; el.insertBefore(cv, el.firstChild); el._fr = cv; FR.add(el);
-  });
   root.querySelectorAll('canvas.ball').forEach(cv => {
     if (cv._init) return; cv._init = 1;
-    const s = +cv.dataset.size || 80; cv.width = s * DPR; cv.height = s * DPR; cv.style.width = s + 'px'; cv.style.height = s + 'px';
+    const s = +cv.dataset.size || 80; cv.width = Math.round(s * DPR); cv.height = Math.round(s * DPR); cv.style.width = s + 'px'; cv.style.height = s + 'px';
     BALLS.add(cv);
   });
-  root.querySelectorAll('canvas.ico').forEach(cv => {
-    if (cv._init) return; cv._init = 1;
-    const s = +cv.dataset.size || 22; cv.width = s * DPR; cv.height = s * DPR; cv.style.width = s + 'px'; cv.style.height = s + 'px';
-    ICOS.add(cv);
-  });
-  drawStatic(performance.now() / 1000, true);
+  paintBalls(performance.now() / 1000, Math.floor(performance.now() / 143) % 3);
 }
-let lastTf = -1, lastB = -1;
-function drawFrames(tf) {
-  for (const el of FR) {
-    if (!el.isConnected) { FR.delete(el); continue; }
-    const w = el.offsetWidth, h = el.offsetHeight; if (!w || !h) continue;
-    const kd = KIND[el.dataset.fr] || KIND.card;
-    const fs = frameSet(el.dataset.fr, w, h, kd[0], kd[1], kd[2]);
-    const cv = el._fr, M = fs.M;
-    const pw = Math.ceil(fs.w * DPR), ph = Math.ceil(fs.h * DPR);
-    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; cv.style.width = fs.w + 'px'; cv.style.height = fs.h + 'px'; cv.style.left = -M + 'px'; cv.style.top = -M + 'px'; }
-    const ctx = cv.getContext('2d');
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
-    ctx.drawImage(fs.fr[tf], 0, 0, fs.w, fs.h);
-    if (el.dataset.strip) {
-      const sp = strip(w - 28, el.dataset.strip), old = setTarget(ctx);
-      spr(sp, M + 14, M + 10, tf, 1); setTarget(old);
-    }
-  }
-  for (const cv of ICOS) {
-    if (!cv.isConnected) { ICOS.delete(cv); continue; }
-    const ctx = cv.getContext('2d'), s = +cv.dataset.size || 22, old = setTarget(ctx);
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
-    const sp = ICON[cv.dataset.ico]();
-    spr(sp, s / 2, s / 2, tf, s / 26); setTarget(old);
-  }
-}
-function drawBalls(tm, tf) {
+function paintBalls(tm, tf) {
   for (const cv of BALLS) {
     if (!cv.isConnected) { BALLS.delete(cv); continue; }
     const ctx = cv.getContext('2d'), s = +cv.dataset.size || 80;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
-    drawBallIn(ctx, cv.dataset.ball, s, tm, tf, +cv.dataset.fit || .55);
+    drawBallIn(ctx, cv.dataset.ball, s, tm, tf, (+cv.dataset.fit || .62) * 1.28, cv.dataset.dark === '1');
   }
 }
-function drawStatic(tm, force) {
-  const tf = Math.floor(tm * 7) % 3;
-  drawFrames(tf); drawBalls(tm, tf);
-}
-let lastT = 0;
+let lastTf = -1, lastT = 0;
 function loop(ms) {
   requestAnimationFrame(loop);
   const tm = ms / 1000, dt = Math.min(.1, tm - lastT || .016); lastT = tm;
-  const tf = Math.floor(tm * 7) % 3; T.f = tf;
-  if (tf !== lastTf) { lastTf = tf; drawFrames(tf); }
-  const b = Math.floor(tm * 14);
-  if (b !== lastB) { lastB = b; drawBalls(tm, tf); }
+  const tf = Math.floor(tm * 7) % 3;
+  if (tf !== lastTf) { lastTf = tf; paintBalls(tm, tf); }
   if (S.view && S.view.frame) S.view.frame(tm, dt, tf);
 }
 
 /* ================= Hilfen ================= */
 function show(html) {
-  clearTimers();
-  SCREEN.innerHTML = html; window.scrollTo(0, 0);
-  decorate(SCREEN);
+  clearTimers(); SCREEN.innerHTML = html; window.scrollTo(0, 0); decorate(SCREEN);
 }
 function setView(v) { if (S.view && S.view.stop) S.view.stop(); S.view = v; }
 function clearTimers() { S.timers.forEach(clearInterval); S.timers = []; }
@@ -128,22 +81,17 @@ function every(fn, ms) { const id = setInterval(fn, ms); S.timers.push(id); retu
 function overlay(html) { OVER.innerHTML = '<div>' + html + '</div>'; OVER.hidden = false; OVER.scrollTop = 0; decorate(OVER); }
 function closeOverlay() { OVER.hidden = true; OVER.innerHTML = ''; }
 let toastT = 0;
-function toast(msg) {
-  TOAST.innerHTML = ''; TOAST.dataset.fr = 'toast';
-  const cv = document.createElement('canvas'); cv.className = 'fr'; TOAST.appendChild(cv); TOAST._fr = cv; FR.add(TOAST);
-  const sp = document.createElement('span'); sp.textContent = msg; TOAST.appendChild(sp);
-  TOAST.hidden = false; drawStatic(performance.now() / 1000);
-  clearTimeout(toastT); toastT = setTimeout(() => { TOAST.hidden = true; }, 2800);
-}
+function toast(msg) { TOAST.textContent = msg; TOAST.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { TOAST.hidden = true; }, 2800); }
 async function api(path, body) {
   try {
     const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': S.token }, body: JSON.stringify(body || {}) });
     const j = await r.json();
-    if (j.me) S.me = j.me;
+    if (j.me) setMe(j.me);
     return j;
   } catch (e) { return { err: 'net' }; }
 }
-function ballName(t) { return DEFS[t] ? DEFS[t].name : '?'; }
+function setMe(me) { S.me = me; if (me.now) S.skew = me.now - Date.now(); }
+const ballName = t => DEFS[t] ? DEFS[t].name : '?';
 const SORT = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
 function typeCounts() {
   const c = {};
@@ -155,27 +103,37 @@ function topType() {
   for (const b of S.me.balls) { const o = RARITY[DEFS[b.type].rarity].order; if (o > bo) { bo = o; best = b.type; } }
   return best || 'stachel';
 }
-function topBar() {
-  return '<div class="row sb"><div class="pill" data-fr="pill"><span>' + esc(S.me.name) + '</span></div><div class="pill" data-fr="pill">' + coinHTML(S.me.coins) + '</div></div>';
+function wallet() {
+  return '<div class="row gap6">' + (eventLive() ? '<div class="pill" title="Halloween-Marken">' + tokHTML(S.me.tokens) + '</div>' : '') + '<div class="pill">' + coinHTML(S.me.coins) + '</div></div>';
 }
 function backBar(title, to) {
-  return '<div class="row"><button class="btn2 pill" data-fr="btn2" data-act="' + (to || 'home') + '" style="padding:6px 14px">' + ico('arrow', 26) + '</button><h2 class="grow jit">' + esc(title) + '</h2><div class="pill" data-fr="pill">' + coinHTML(S.me.coins) + '</div></div>';
+  return '<div class="row" style="padding-right:50px"><button class="btn sm" style="min-height:44px;padding:2px 14px" data-act="' + (to || 'home') + '">' + gi('arrow', 26) + '</button><h2 class="grow jit">' + esc(title) + '</h2></div><div class="row" style="justify-content:flex-end;margin-top:-4px">' + wallet() + '</div>';
 }
 function btn(label, act, extra, kind) {
-  return '<button class="btn" data-fr="' + (kind || 'btn') + '" data-act="' + act + '" ' + (extra || '') + '><span>' + label + '</span></button>';
+  return '<button class="btn ' + (kind || '') + '" data-act="' + act + '" ' + (extra || '') + '>' + label + '</button>';
+}
+function timeLeft(ms) {
+  const m = Math.max(0, Math.floor(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
+  return d >= 1 ? 'noch ' + d + (d === 1 ? ' Tag' : ' Tage') + (h ? ' und ' + h + ' Std.' : '') : h >= 1 ? 'noch ' + h + ' Std. ' + (m % 60) + ' Min.' : 'noch ' + m + ' Min.';
+}
+function confetti(n) {
+  const cols = ['#f4c942', '#e0533a', '#4fa3e8', '#5cc45a', '#c06af0', '#ff8aa0'];
+  for (let i = 0; i < (n || 40); i++) {
+    const d = document.createElement('div'), x = Math.random() * 100, dur = 1.6 + Math.random() * 1.6, sz = 7 + Math.random() * 7;
+    d.style.cssText = 'position:fixed;top:-20px;left:' + x + 'vw;width:' + sz + 'px;height:' + sz * .6 + 'px;background:' + cols[i % cols.length] + ';border:1.5px solid ' + INK + ';z-index:40;pointer-events:none;transform:rotate(' + Math.random() * 360 + 'deg);animation:cf ' + dur + 's ease-in ' + Math.random() * .5 + 's forwards';
+    document.body.appendChild(d); setTimeout(() => d.remove(), 4000);
+  }
+}
+(function () { const st = document.createElement('style'); st.textContent = '@keyframes cf{to{transform:translate(' + 40 + 'px,110vh) rotate(720deg)}}'; document.head.appendChild(st); })();
+function sndIcon() {
+  const m = getMode(); $('#snd').innerHTML = gi(m === 2 ? 'speaker' : m === 1 ? 'note0' : 'speaker0', 28);
 }
 
 /* ================= Anmeldung ================= */
 async function boot() {
-  try { await document.fonts.load('18px Hand'); } catch (e) { }
-  // Papier-Körnung
-  try {
-    const c = document.createElement('canvas'); c.width = c.height = 200; const x = c.getContext('2d'), R = mulberry(5);
-    x.fillStyle = '#fffaf0'; x.fillRect(0, 0, 200, 200);
-    for (let i = 0; i < 900; i++) { x.fillStyle = 'rgba(120,96,60,' + (.03 + R() * .05) + ')'; x.fillRect(R() * 200, R() * 200, 1 + R() * 2, 1 + R() * 2); }
-    document.body.style.backgroundImage = 'url(' + c.toDataURL() + ')';
-  } catch (e) { }
+  try { await document.fonts.load('20px "Patrick Hand"'); await document.fonts.load('30px "Caveat Brush"'); } catch (e) { }
   requestAnimationFrame(loop);
+  sndIcon();
   S.token = lget('bvb_token');
   if (!S.token) { S.token = crypto.randomUUID() + crypto.randomUUID(); lset('bvb_token', S.token); }
   const r = await api('/api/login', {});
@@ -187,9 +145,9 @@ function netError(c) {
   show('<div class="col center"><h1>Ball gegen Ball</h1><p>' + esc(errText(c)) + '</p>' + btn('Nochmal versuchen', 'reload') + '</div>');
 }
 function nameScreen(err) {
-  show('<div class="col"><h1 class="jit">Ball gegen Ball</h1><p class="center">Sammle Bälle und kämpfe gegen andere. Wie willst du heißen?</p>' +
-    '<div class="inp" data-fr="inp"><input id="nm" maxlength="16" placeholder="Dein Name" autocomplete="off"></div><div class="err center" id="err">' + esc(err) + '</div>' +
-    btn('Los geht\'s', 'register') + '<p class="small mute center">Dein Gerät merkt sich dein Konto. 3 bis 16 Zeichen.</p></div>');
+  show('<div class="col" style="margin-top:6vh"><h1 class="jit">Ball gegen Ball</h1><div class="hero bounce">' + ball('stachel', 150, .62) + '</div><div class="panel center"><p>Sammle Bälle und kämpfe gegen andere. Wie willst du heißen?</p></div>' +
+    '<div class="inp"><input id="nm" maxlength="16" placeholder="Dein Name" autocomplete="off"></div><div class="err center" id="err">' + esc(err) + '</div>' +
+    btn('Los geht\'s', 'register', '', 'pri big') + '<p class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dein Gerät merkt sich dein Konto. 3 bis 16 Zeichen.</p></div>');
 }
 
 /* ================= Verbindung ================= */
@@ -211,10 +169,8 @@ function wsSend(o) {
 }
 function onMsg(m) {
   switch (m.t) {
-    case 'hello':
-      if (m.ok) S.wsOK = true; else toast('Server-Anmeldung fehlgeschlagen.');
-      break;
-    case 'kicked': S.kicked = true; show('<div class="col center"><h1>Ball gegen Ball</h1><p>Dein Konto wurde auf einem anderen Gerät oder Tab geöffnet.</p>' + btn('Hier weiterspielen', 'reload') + '</div>'); break;
+    case 'hello': if (m.ok) S.wsOK = true; else toast('Server-Anmeldung fehlgeschlagen.'); break;
+    case 'kicked': S.kicked = true; show('<div class="col center"><h1>Ball gegen Ball</h1><div class="panel"><p>Dein Konto wurde auf einem anderen Gerät oder Tab geöffnet.</p></div>' + btn('Hier weiterspielen', 'reload') + '</div>'); break;
     case 'error': toast(errText(m.code)); break;
     case 'queued': if (S.screen !== 'queue') queueScreen(m); else queueUpdate(m); break;
     case 'unqueued': home(); break;
@@ -222,9 +178,7 @@ function onMsg(m) {
     case 'room_left': S.room = null; friends(); break;
     case 'match_start': S.match = { players: m.players, you: m.you, n: m.n, mode: m.mode, lives: m.lives, friendly: m.friendly, round: 0 }; if (m.resume) toast('Wieder verbunden.'); else matchIntro(); break;
     case 'pick_phase': pickScreen(m); break;
-    case 'picked': break;
     case 'reveal': dirScreen(m); break;
-    case 'dir_ok': break;
     case 'fight': fightScreen(m); break;
     case 'match_end': matchEnd(m); break;
     case 'left': S.match = null; home(); break;
@@ -233,103 +187,156 @@ function onMsg(m) {
 
 /* ================= Startseite ================= */
 function home() {
-  S.screen = 'home'; setView(null); closeOverlay();
-  const me = S.me, tot = me.balls.length, types = new Set(me.balls.map(b => b.type)).size;
-  show('<div class="col">' + topBar() +
+  S.screen = 'home'; setView(null); closeOverlay(); setScene('menu');
+  const me = S.me, types = new Set(me.balls.map(b => b.type)).size, ev = eventLive();
+  show('<div class="col" style="padding-top:2px"><div class="row sb" style="padding-right:50px"><div class="pill">' + esc(me.name) + '</div></div><div class="row" style="justify-content:flex-end;margin-top:-6px">' + wallet() + '</div>' +
     '<h1 class="jit">Ball gegen Ball</h1>' +
-    '<div class="hero"><canvas class="ball" data-ball="' + topType() + '" data-size="150" data-fit=".62"></canvas></div>' +
-    '<div class="stat">' + me.wins + ' Siege, ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen gesammelt</div>' +
-    btn('Kampf (1 gegen 1)', 'queue1') + btn('Team-Kampf (2 gegen 2)', 'queue2', '', 'btn') + btn('Mit Freunden spielen', 'friends', '', 'btn2') +
-    '<div class="row gap6">' + '<div class="grow">' + btn('Sammlung', 'collection', '', 'btn2') + '</div><div class="grow">' + btn('Ballbox', 'box', '', 'btn2') + '</div></div>' +
-    '<div class="row gap6">' + '<div class="grow">' + btn('Markt', 'market', '', 'btn2') + '</div><div class="grow">' + btn('Tauschen', 'trades', '', 'btn2') + '</div></div>' +
-    (me.dailyReady ? btn('Tagesbelohnung abholen', 'daily') : '<p class="center mute small">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
-    '<p class="center small"><button data-act="rename" class="mute" style="text-decoration:underline">Name ändern</button></p></div>');
+    '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
+    '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
+    (ev ? '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="halloween">' + gi('token', 46) + '<div class="grow"><h3>Halloween-Box ist da!</h3><span class="small">' + timeLeft(me.eventEnd - now()) + ' - 6 neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>' : '') +
+    btn('Kampf', 'queue1', '', 'pri big') + btn('Team-Kampf (2 gegen 2)', 'queue2') + btn('Mit Freunden spielen', 'friends') +
+    '<div class="row gap6"><div class="grow">' + btn('Sammlung', 'collection') + '</div><div class="grow">' + btn('Ballboxen', 'box') + '</div></div>' +
+    '<div class="row gap6"><div class="grow">' + btn('Markt', 'market') + '</div><div class="grow">' + btn('Tauschen', 'trades') + '</div></div>' +
+    (me.dailyReady ? btn('Tagesbelohnung abholen' + (ev ? ' (+5 Marken)' : ''), 'daily', '', 'green') : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
+    '<p class="center small"><button data-act="rename" style="color:#fff;text-decoration:underline;text-shadow:1px 1px 0 var(--ink)">Name ändern</button></p></div>');
 }
 
 /* ================= Sammlung ================= */
-function collection() {
+function sortedIds() {
+  const c = typeCounts(), f = S.col, q = f.q.trim().toLowerCase();
+  let ids = BALL_IDS.filter(id => {
+    const d = DEFS[id];
+    if (f.rar !== 'all' && d.rarity !== f.rar) return false;
+    if (f.box !== 'all' && d.box !== f.box) return false;
+    if (f.own && !c[id]) return false;
+    if (q && !d.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const ro = id => RARITY[DEFS[id].rarity].order;
+  if (f.sort === 'name') ids.sort((a, b) => DEFS[a].name.localeCompare(DEFS[b].name, 'de'));
+  else if (f.sort === 'own') ids.sort((a, b) => ((c[b] ? c[b].n : 0) - (c[a] ? c[a].n : 0)) || ro(b) - ro(a));
+  else ids.sort((a, b) => ro(b) - ro(a) || DEFS[a].name.localeCompare(DEFS[b].name, 'de'));
+  return ids;
+}
+function colGrid() {
+  const c = typeCounts(), ids = sortedIds();
+  if (!ids.length) return '<p class="center" style="grid-column:1/-1;color:#fff;text-shadow:1px 1px 0 var(--ink)">Nichts gefunden.</p>';
+  return ids.map(id => {
+    const d = DEFS[id], o = c[id];
+    return '<button class="card cell rbar' + (o ? '' : ' locked') + '" style="--rc:' + RARITY[d.rarity].color + '" data-act="detail" data-t="' + id + '">' +
+      (o && o.n > 1 ? '<span class="badge">x' + o.n + '</span>' : '') +
+      ball(id, 84, .62, o ? '' : 'data-dark="1"') + '<div class="nm">' + (o ? d.name : '???') + '</div></button>';
+  }).join('');
+}
+function collection(keep) {
   S.screen = 'collection'; setView(null);
-  const c = typeCounts(), have = Object.keys(c).length;
+  const c = typeCounts(), have = Object.keys(c).length, f = S.col;
   const tabs = [['all', 'Alle']].concat(SORT.map(r => [r, RARITY[r].name]));
-  const ids = BALL_IDS.filter(id => S.filter === 'all' || DEFS[id].rarity === S.filter)
-    .sort((a, b) => RARITY[DEFS[a].rarity].order - RARITY[DEFS[b].rarity].order);
+  const boxes = [['all', 'Alle Boxen']].concat(BOX_LIST.map(b => [b.id, b.name.replace('-Box', '')]));
   show('<div class="col">' + backBar('Sammlung') +
-    '<p class="center small">' + have + ' von ' + BALL_IDS.length + ' verschiedenen Bällen - ' + S.me.balls.length + ' insgesamt</p>' +
-    '<div class="tabs">' + tabs.map(t => '<button class="tab" data-fr="' + (S.filter === t[0] ? 'tabon' : 'tab') + '" data-act="filter" data-v="' + t[0] + '"><span>' + t[1] + '</span></button>').join('') + '</div>' +
-    '<div class="grid3">' + ids.map(id => {
-      const d = DEFS[id], o = c[id];
-      return '<button class="card cell' + (o ? '' : ' locked') + '" data-fr="card" data-strip="' + RARITY[d.rarity].color + '" data-act="detail" data-t="' + id + '">' +
-        (o && o.n > 1 ? '<span class="badge">x' + o.n + '</span>' : '') +
-        '<div style="height:12px"></div><canvas class="ball" data-ball="' + id + '" data-size="84" data-fit=".6"></canvas><div class="nm">' + (o ? d.name : '???') + '</div></button>';
-    }).join('') + '</div></div>');
+    '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + BALL_IDS.length + ' Bällen</span><span>' + S.me.balls.length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
+    '<div class="row gap6"><div class="inp grow row" style="padding-left:8px">' + gi('search', 24) + '<input id="cq" placeholder="Ball suchen" value="' + esc(f.q) + '" autocomplete="off"></div></div>' +
+    '<div class="tabs">' + tabs.map(t => '<button class="tab' + (f.rar === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="rar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+    '<div class="tabs">' + boxes.map(t => '<button class="tab' + (f.box === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="box" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+    '<div class="tabs"><button class="tab' + (f.sort === 'rar' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="rar">Nach Seltenheit</button><button class="tab' + (f.sort === 'name' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="name">A bis Z</button><button class="tab' + (f.sort === 'own' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="own">Meiste</button><button class="tab' + (f.own ? ' on' : '') + '" data-act="cown">Nur meine</button></div>' +
+    '<div class="grid3" id="cgrid">' + colGrid() + '</div></div>');
+  const q = $('#cq'); if (q) q.oninput = () => { S.col.q = q.value; const g = $('#cgrid'); if (g) { g.innerHTML = colGrid(); decorate(g); } };
 }
 function detail(type) {
-  const d = DEFS[type], c = typeCounts()[type];
+  const d = DEFS[type], c = typeCounts()[type], box = BOX_BY_ID[d.box];
   const sugg = { gewoehnlich: 40, selten: 100, episch: 250, legendaer: 700 }[d.rarity];
   let own = '';
   if (c) {
     own = '<h3>Du besitzt ' + c.n + 'x</h3>' + c.list.map(b => {
       let r;
-      if (b.lock === 1) r = '<span class="small">Auf dem Markt für ' + coinHTML(b.price) + '</span><button class="btn2 sm" data-fr="btn2" data-act="mkcancel" data-uid="' + b.uid + '"><span>Zurückziehen</span></button>';
-      else if (b.lock === 2) r = '<span class="small">' + ico('lock', 20) + ' Im Tausch</span>';
-      else r = '<div class="inp" data-fr="inp" style="width:90px"><input type="number" inputmode="numeric" min="10" id="pr' + b.uid + '" value="' + sugg + '"></div><button class="btn sm" data-fr="btn" data-act="mklist" data-uid="' + b.uid + '"><span>Verkaufen</span></button>';
-      return '<div class="listrow card" data-fr="card"><span class="small grow">Ball Nr. ' + b.uid + '</span>' + r + '</div>';
-    }).join('') + '<p class="small mute">Doppelte Bälle sind im Kampf nutzlos, aber du kannst sie verkaufen oder tauschen. Drei freie Bälle musst du immer behalten.</p>';
-  } else own = '<p class="center mute">Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.</p>';
-  overlay('<div class="col"><div class="row sb"><h2 class="jit">' + esc(d.name) + '</h2><button class="btn2 pill" data-fr="btn2" data-act="closeov" style="padding:6px 14px">' + ico('cross', 24) + '</button></div>' +
-    '<div class="hero"><canvas class="ball" data-ball="' + type + '" data-size="220" data-fit=".66"></canvas></div>' +
-    '<div class="row sb wrap">' + rarHTML(d.rarity) + '<span>' + ico('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + ico('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div>' +
-    '<div class="panel" data-fr="panel"><p>' + esc(d.desc) + '</p></div>' +
-    '<div class="panel" data-fr="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' + own + '</div>');
+      if (b.lock === 1) r = '<span class="small">Auf dem Markt für ' + coinHTML(b.price) + '</span><button class="btn sm" data-act="mkcancel" data-uid="' + b.uid + '">Zurückziehen</button>';
+      else if (b.lock === 2) r = '<span class="small">' + gi('lock', 20) + ' Im Tausch</span>';
+      else r = '<div class="inp" style="width:90px"><input type="number" inputmode="numeric" min="10" id="pr' + b.uid + '" value="' + sugg + '"></div><button class="btn sm pri" data-act="mklist" data-uid="' + b.uid + '">Verkaufen</button>';
+      return '<div class="listrow card"><span class="small grow">Ball Nr. ' + b.uid + '</span>' + r + '</div>';
+    }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Doppelte Bälle sind im Kampf nutzlos, aber du kannst sie verkaufen oder tauschen. Drei freie Bälle musst du immer behalten.</p>';
+  } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.</p>';
+  overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + esc(d.name) + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
+    '<div class="hero pop">' + ball(type, 230, .66) + '</div>' +
+    '<div class="panel"><div class="row sb wrap">' + rarHTML(d.rarity) + '<span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p>' +
+    (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
+    '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' + own + '</div>');
 }
 
-/* ================= Ballbox ================= */
+/* ================= Ballboxen ================= */
+function boxStats(id) {
+  const ids = ballsInBox(id), c = typeCounts();
+  return { n: ids.length, own: ids.filter(t => c[t]).length, ids };
+}
 function boxScreen() {
   S.screen = 'box'; setView(null);
-  const p = S.me.boxPrice, ok = S.me.coins >= p;
-  show('<div class="col">' + backBar('Ballbox') +
-    '<div class="hero"><canvas id="bx" width="1" height="1"></canvas></div>' +
-    '<div class="panel center" data-fr="panel"><h3>Standard-Box</h3><p class="mt">Zehn Bälle fallen in die Schüssel. Der erste, der durch die Öffnung rutscht, gehört dir.</p></div>' +
-    '<div class="panel" data-fr="panel"><h3>Chancen</h3>' + SORT.map(r => '<div class="row sb"><span>' + rarHTML(r) + '</span><span>' + RARITY[r].weight + ' %</span></div>').join('') + '</div>' +
-    btn('Öffnen für ' + p + ' Münzen', 'openbox', ok ? '' : 'disabled') + (ok ? '' : '<p class="center small mute">Dir fehlen Münzen. Gewinne Kämpfe oder hole die Tagesbelohnung.</p>') + '</div>');
-  const cv = $('#bx'), w = 150, h = 130; cv.width = w * DPR; cv.height = h * DPR; cv.style.width = w + 'px'; cv.style.height = h + 'px';
-  S.view = {
-    frame(tm, dt, tf) {
-      const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
-      const old = setTarget(ctx); spr(BOXART(), w / 2, h / 2 + 4 + Math.sin(tm * 2) * 2, tf, 1, Math.sin(tm * 1.5) * .04); setTarget(old);
-    }
-  };
+  const list = BOX_LIST.filter(b => boxActive(b.id, now()));
+  show('<div class="col">' + backBar('Ballboxen') +
+    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle eine Box. Zehn Bälle fallen in die Schüssel, der erste durch die Öffnung gehört dir.</p>' +
+    list.map(b => {
+      const st = boxStats(b.id), ev = !!b.until;
+      return '<button class="panel boxcard' + (ev ? ' event' : '') + '" data-act="boxdetail" data-id="' + b.id + '"><div class="art hero bounce">' + gi('box', 78, b.col) + '</div><div class="grow"><h3>' + esc(b.name) + (ev ? ' <span class="tag">Begrenzt</span>' : '') + '</h3>' +
+        '<div class="small mute">' + esc(b.desc) + '</div><div class="row sb small mt"><span>' + st.own + ' von ' + st.n + ' gesammelt</span><span style="font-size:21px">' + priceHTML(b) + '</span></div>' +
+        (ev ? '<div class="small" style="color:var(--danger)">' + timeLeft(b.until - now()) + '</div>' : '') + '</div></button>';
+    }).join('') + '</div>');
 }
-async function openBox() {
-  const before = new Set(S.me.balls.map(b => b.type));
-  const r = await api('/api/box', { box: 'standard' });
+function boxDetail(id) {
+  const b = BOX_BY_ID[id];
+  if (!b || !boxActive(id, now())) { toast('Diese Box gibt es nicht mehr.'); return boxScreen(); }
+  S.screen = 'boxdetail'; setView(null); S.curBox = id;
+  const st = boxStats(id), c = typeCounts(), have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price;
+  const byR = SORT.map(r => [r, st.ids.filter(t => DEFS[t].rarity === r).length]).filter(x => x[1]);
+  show('<div class="col">' + backBar(b.name, 'box') +
+    '<div class="hero bounce" style="margin-top:6px">' + gi('box', 130, b.col) + '</div>' +
+    (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am 1. November. ' + timeLeft(b.until - now()) + '.<div class="small mt">Halloween-Marken bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Marken verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
+    '<div class="panel"><h3>Das kann drin sein</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
+    st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? '' : '') + esc(DEFS[t].name.replace('ball', '')) + '</div></button>').join('') +
+    '</div></div>' +
+    '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + r[1] + ' Bälle)</span></span><span>' + RARITY[r[0]].weight + ' %</span></div>').join('') + '</div>' +
+    btn('Öffnen für ' + priceHTML(b), 'openbox', (ok ? '' : 'disabled') + ' data-id="' + id + '"', 'pri big') +
+    (ok ? '' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (b.cur === 'tokens' ? 'Dir fehlen Marken. Gewinne Kämpfe oder hole die Tagesbelohnung.' : 'Dir fehlen Münzen. Gewinne Kämpfe oder hole die Tagesbelohnung.') + '</p>') + '</div>');
+}
+async function openBox(id) {
+  const b = BOX_BY_ID[id || S.curBox];
+  const before = new Set(S.me.balls.map(x => x.type));
+  const r = await api('/api/box', { box: b.id });
   if (r.err) { toast(errText(r.err)); return; }
-  S.screen = 'boxplay';
-  const W = Math.min(window.innerWidth - 32, 340), H = Math.round(W / BW * (BOX_H));
-  show('<div class="col"><h2 class="center jit">Los geht\'s!</h2><canvas id="bc" class="view"></canvas><p class="center small mute">Der erste Ball durch die Öffnung unten gehört dir.</p></div>');
+  S.screen = 'boxplay'; sfx('open');
+  const W = Math.min(window.innerWidth - 28, 340), H = Math.round(W / BW * BOX_H);
+  show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Los geht\'s!</h2><canvas id="bc" class="view"></canvas><p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Der erste Ball durch die Öffnung unten gehört dir.</p></div>');
   const cv = $('#bc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  const s = createBox(r.seed, 10); let acc = 0, fin = 0, shown = false;
-  S.view = {
+  const s = createBox(r.seed, 10); let acc = 0, fin = 0, shown = false, lastN = 0, flash = 0;
+  setView({
     frame(tm, dt, tf) {
       const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
-      acc += dt * 120;
+      // Spannung: kurz vor der Öffnung läuft alles in Zeitlupe
+      let near = false;
+      for (const x of s.balls) if (!x.done && x.y > 300) near = true;
+      const rate = s.order.length ? 1 : near ? .45 : 1;
+      acc += dt * 120 * rate;
       while (acc >= 1 && !s.done && s.order.length < 3) { stepBox(s); acc--; }
+      if (s.order.length > lastN) { if (lastN === 0) { flash = 1; sfx('pop'); } lastN = s.order.length; }
+      flash = Math.max(0, flash - dt * 2.5);
       if (s.order.length >= 3 || s.done) { if (!fin) fin = tm; }
-      drawBox(ctx, W, s, r.cands, tm, tf, s.order.length ? s.order[0] : -1);
-      if (fin && tm - fin > 1.6 && !shown) { shown = true; boxResult(r, s, before); }
+      drawBox(ctx, W, s, r.cands, tm, tf, s.order.length ? s.order[0] : -1, b.col);
+      if (flash > 0) { ctx.fillStyle = 'rgba(255,250,200,' + flash * .5 + ')'; ctx.fillRect(0, 0, W, H); }
+      if (fin && tm - fin > 1.4 && !shown) { shown = true; boxResult(r, s, before, b); }
     }
-  };
+  });
 }
-function boxResult(r, s, before) {
+function boxResult(r, s, before, b) {
   S.screen = 'boxres'; setView(null);
-  const d = DEFS[r.ball.type], isNew = !before.has(r.ball.type);
-  const near = s.order.slice(1, 3).map(i => r.cands[i]).filter(t => RARITY[DEFS[t].rarity].order > RARITY[d.rarity].order);
-  const ok = S.me.coins >= S.me.boxPrice;
-  show('<div class="col"><h1 class="jit">' + esc(d.name) + '!</h1><div class="center">' + rarHTML(d.rarity) + (isNew ? ' - <b>Neu in deiner Sammlung!</b>' : ' - Du hast ihn schon (Duplikat)') + '</div>' +
-    '<div class="hero"><canvas class="ball" data-ball="' + r.ball.type + '" data-size="230" data-fit=".66"></canvas></div>' +
-    '<div class="panel" data-fr="panel"><div class="row sb wrap"><span>' + ico('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + ico('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
-    (near.length ? '<p class="center">Knapp daneben: ' + near.map(t => '<b style="color:' + RARITY[DEFS[t].rarity].color + '">' + esc(ballName(t)) + '</b>').join(' und ') + ' lag auch vorn!</p>' : '') +
-    btn('Noch eine Box (' + S.me.boxPrice + ' Münzen)', 'openbox', ok ? '' : 'disabled') + btn('Zurück', 'home', '', 'btn2') + '</div>');
+  const d = DEFS[r.ball.type], isNew = !before.has(r.ball.type), rar = d.rarity;
+  const near = s.order.slice(1, 3).map(i => r.cands[i]).filter(t => RARITY[DEFS[t].rarity].order > RARITY[rar].order);
+  const have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price && boxActive(b.id, now());
+  const big = rar === 'episch' || rar === 'legendaer';
+  show('<div class="col res"><h1 class="jit pop" style="color:#fff;text-shadow:3px 4px 0 var(--ink)">' + esc(d.name) + '!</h1><div>' + rarHTML(rar).replace('rar"', 'rar" style="font-size:22px;background:var(--paper);padding:1px 10px;border:2px solid var(--ink);border-radius:8px;color:' + RARITY[rar].color + '"') + '</div>' +
+    '<div class="hero sheet-ball" style="min-height:250px;align-items:center">' + (big ? '<div class="rays"></div>' : '') + '<div class="pop" style="position:relative">' + ball(r.ball.type, 240, .66) + '</div></div>' +
+    (isNew ? '<div class="center"><span class="tag" style="font-size:24px;padding:2px 14px">Neu in deiner Sammlung!</span></div>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast ihn schon (Duplikat). Verkaufe oder tausche ihn.</p>') +
+    '<div class="panel" style="text-align:left"><div class="row sb wrap"><span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
+    (near.length ? '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Knapp daneben: ' + near.map(t => '<b style="color:' + RARITY[DEFS[t].rarity].color + ';background:var(--paper);padding:0 6px;border-radius:6px">' + esc(ballName(t)) + '</b>').join(' und ') + ' lag auch vorn!</p>' : '') +
+    btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box') + '</div>');
+  sfx(rar === 'legendaer' ? 'legend' : big ? 'rare' : 'coin');
+  if (big) confetti(rar === 'legendaer' ? 70 : 40);
 }
 
 /* ================= Markt ================= */
@@ -342,23 +349,23 @@ async function market(resetPage) {
     const r = await api('/api/market/browse', { rarity: mk.rarity, q: mk.q, sort: mk.sort, page: mk.page });
     if (r.err) { toast(errText(r.err)); return; }
     mk.items = r.items; mk.total = r.total;
-    body = '<div class="row gap6 wrap">' + [['', 'Alle']].concat(SORT.map(x => [x, RARITY[x].name])).map(t => '<button class="tab" data-fr="' + (mk.rarity === t[0] ? 'tabon' : 'tab') + '" data-act="mkrar" data-v="' + t[0] + '"><span>' + t[1] + '</span></button>').join('') + '</div>' +
-      '<div class="row gap6"><div class="inp grow" data-fr="inp"><input id="mkq" placeholder="Ball suchen" value="' + esc(mk.q) + '"></div><button class="btn sm" data-fr="btn" data-act="mksearch"><span>Suchen</span></button></div>' +
-      '<div class="row gap6">' + [['low', 'Billigste'], ['high', 'Teuerste'], ['new', 'Neueste']].map(t => '<button class="tab" data-fr="' + (mk.sort === t[0] ? 'tabon' : 'tab') + '" data-act="mksort" data-v="' + t[0] + '"><span>' + t[1] + '</span></button>').join('') + '</div>' +
+    body = '<div class="tabs">' + [['', 'Alle']].concat(SORT.map(x => [x, RARITY[x].name])).map(t => '<button class="tab' + (mk.rarity === t[0] ? ' on' : '') + '" data-act="mkrar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+      '<div class="row gap6"><div class="inp grow row" style="padding-left:8px">' + gi('search', 24) + '<input id="mkq" placeholder="Ball suchen" value="' + esc(mk.q) + '"></div><button class="btn sm pri" data-act="mksearch">Suchen</button></div>' +
+      '<div class="tabs">' + [['low', 'Billigste'], ['high', 'Teuerste'], ['new', 'Neueste']].map(t => '<button class="tab' + (mk.sort === t[0] ? ' on' : '') + '" data-act="mksort" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
       (mk.items.length ? mk.items.map(it => {
         const d = DEFS[it.type];
-        return '<div class="listrow card" data-fr="card" data-strip="' + RARITY[d.rarity].color + '"><div style="height:8px;width:0"></div><canvas class="ball" data-ball="' + it.type + '" data-size="56" data-fit=".7"></canvas><div class="grow"><b>' + esc(d.name) + '</b><br><span class="small mute">von ' + esc(it.seller) + '</span></div>' +
-          (it.mine ? '<span class="small">dein Angebot</span>' : '<button class="btn sm" data-fr="btn" data-act="mkbuy" data-uid="' + it.uid + '" data-price="' + it.price + '"><span>' + coinHTML(it.price) + '</span></button>') + '</div>';
-      }).join('') : '<p class="center mute">Gerade keine Angebote.</p>') +
-      '<div class="row sb">' + (mk.page > 0 ? '<button class="btn2 sm btn" data-fr="btn2" data-act="mkprev"><span>Zurück</span></button>' : '<span></span>') + (mk.total > (mk.page + 1) * 40 ? '<button class="btn2 sm btn" data-fr="btn2" data-act="mknext"><span>Weiter</span></button>' : '<span></span>') + '</div>';
+        return '<div class="listrow card rbar" style="--rc:' + RARITY[d.rarity].color + '">' + ball(it.type, 58, .7) + '<div class="grow"><b>' + esc(d.name) + '</b><br><span class="small mute">von ' + esc(it.seller) + '</span></div>' +
+          (it.mine ? '<span class="small">dein Angebot</span>' : '<button class="btn sm pri" data-act="mkbuy" data-uid="' + it.uid + '">' + coinHTML(it.price) + '</button>') + '</div>';
+      }).join('') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Gerade keine Angebote.</p>') +
+      '<div class="row sb">' + (mk.page > 0 ? '<button class="btn sm" data-act="mkprev">Zurück</button>' : '<span></span>') + (mk.total > (mk.page + 1) * 40 ? '<button class="btn sm" data-act="mknext">Weiter</button>' : '<span></span>') + '</div>';
   } else {
     const mine = S.me.balls.filter(b => b.lock === 1);
     body = mine.length ? mine.map(b => {
       const d = DEFS[b.type];
-      return '<div class="listrow card" data-fr="card" data-strip="' + RARITY[d.rarity].color + '"><div style="height:8px;width:0"></div><canvas class="ball" data-ball="' + b.type + '" data-size="56" data-fit=".7"></canvas><div class="grow"><b>' + esc(d.name) + '</b><br>' + coinHTML(b.price) + '</div><button class="btn2 sm btn" data-fr="btn2" data-act="mkcancel" data-uid="' + b.uid + '" data-back="market"><span>Zurückziehen</span></button></div>';
-    }).join('') : '<p class="center mute">Du hast nichts zum Verkauf angeboten. Öffne in der Sammlung einen Ball, den du doppelt hast, und lege einen Preis fest.</p>';
+      return '<div class="listrow card rbar" style="--rc:' + RARITY[d.rarity].color + '">' + ball(b.type, 58, .7) + '<div class="grow"><b>' + esc(d.name) + '</b><br>' + coinHTML(b.price) + '</div><button class="btn sm" data-act="mkcancel" data-uid="' + b.uid + '" data-back="market">Zurückziehen</button></div>';
+    }).join('') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast nichts zum Verkauf angeboten. Öffne in der Sammlung einen Ball, den du doppelt hast, und lege einen Preis fest.</p>';
   }
-  show('<div class="col">' + backBar('Markt') + '<div class="row gap6"><button class="tab" data-fr="' + (mk.tab === 'buy' ? 'tabon' : 'tab') + '" data-act="mktab" data-v="buy"><span>Kaufen</span></button><button class="tab" data-fr="' + (mk.tab === 'mine' ? 'tabon' : 'tab') + '" data-act="mktab" data-v="mine"><span>Meine Angebote</span></button></div>' + body + '<p class="small mute center">Beim Verkauf werden 5 % Gebühr abgezogen.</p></div>');
+  show('<div class="col">' + backBar('Markt') + '<div class="tabs"><button class="tab' + (mk.tab === 'buy' ? ' on' : '') + '" data-act="mktab" data-v="buy">Kaufen</button><button class="tab' + (mk.tab === 'mine' ? ' on' : '') + '" data-act="mktab" data-v="mine">Meine Angebote</button></div>' + body + '<p class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Beim Verkauf werden 5 % Gebühr abgezogen.</p></div>');
 }
 
 /* ================= Tauschen ================= */
@@ -368,14 +375,14 @@ async function trades() {
   let body = '';
   if (tab === 'new') {
     const t = S.tnew, myFree = S.me.balls.filter(b => !b.lock);
-    const chip = (b, set, act) => '<button class="tab" data-fr="' + (set.has(b.uid) ? 'tabon' : 'tab') + '" data-act="' + act + '" data-uid="' + b.uid + '"><span>' + esc(ballName(b.type)) + '</span></button>';
-    body = '<div class="row gap6"><div class="inp grow" data-fr="inp"><input id="tname" placeholder="Spielername" value="' + esc(t.name) + '"></div><button class="btn sm" data-fr="btn" data-act="tfind"><span>Suchen</span></button></div>' +
+    const chip = (b, set, act) => '<button class="tab' + (set.has(b.uid) ? ' on' : '') + '" data-act="' + act + '" data-uid="' + b.uid + '">' + esc(ballName(b.type)) + '</button>';
+    body = '<div class="row gap6"><div class="inp grow"><input id="tname" placeholder="Spielername" value="' + esc(t.name) + '"></div><button class="btn sm pri" data-act="tfind">Suchen</button></div>' +
       '<div class="err" id="err"></div>' +
-      (t.player ? '<h3>Du gibst</h3><div class="row gap6 wrap">' + (myFree.map(b => chip(b, t.give, 'tgive')).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
-        '<div class="row gap6"><span>und</span><div class="inp" data-fr="inp" style="width:100px"><input id="cgive" type="number" inputmode="numeric" min="0" placeholder="0"></div>' + ico('coin', 22) + '</div>' +
-        '<h3>Du willst von ' + esc(t.player.name) + '</h3><div class="row gap6 wrap">' + (t.player.balls.map(b => chip(b, t.want, 'twant')).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
-        '<div class="row gap6"><span>und</span><div class="inp" data-fr="inp" style="width:100px"><input id="cwant" type="number" inputmode="numeric" min="0" placeholder="0"></div>' + ico('coin', 22) + '</div>' +
-        btn('Angebot senden', 'tsend') : '<p class="mute center">Suche einen Spieler über seinen Namen.</p>');
+      (t.player ? '<div class="panel"><h3>Du gibst</h3><div class="tabs mt">' + (myFree.map(b => chip(b, t.give, 'tgive')).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
+        '<div class="row gap6 mt"><span>und</span><div class="inp" style="width:100px"><input id="cgive" type="number" inputmode="numeric" min="0" placeholder="0"></div>' + gi('coin', 22) + '</div></div>' +
+        '<div class="panel"><h3>Du willst von ' + esc(t.player.name) + '</h3><div class="tabs mt">' + (t.player.balls.map(b => chip(b, t.want, 'twant')).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
+        '<div class="row gap6 mt"><span>und</span><div class="inp" style="width:100px"><input id="cwant" type="number" inputmode="numeric" min="0" placeholder="0"></div>' + gi('coin', 22) + '</div></div>' +
+        btn('Angebot senden', 'tsend', '', 'pri') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Suche einen Spieler über seinen Namen.</p>');
   } else {
     const r = await api('/api/trades');
     if (r.err) { toast(errText(r.err)); return; }
@@ -384,117 +391,113 @@ async function trades() {
     body = list.length ? list.map(t => {
       const other = t.mine ? t.to : t.from;
       let acts = '';
-      if (tab === 'in') acts = '<div class="row gap6"><button class="btn sm" data-fr="btn" data-act="tans" data-id="' + t.id + '" data-a="accept"><span>Annehmen</span></button><button class="btn2 sm btn" data-fr="btnr" data-act="tans" data-id="' + t.id + '" data-a="decline"><span>Ablehnen</span></button></div>';
-      else if (tab === 'out') acts = '<button class="btn2 sm btn" data-fr="btn2" data-act="tans" data-id="' + t.id + '" data-a="cancel"><span>Zurückziehen</span></button>';
+      if (tab === 'in') acts = '<div class="row gap6"><button class="btn sm green" data-act="tans" data-id="' + t.id + '" data-a="accept">Annehmen</button><button class="btn sm red" data-act="tans" data-id="' + t.id + '" data-a="decline">Ablehnen</button></div>';
+      else if (tab === 'out') acts = '<button class="btn sm" data-act="tans" data-id="' + t.id + '" data-a="cancel">Zurückziehen</button>';
       const you = t.mine ? t.give : t.want, they = t.mine ? t.want : t.give, cy = t.mine ? t.coinsGive : t.coinsWant, ct = t.mine ? t.coinsWant : t.coinsGive;
       const ST = { accepted: 'angenommen', declined: 'abgelehnt', cancelled: 'zurückgezogen', expired: 'abgelaufen' };
-      return '<div class="card col" data-fr="card" style="gap:6px"><div class="row sb"><b>' + esc(other) + '</b>' + (tab === 'hist' ? '<span class="small">' + (ST[t.status] || t.status) + '</span>' : '') + '</div>' +
+      return '<div class="card col" style="gap:6px"><div class="row sb"><b>' + esc(other) + '</b>' + (tab === 'hist' ? '<span class="small">' + (ST[t.status] || t.status) + '</span>' : '') + '</div>' +
         '<p class="small">Du gibst: ' + bl(you) + (cy ? ' + ' + coinHTML(cy) : '') + '</p><p class="small">Du bekommst: ' + bl(they) + (ct ? ' + ' + coinHTML(ct) : '') + '</p>' + acts + '</div>';
-    }).join('') : '<p class="center mute">Nichts da.</p>';
+    }).join('') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Nichts da.</p>';
   }
   const tabs = [['in', 'Eingehend'], ['out', 'Ausgehend'], ['new', 'Neu'], ['hist', 'Verlauf']];
-  show('<div class="col">' + backBar('Tauschen') + '<div class="tabs">' + tabs.map(t => '<button class="tab" data-fr="' + (tab === t[0] ? 'tabon' : 'tab') + '" data-act="ttab" data-v="' + t[0] + '"><span>' + t[1] + '</span></button>').join('') + '</div>' + body + '</div>');
+  show('<div class="col">' + backBar('Tauschen') + '<div class="tabs">' + tabs.map(t => '<button class="tab' + (tab === t[0] ? ' on' : '') + '" data-act="ttab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' + body + '</div>');
 }
 
 /* ================= Freunde ================= */
 function friends() {
   S.screen = 'friends'; setView(null);
   show('<div class="col">' + backBar('Mit Freunden') +
-    '<p class="center">Erstelle einen Raum und gib deinen Freunden den Code. Leere Plätze füllen Bots auf. Es gibt keine Belohnung, aber auch keine Verluste.</p>' +
-    btn('Raum erstellen: 1 gegen 1', 'room1') + btn('Raum erstellen: 2 gegen 2', 'room2', '', 'btn') +
-    '<h3 class="center mt">Einem Raum beitreten</h3><div class="inp" data-fr="inp"><input id="rc" maxlength="4" placeholder="CODE" style="text-transform:uppercase;text-align:center;font-size:24px"></div>' + btn('Beitreten', 'roomjoin', '', 'btn2') + '</div>');
+    '<div class="panel"><p class="center">Erstelle einen Raum und gib deinen Freunden den Code. Leere Plätze füllen Bots auf. Es gibt keine Belohnung, aber auch keine Verluste.</p></div>' +
+    btn('Raum erstellen: 1 gegen 1', 'room1', '', 'pri') + btn('Raum erstellen: 2 gegen 2', 'room2') +
+    '<h3 class="center mt" style="color:#fff;text-shadow:2px 2px 0 var(--ink)">Einem Raum beitreten</h3><div class="inp"><input id="rc" maxlength="4" placeholder="CODE" style="text-transform:uppercase;text-align:center;font:400 34px var(--f-display)"></div>' + btn('Beitreten', 'roomjoin') + '</div>');
 }
 function roomScreen() {
   S.screen = 'room'; setView(null);
   const r = S.room, n = r.slots.length;
   const slot = i => {
     const nm = r.slots[i];
-    return '<div class="listrow card" data-fr="card"><span class="grow">' + (nm ? '<b>' + esc(nm) + '</b>' + (i === r.youSlot ? ' (du)' : '') : '<span class="mute">frei (Bot)</span>') + '</span>' + (!nm ? '<button class="btn sm" data-fr="btn" data-act="roomslot" data-s="' + i + '"><span>Hierhin</span></button>' : '') + '</div>';
+    return '<div class="listrow card"><span class="grow">' + (nm ? '<b>' + esc(nm) + '</b>' + (i === r.youSlot ? ' (du)' : '') : '<span class="mute">frei (Bot)</span>') + '</span>' + (!nm ? '<button class="btn sm" data-act="roomslot" data-s="' + i + '">Hierhin</button>' : '') + '</div>';
   };
   const teams = n === 2 ? '<h3>Spieler 1</h3>' + slot(0) + '<h3>Spieler 2</h3>' + slot(1)
-    : '<h3 style="color:' + TEAM_COL[0] + '">Team Blau</h3>' + slot(0) + slot(1) + '<h3 style="color:' + TEAM_COL[1] + '">Team Rot</h3>' + slot(2) + slot(3);
-  show('<div class="col"><h2 class="center jit">Raum</h2><p class="center">Code für deine Freunde:</p><div class="codebig jit">' + esc(r.code) + '</div>' + teams +
-    (r.youHost ? btn('Kampf starten', 'roomstart') : '<p class="center mute">Warte, bis ' + esc(r.host) + ' startet.</p>') + btn('Raum verlassen', 'roomleave', '', 'btn2') + '</div>');
+    : '<h3 style="color:#cfe4ff;text-shadow:1px 1px 0 var(--ink)">Team Blau</h3>' + slot(0) + slot(1) + '<h3 style="color:#ffd0c8;text-shadow:1px 1px 0 var(--ink)">Team Rot</h3>' + slot(2) + slot(3);
+  show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Raum</h2><p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Code für deine Freunde:</p><div class="panel codebig jit">' + esc(r.code) + '</div>' + teams +
+    (r.youHost ? btn('Kampf starten', 'roomstart', '', 'pri') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Warte, bis ' + esc(r.host) + ' startet.</p>') + btn('Raum verlassen', 'roomleave') + '</div>');
 }
 
 /* ================= Warteschlange ================= */
 function queueScreen(m) {
   S.screen = 'queue'; setView(null);
   const t0 = Date.now();
-  show('<div class="col center"><h2 class="jit">Suche Gegner ...</h2><div class="hero"><canvas class="ball" data-ball="' + topType() + '" data-size="170" data-fit=".62"></canvas></div>' +
-    '<p>' + (m.mode === 2 ? 'Team-Kampf (2 gegen 2)' : 'Kampf (1 gegen 1)') + '</p><p id="qc" class="small"></p><div class="big" id="qt">0</div><p class="small mute">Wenn nach 15 Sekunden niemand gefunden wurde, spielt ein Bot mit.</p>' + btn('Abbrechen', 'unqueue', '', 'btn2') + '</div>');
+  show('<div class="col center" style="margin-top:4vh"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Suche Gegner ...</h2><div class="hero bounce">' + ball(topType(), 180, .62) + '</div>' +
+    '<div class="panel"><p>' + (m.mode === 2 ? 'Team-Kampf (2 gegen 2)' : 'Kampf (1 gegen 1)') + '</p><p id="qc" class="small"></p><div class="big" id="qt">0</div><p class="small mute">Wenn nach 15 Sekunden niemand gefunden wurde, spielt ein Bot mit.</p></div>' + btn('Abbrechen', 'unqueue') + '</div>');
   every(() => { const e = $('#qt'); if (e) e.textContent = Math.floor((Date.now() - t0) / 1000); }, 300);
   queueUpdate(m);
 }
 function queueUpdate(m) { const e = $('#qc'); if (e) e.textContent = m.count + ' Spieler in der Warteschlange'; }
 
 /* ================= Kampf ================= */
-const POS2 = [[.22, .5], [.78, .5]], POS4 = [[.25, .28], [.25, .72], [.75, .28], [.75, .72]];
-function startPos(i, n) { return (n <= 2 ? POS2 : POS4)[i]; }
-function livesHTML(team, count) {
-  let h = ''; for (let i = 0; i < 3; i++) h += ico(i < count ? 'heart' : 'heart0', 26); return '<span class="lives" style="color:' + TEAM_COL[team] + '">' + h + '</span>';
-}
+function livesHTML(count) { let h = ''; for (let i = 0; i < 3; i++) h += gi(i < count ? 'heart' : 'heart0', 26); return '<span class="lives">' + h + '</span>'; }
 function matchHeader() {
   const m = S.match, me = m.players[m.you], my = me.team, en = 1 - my;
   const nm = t => m.n === 2 ? esc(m.players.find(p => p.team === t).name) : (t === my ? 'Dein Team' : 'Gegner');
-  return '<div class="row sb" id="mh"><div><div class="small" style="color:' + TEAM_COL[my] + '">' + (m.n === 2 ? 'Du' : 'Dein Team') + '</div>' + livesHTML(my, m.lives[my]) + '</div>' +
-    '<div class="center small">' + (m.friendly ? 'Freundschaftsspiel' : 'Runde ' + m.round) + '</div>' +
-    '<div style="text-align:right"><div class="small" style="color:' + TEAM_COL[en] + '">' + nm(en) + '</div>' + livesHTML(en, m.lives[en]) + '</div></div>';
+  return '<div class="row sb" id="mh" style="padding-right:52px"><div><div class="small" style="color:#cfe4ff;text-shadow:1px 1px 0 var(--ink)">' + (m.n === 2 ? 'Du' : 'Dein Team') + '</div>' + livesHTML(m.lives[my]) + '</div>' +
+    '<div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (m.friendly ? 'Freundschaftsspiel' : 'Runde ' + m.round) + '</div>' +
+    '<div style="text-align:right"><div class="small" style="color:#ffd0c8;text-shadow:1px 1px 0 var(--ink)">' + nm(en) + '</div>' + livesHTML(m.lives[en]) + '</div></div>';
 }
 function matchIntro() {
-  const m = S.match; S.screen = 'matchintro'; setView(null);
+  const m = S.match; S.screen = 'matchintro'; setView(null); setScene('fight'); sfx('go');
   const nm = p => (p.slot === m.you ? 'Du' : esc(p.name) + (p.bot ? ' (Bot)' : ''));
-  show('<div class="col center"><h2 class="jit">Gegner gefunden!</h2>' +
-    (m.n === 2 ? '<p>' + nm(m.players[0]) + ' gegen ' + nm(m.players[1]) + '</p>' :
+  show('<div class="col center" style="margin-top:8vh"><h2 class="jit pop" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Gegner gefunden!</h2><div class="panel pop">' +
+    (m.n === 2 ? '<h3>' + nm(m.players[0]) + '</h3><div class="big" style="font-size:40px;margin:4px 0">gegen</div><h3 style="color:var(--red)">' + nm(m.players[1]) + '</h3>' :
       '<p><b style="color:' + TEAM_COL[0] + '">Team Blau:</b> ' + [0, 1].map(i => nm(m.players[i])).join(' und ') + '</p><p><b style="color:' + TEAM_COL[1] + '">Team Rot:</b> ' + [2, 3].map(i => nm(m.players[i])).join(' und ') + '</p><p class="small mute">Eure Leben werden im Team geteilt.</p>') +
-    '<p class="mute">Drei Leben. Wer keins mehr hat, verliert.</p></div>');
+    '<p class="mute mt">Drei Leben. Wer keins mehr hat, verliert.</p></div></div>');
 }
 let pickSel = null, countdownEnd = 0;
 function startCountdown(secs, id) {
   countdownEnd = Date.now() + secs * 1000;
-  every(() => { const e = $(id || '#cd'); if (e) e.textContent = 'Noch ' + Math.max(0, Math.ceil((countdownEnd - Date.now()) / 1000)) + ' Sekunden'; }, 250);
+  every(() => { const e = $(id || '#cd'); if (e) e.textContent = Math.max(0, Math.ceil((countdownEnd - Date.now()) / 1000)) + ' Sekunden'; }, 250);
 }
 function pickScreen(m) {
   const M = S.match; if (!M) return;
-  M.round = m.round; M.lives = m.lives; S.screen = 'pick'; setView(null); pickSel = m.picked || null;
-  show('<div class="col">' + matchHeader() + '<h2 class="center jit">Wähle deinen Ball</h2><p class="center small mute">Dein Gegner sieht ihn erst, wenn alle gewählt haben.</p><div id="cd" class="timer"></div>' +
+  M.round = m.round; M.lives = m.lives; S.screen = 'pick'; setView(null); pickSel = m.picked || null; setScene('fight');
+  show('<div class="col">' + matchHeader() + '<h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Wähle deinen Ball</h2><p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dein Gegner sieht ihn erst, wenn alle gewählt haben.</p><div id="cd" class="timer" style="color:#fff;text-shadow:2px 2px 0 var(--ink)"></div>' +
     m.hand.map(h => {
       const d = DEFS[h.type];
-      return '<button class="card pickrow" data-fr="card" data-strip="' + RARITY[d.rarity].color + '" data-act="pick" data-uid="' + h.uid + '"><canvas class="ball" data-ball="' + h.type + '" data-size="92" data-fit=".66"></canvas>' +
-        '<div class="txt"><b>' + esc(d.name) + '</b>' + rarHTML(d.rarity) + '<span class="small">' + ico('heart', 18) + ' ' + d.hp + '   ' + ico('sword', 18) + ' ' + d.dmg + '</span><span class="small mute">' + esc(d.desc.split('.')[0]) + '.</span></div></button>';
-    }).join('') + '<div id="pickbtn">' + btn('Diesen Ball wählen', 'pickgo', 'disabled') + '</div></div>');
+      return '<button class="card pickrow rbar slide" style="--rc:' + RARITY[d.rarity].color + '" data-act="pick" data-uid="' + h.uid + '">' + ball(h.type, 96, .66) +
+        '<div class="txt"><b style="font:400 25px var(--f-display)">' + esc(d.name) + '</b>' + rarHTML(d.rarity) + '<span class="small">' + gi('heart', 18) + ' ' + d.hp + '   ' + gi('sword', 18) + ' ' + d.dmg + '</span><span class="small mute">' + esc(d.desc.split('.')[0]) + '.</span></div></button>';
+    }).join('') + '<div id="pickbtn">' + btn('Diesen Ball wählen', 'pickgo', 'disabled', 'pri') + '</div></div>');
   startCountdown(m.secs);
   if (pickSel) selectPick(pickSel, true);
 }
 function selectPick(uid, locked) {
   pickSel = uid;
-  SCREEN.querySelectorAll('[data-act="pick"]').forEach(el => { el.dataset.fr = String(el.dataset.uid) === String(uid) ? 'btn' : 'card'; });
-  const b = $('#pickbtn'); if (b && !locked) { b.innerHTML = btn('Diesen Ball wählen', 'pickgo'); decorate(b); }
-  if (locked) { const b2 = $('#pickbtn'); if (b2) b2.innerHTML = '<p class="center">Gewählt. Warte auf die anderen ...</p>'; }
+  SCREEN.querySelectorAll('[data-act="pick"]').forEach(el => el.classList.toggle('sel', String(el.dataset.uid) === String(uid)));
+  const b = $('#pickbtn'); if (b && !locked) b.innerHTML = btn('Diesen Ball wählen', 'pickgo', '', 'pri');
+  if (locked) { const b2 = $('#pickbtn'); if (b2) b2.innerHTML = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Gewählt. Warte auf die anderen ...</p>'; }
 }
 let dirDeg = 0, dirTouched = false, dirSent = false;
+function arenaSize() { return Math.min(window.innerWidth - 36, 460, Math.max(240, window.innerHeight - 330)); }
 function dirScreen(m) {
   const M = S.match; if (!M) return;
   S.screen = 'dir'; dirSent = false; dirTouched = false;
-  const n = M.n, balls = m.balls.map(b => ({ type: b.type, team: M.players[b.slot].team, deg: 0 }));
+  const balls = m.balls.map(b => ({ type: b.type, team: M.players[b.slot].team, deg: 0 }));
   const sim = createSim({ seed: 1, balls, noFx: true });
-  const my = sim.balls.find(b => b.slot === M.you);
-  const en = sim.balls.find(b => b.team !== my.team);
+  const my = sim.balls.find(b => b.slot === M.you), en = sim.balls.find(b => b.team !== my.team);
   dirDeg = Math.round((Math.atan2(en.y - my.y, en.x - my.x) * 180 / Math.PI + 360) % 360);
-  const W = Math.min(window.innerWidth - 32, 440), AS = W - 8, H = AS + 10;
-  show('<div class="col">' + matchHeader() + '<h2 class="center jit">Startrichtung</h2>' +
-    '<p class="center small">Tippe in die Arena, um die Richtung deines Balls zu wählen. Ab dann fliegt er geradeaus und prallt ab. Dein Gegner wählt gleichzeitig.</p><div id="cd" class="timer"></div>' +
-    '<canvas id="dc" class="view"></canvas>' + '<div class="small center">' + m.balls.map(b => { const p = M.players[b.slot]; return (b.slot === M.you ? 'Dein' : esc(p.name)) + ': <b style="color:' + TEAM_COL[p.team] + '">' + esc(ballName(b.type)) + '</b>'; }).join(' - ') + '</div>' +
-    btn('Los!', 'dirgo') + '</div>');
+  const AS = arenaSize(), W = AS + 20, H = AS + 20;
+  show('<div class="col">' + matchHeader() + '<h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Startrichtung</h2>' +
+    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tippe in die Arena, um die Richtung deines Balls zu wählen. Dein Gegner wählt gleichzeitig.</p><div id="cd" class="timer" style="color:#fff;text-shadow:2px 2px 0 var(--ink)"></div>' +
+    '<canvas id="dc" class="view"></canvas><div class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + m.balls.map(b => { const p = M.players[b.slot]; return (b.slot === M.you ? 'Dein' : esc(p.name)) + ': <b>' + esc(ballName(b.type)) + '</b>'; }).join(' - ') + '</div>' +
+    btn('Los!', 'dirgo', '', 'pri') + '</div>');
   startCountdown(m.secs);
   const cv = $('#dc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  const k = AS / BOX, ox = 4, oy = 4;
+  const k = AS / BOX, ox = 10, oy = 10;
   const setDeg = ev => {
     const r = cv.getBoundingClientRect(), x = (ev.clientX - r.left - ox) / k, y = (ev.clientY - r.top - oy) / k;
     dirDeg = Math.round((Math.atan2(y - my.y, x - my.x) * 180 / Math.PI + 360) % 360); dirTouched = true;
   };
   let down = false;
-  cv.onpointerdown = ev => { down = true; cv.setPointerCapture(ev.pointerId); setDeg(ev); };
+  cv.onpointerdown = ev => { down = true; cv.setPointerCapture(ev.pointerId); setDeg(ev); sfx('tick'); };
   cv.onpointermove = ev => { if (down) setDeg(ev); };
   cv.onpointerup = () => { down = false; };
   const auto = setTimeout(() => { if (!dirSent && dirTouched) sendDir(); }, Math.max(500, m.secs * 1000 - 700));
@@ -504,70 +507,106 @@ function dirScreen(m) {
     frame(tm, dt, tf) {
       const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
       sim.fx.length = 0;
-      drawArena(ctx, ox, oy, AS, sim, tf, tm, dt, M.you, M.players);
-      const old = setTarget(ctx); T.f = tf;
+      drawArena(ctx, ox, oy, AS, sim, tf, tm, dt, M.you, M.players, { noBars: true });
       const a = dirDeg * Math.PI / 180, x0 = ox + my.x * k, y0 = oy + my.y * k, L = 54 + Math.sin(tm * 5) * 4;
       const x1 = x0 + Math.cos(a) * (my.r * k + L), y1 = y0 + Math.sin(a) * (my.r * k + L), xs = x0 + Math.cos(a) * (my.r * k + 6), ys = y0 + Math.sin(a) * (my.r * k + 6);
-      const Z = { s: mulberry(7), f: mulberry(tf + 3) };
-      line(Z, xs, ys, x1, y1, 4, '#d33a3a', { over: 0, bow: .05 });
-      line(Z, x1, y1, x1 - Math.cos(a - .5) * 15, y1 - Math.sin(a - .5) * 15, 4, '#d33a3a', { over: 0, bow: 0 });
-      line(Z, x1, y1, x1 - Math.cos(a + .5) * 15, y1 - Math.sin(a + .5) * 15, 4, '#d33a3a', { over: 0, bow: 0 });
-      setTarget(old);
+      ctx.lineCap = ctx.lineJoin = 'round';
+      for (const [w, col] of [[9, INK], [5, '#f4c942']]) {
+        ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(xs, ys); ctx.lineTo(x1, y1);
+        ctx.moveTo(x1 - Math.cos(a - .5) * 16, y1 - Math.sin(a - .5) * 16); ctx.lineTo(x1, y1); ctx.lineTo(x1 - Math.cos(a + .5) * 16, y1 - Math.sin(a + .5) * 16); ctx.stroke();
+      }
     }
   });
 }
-function sendDir() { if (dirSent) return; dirSent = true; wsSend({ t: 'dir', deg: dirDeg }); const b = $('#dc'); }
+function sendDir() { if (dirSent) return; dirSent = true; wsSend({ t: 'dir', deg: dirDeg }); }
 
+function hudHTML(M) {
+  const order = M.players.slice().sort((a, b) => (a.team === M.players[M.you].team ? 0 : 1) - (b.team === M.players[M.you].team ? 0 : 1) || a.slot - b.slot);
+  return '<div class="hud" style="grid-template-columns:' + (M.n === 2 ? '1fr 1fr' : '1fr 1fr') + '">' + order.map(p =>
+    '<div class="hp ' + (p.team === M.players[M.you].team ? 'me' : 'foe') + '" data-slot="' + p.slot + '"><div class="nm">' + esc(p.slot === M.you ? 'Du' : p.name) + ' - <span class="bn"></span></div><div class="bar"><i></i></div></div>').join('') + '</div>';
+}
 function fightScreen(m) {
   const M = S.match; if (!M) return;
-  S.screen = 'fight'; clearFx();
+  S.screen = 'fight'; clearFx(); setScene('fight');
   M.round = m.round;
   const sim = createSim(m.cfg);
   sim.slotMax = {}; for (const b of sim.balls) sim.slotMax[b.slot] = (sim.slotMax[b.slot] || 0) + b.maxHp;
-  const W = Math.min(window.innerWidth - 32, 440), AS = W - 8, HUD = M.n === 2 ? 52 : 104, H = AS + HUD + 18;
-  const myTeam = M.players[M.you].team;
-  show('<div class="col">' + matchHeader() + '<div class="fightwrap"><canvas id="fc" class="view"></canvas></div><div id="fres"></div>' +
-    '<div id="fbtn" class="row gap6"><div class="grow">' + btn('Überspringen', 'skip', '', 'btn2') + '</div></div></div>');
+  const AS = arenaSize(), W = AS + 20, H = AS + 20, myTeam = M.players[M.you].team;
+  show('<div class="col">' + matchHeader() + hudHTML(M) + '<div style="position:relative;width:' + W + 'px;margin:0 auto"><canvas id="fc" class="view"></canvas><div id="cdwrap"></div></div><div id="fres"></div>' +
+    '<div id="fbtn" class="row gap6"><div class="grow">' + btn(gi('skip', 26) + ' Überspringen', 'skip') + '</div></div></div>');
   const cv = $('#fc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  let acc = 0, over = false, overT = 0, sentReady = false, skipped = false;
+  const hp = {}; SCREEN.querySelectorAll('.hp').forEach(el => { hp[el.dataset.slot] = { bar: el.querySelector('i'), bn: el.querySelector('.bn') }; });
+  for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.type].name;
+  let acc = 0, phase = 'count', t0 = 0, koT = 0, sentReady = false, cdN = 4, tPhase = 0, resShown = false;
+  const cdw = $('#cdwrap');
   const finish = () => {
-    over = true; overT = performance.now();
+    resShown = true;
     const win = m.winner === myTeam;
-    M.lives = m.lives; const mh = $('#mh'); if (mh) mh.outerHTML = matchHeader(); decorate(SCREEN);
-    $('#fres').innerHTML = '<div class="panel center" data-fr="panel"><h2 class="jit" style="color:' + (win ? '#2f9a3a' : '#c93030') + '">' + (win ? 'Runde gewonnen!' : 'Runde verloren!') + '</h2><p class="small mute">' +
+    M.lives = m.lives; const mh = $('#mh'); if (mh) mh.outerHTML = matchHeader();
+    sfx(win ? 'win' : 'lose');
+    if (win) { confetti(46); }
+    $('#fres').innerHTML = '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:' + (win ? '#2f8a3a' : '#c93030') + '">' + (win ? 'Runde gewonnen!' : 'Runde verloren!') + '</h2><p class="small mute">' +
       (m.over ? (win ? 'Das war der letzte Kampf.' : 'Das war dein letztes Leben.') : (win ? 'Der Gegner verliert ein Leben.' : 'Du verlierst ein Leben.')) + '</p></div>';
-    $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext') + '</div>';
-    decorate(SCREEN);
+    $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext', '', 'pri') + '</div>';
+    window.scrollTo(0, document.body.scrollHeight);
   };
-  S.fightNext = () => { if (!sentReady) { sentReady = true; wsSend({ t: 'ready' }); const b = $('#fbtn'); if (b) b.innerHTML = '<p class="center mute">Warte auf die anderen ...</p>'; } };
+  S.fightNext = () => { if (!sentReady) { sentReady = true; wsSend({ t: 'ready' }); const b = $('#fbtn'); if (b) b.innerHTML = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Warte auf die anderen ...</p>'; } };
   S.fightSkip = () => {
-    if (over) return; skipped = true; sim.noFx = true; let g2 = 6000;
+    if (phase === 'ko' || phase === 'done') return; sim.noFx = true; let g2 = 6000;
     while (!sim.over && g2-- > 0 && sim.step < m.steps + 5) stepSim(sim);
-    sim.fx.length = 0; clearFx();
+    sim.fx.length = 0; clearFx(); phase = 'ko'; koT = 0.01; sim.winner = m.winner; sim.over = true;
+    cdw.innerHTML = '';
   };
+  let lastSec = -1;
   setView({
     frame(tm, dt, tf) {
       const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
-      if (!over) {
-        acc += Math.min(dt, .05);
+      let sdt = Math.min(dt, .05);
+      if (phase === 'count') {
+        tPhase += sdt;
+        const n = 3 - Math.floor(tPhase / .75);
+        if (n !== cdN) { cdN = n; if (n > 0) { cdw.innerHTML = '<div id="cdnum">' + n + '</div>'; sfx('tick'); } else if (n === 0) { cdw.innerHTML = '<div id="cdnum" style="font-size:90px">Los!</div>'; sfx('go'); } }
+        if (tPhase >= 3 * .75 + .45) { phase = 'run'; cdw.innerHTML = ''; }
+      } else if (phase === 'run') {
+        if (fxState.hitstop > 0) { fxState.hitstop -= sdt; sdt = 0; }
+        else if (fxState.ko > 0) { fxState.ko -= sdt; sdt *= .3; }
+        acc += sdt;
         let n = 0;
         while (acc >= DT && !sim.over && n++ < 8) { stepSim(sim); acc -= DT; }
         if (!sim.over && sim.step >= m.steps + 5) { sim.over = true; sim.winner = m.winner; }
-        if (sim.over) { sim.winner = m.winner; finish(); }
-      } else if (!sentReady && performance.now() - overT > 4500) S.fightNext();
-      drawArena(ctx, 4, 4, AS, sim, tf, tm, dt, M.you, M.players);
-      drawHud(ctx, 4, AS + 14, W - 8, sim, M.players, M.you, tf);
+        if (sim.over) { sim.winner = m.winner; phase = 'ko'; koT = 0; }
+      } else if (phase === 'ko') {
+        koT += dt; sdt = dt * .3;
+        if (koT > 1.5 && !resShown) { phase = 'done'; finish(); }
+      } else if (phase === 'done' && !sentReady && performance.now() / 1000 - tm > -1) {
+        koT += dt; if (koT > 8) S.fightNext();
+      }
+      // Slow-Motion beim Treffer des Endschlags: Effekte laufen langsam weiter
+      for (const s2 of fxState.sound) sfx(s2[0], s2[1]);
+      fxState.sound.length = 0;
+      drawArena(ctx, 10, 10, AS, sim, tf, tm, phase === 'ko' || fxState.ko > 0 ? sdt || dt * .3 : dt, M.you, M.players);
+      for (const b of sim.balls) {
+        const h = hp[b.slot]; if (!h) continue;
+      }
+      for (const p of M.players) {
+        const h = hp[p.slot]; if (!h) continue;
+        let cur = 0, mx = 0;
+        for (const b of sim.balls) if (b.slot === p.slot) { mx += b.maxHp; if (!b.dead) cur += Math.max(0, b.hp); }
+        const base = sim.slotMax[p.slot] || mx || 1, pc = Math.max(0, Math.min(100, cur / base * 100));
+        h.bar.style.width = pc.toFixed(1) + '%';
+      }
     }
   });
 }
 
 function matchEnd(m) {
-  S.match = null; S.screen = 'end'; setView(null);
-  if (m.me) S.me = m.me;
-  show('<div class="col center"><h1 class="jit" style="color:' + (m.win ? '#2f9a3a' : '#c93030') + '">' + (m.win ? 'Sieg!' : 'Niederlage') + '</h1>' +
-    '<div class="hero"><canvas class="ball" data-ball="' + topType() + '" data-size="170" data-fit=".62"></canvas></div>' +
-    (m.friendly ? '<p>Freundschaftsspiel - keine Belohnung.</p>' : '<div class="panel" data-fr="panel"><p>Belohnung:</p><div class="big">' + coinHTML('+' + m.coins) + '</div></div>') +
-    btn('Nochmal kämpfen', 'queue1') + btn('Zur Startseite', 'home', '', 'btn2') + '</div>');
+  S.match = null; S.screen = 'end'; setView(null); setScene('menu');
+  if (m.me) setMe(m.me);
+  show('<div class="col center res"><h1 class="jit pop" style="color:' + (m.win ? '#fff' : '#ffd0c8') + ';text-shadow:3px 4px 0 var(--ink)">' + (m.win ? 'Sieg!' : 'Niederlage') + '</h1>' +
+    '<div class="hero ' + (m.win ? 'bounce' : '') + '">' + (m.win ? '<div class="rays"></div>' : '') + '<div style="position:relative">' + ball(topType(), 180, .62) + '</div></div>' +
+    (m.friendly ? '<div class="panel"><p>Freundschaftsspiel - keine Belohnung.</p></div>' : '<div class="panel pop"><p>Belohnung</p><div class="big">' + coinHTML('+' + m.coins) + '</div>' + (m.tokens ? '<div class="big" style="font-size:38px;margin-top:4px">' + tokHTML('+' + m.tokens) + '</div>' : '') + '</div>') +
+    btn('Nochmal kämpfen', 'queue1', '', 'pri') + btn('Zur Startseite', 'home') + '</div>');
+  if (m.win) { confetti(60); sfx('win'); } else sfx('lose');
 }
 
 /* ================= Aktionen ================= */
@@ -592,7 +631,8 @@ const ACT = {
   roomstart() { wsSend({ t: 'room_start' }); },
   roomleave() { wsSend({ t: 'room_leave' }); },
   collection() { collection(); },
-  filter(d) { S.filter = d.v; collection(); },
+  cfilter(d) { S.col[d.k] = d.v; collection(); },
+  cown() { S.col.own = !S.col.own; collection(); },
   detail(d) { detail(d.t); },
   async mklist(d) {
     const price = parseInt(($('#pr' + d.uid) || {}).value, 10);
@@ -605,8 +645,9 @@ const ACT = {
     if (r.err) { toast(errText(r.err)); return; }
     toast('Angebot zurückgezogen.'); closeOverlay(); if (d.back === 'market') market(); else collection();
   },
-  box() { boxScreen(); },
-  openbox() { openBox(); },
+  box() { closeOverlay(); boxScreen(); },
+  boxdetail(d) { closeOverlay(); boxDetail(d.id); },
+  openbox(d) { openBox(d.id); },
   market() { market(true); },
   mktab(d) { S.mk.tab = d.v; market(true); },
   mkrar(d) { S.mk.rarity = d.v; market(true); },
@@ -617,7 +658,7 @@ const ACT = {
   async mkbuy(d) {
     const r = await api('/api/market/buy', { uid: +d.uid });
     if (r.err) { toast(errText(r.err)); if (r.err === 'gone') market(); return; }
-    toast(ballName(r.type) + ' gekauft!'); market();
+    sfx('coin'); toast(ballName(r.type) + ' gekauft!'); market();
   },
   trades() { S.tr.tab = 'in'; trades(); },
   ttab(d) { S.tr.tab = d.v; trades(); },
@@ -647,10 +688,11 @@ const ACT = {
   async daily() {
     const r = await api('/api/daily');
     if (r.err) { toast(errText(r.err)); return; }
-    toast('+' + r.gain + ' Münzen (Tag ' + r.streak + ' in Folge)'); home();
+    sfx('coin'); confetti(24);
+    toast('+' + r.gain + ' Münzen' + (r.tokens ? ' und +' + r.tokens + ' Marken' : '') + ' (Tag ' + r.streak + ' in Folge)'); home();
   },
   rename() {
-    overlay('<div class="col"><h2 class="jit">Neuer Name</h2><div class="inp" data-fr="inp"><input id="nn" maxlength="16" value="' + esc(S.me.name) + '"></div><div class="err" id="err"></div>' + btn('Speichern', 'renamego') + btn('Abbrechen', 'closeov', '', 'btn2') + '</div>');
+    overlay('<div class="col"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Neuer Name</h2><div class="inp"><input id="nn" maxlength="16" value="' + esc(S.me.name) + '"></div><div class="err" id="err" style="color:#ffd0c8"></div>' + btn('Speichern', 'renamego', '', 'pri') + btn('Abbrechen', 'closeov') + '</div>');
   },
   async renamego() {
     const r = await api('/api/rename', { name: $('#nn').value.trim() });
@@ -659,7 +701,7 @@ const ACT = {
   },
   pick(d) { selectPick(d.uid); },
   pickgo() { if (pickSel == null) return; wsSend({ t: 'pick', uid: +pickSel }); selectPick(pickSel, true); },
-  dirgo() { sendDir(); const b = SCREEN.querySelector('[data-act="dirgo"]'); if (b) b.outerHTML = '<p class="center">Gewählt. Warte auf die anderen ...</p>'; },
+  dirgo() { sendDir(); const b = SCREEN.querySelector('[data-act="dirgo"]'); if (b) b.outerHTML = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Gewählt. Warte auf die anderen ...</p>'; },
   skip() { if (S.fightSkip) S.fightSkip(); },
   fightnext() { if (S.fightNext) S.fightNext(); }
 };
@@ -668,12 +710,14 @@ function keepTradeInputs() {
   S.tnew.name = nm || S.tnew.name;
   trades().then(() => { if ($('#cgive')) $('#cgive').value = a || ''; if ($('#cwant')) $('#cwant').value = b || ''; });
 }
+document.addEventListener('pointerdown', () => unlock(), { once: false, passive: true });
 document.addEventListener('click', ev => {
   const t = ev.target.closest('[data-act]');
   if (!t || t.disabled) return;
   const fn = ACT[t.dataset.act];
-  if (fn) fn(t.dataset, t, ev);
+  if (fn) { sfx(t.dataset.act === 'home' || t.dataset.act === 'closeov' ? 'back' : 'click'); fn(t.dataset, t, ev); }
 });
+$('#snd').addEventListener('click', () => { unlock(); const m = (getMode() + 2) % 3; setMode(m); sndIcon(); toast(m === 2 ? 'Ton und Musik an' : m === 1 ? 'Nur Effekte' : 'Stumm'); if (m) sfx('click'); });
 document.addEventListener('keydown', ev => {
   if (ev.key === 'Enter' && ev.target.id === 'nm') ACT.register();
 });

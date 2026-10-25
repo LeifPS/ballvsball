@@ -366,20 +366,20 @@ export class Game extends DurableObject {
       if (p.bot) continue;
       this.userMatch.delete(p.userId);
       const win = p.team === winnerTeam;
-      let coins = 0, me = null;
+      let coins = 0, tokens = 0;
       if (!m.friendly && !p.left) {
         const botOpp = m.players.some(o => o.bot && o.team !== p.team);
         coins = win ? (botOpp ? 20 : 30) : (botOpp ? 3 : 8);
-        try { await this.store().reward(p.userId, coins, win); } catch (e) { console.log('reward', e); }
+        try { tokens = await this.store().reward(p.userId, coins, win, win ? (botOpp ? 2 : 3) : 1) || 0; } catch (e) { console.log('reward', e); }
       }
-      results.push({ p, win, coins });
+      results.push({ p, win, coins, tokens });
     }
     for (const r of results) {
       let me = null;
       try { const x = await this.store().me(r.p.token); if (x.ok) me = x.me; } catch (e) { }
       if (r.p.conn) {
         r.p.conn.match = null; r.p.conn.p = null;
-        this.send(r.p.conn, { t: 'match_end', winnerTeam, win: r.win, coins: r.coins, friendly: m.friendly, me });
+        this.send(r.p.conn, { t: 'match_end', winnerTeam, win: r.win, coins: r.coins, tokens: r.tokens, friendly: m.friendly, me });
       }
     }
   }

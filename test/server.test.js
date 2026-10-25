@@ -52,6 +52,25 @@ for (let i = 0; i < free.length - 3; i++) await api('/api/market/list', t1, { ui
 r = await api('/api/market/list', t1, { uid: free[free.length - 1].uid, price: 999 });
 ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
 
+// Theme-Boxen und Halloween-Marken
+{
+  const { ballsInBox } = await import('../public/js/engine.js');
+  const { EVENT_END } = await import('../public/js/boxes.js');
+  const t3 = tok();
+  let x = await api('/api/login', t3, { name: 'Tbx' + Math.floor(Math.random() * 1e6) });
+  x = await api('/api/box', t3, { box: 'gibtsnicht' });
+  ok(x.err === 'box_unknown', 'unbekannte Box abgelehnt');
+  x = await api('/api/box', t3, { box: 'halloween' });
+  ok(x.err === 'no_tokens' || x.err === 'box_over', 'Halloween-Box ohne Marken: ' + x.err);
+  x = await api('/api/box', t3, { box: 'weltraum' });
+  ok(x.ok && x.me.coins === 25 && x.box === 'weltraum' && ballsInBox('weltraum').includes(x.ball.type), 'Weltraum-Box: 175 Münzen, Ball aus der Box: ' + (x.ball && x.ball.type));
+  x = await api('/api/box', t3, { box: 'weltraum' });
+  ok(x.err === 'no_coins', 'Weltraum-Box zu teuer');
+  x = await api('/api/daily', t3);
+  const live = Date.now() < EVENT_END;
+  ok(x.ok && x.me.tokens === (live ? 5 : 0), 'Tagesbelohnung gibt Halloween-Marken (Event ' + (live ? 'aktiv' : 'vorbei') + '): ' + x.me.tokens);
+  if (live) { x = await api('/api/box', t3, { box: 'halloween' }); ok(x.err === 'no_tokens', 'Halloween-Box mit 5 Marken noch zu teuer'); }
+}
 // Botkampf
 function connect(token) {
   return new Promise(res => {

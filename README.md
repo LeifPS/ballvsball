@@ -4,9 +4,11 @@ Handgezeichnetes Mobile-Browserspiel: Bälle sammeln, Ballboxen öffnen, online 
 
 ## Aufbau
 - `public/` - Client (statische Dateien, werden von Cloudflare ausgeliefert)
-  - `js/core.js`, `balls.js`, `engine.js` - deterministische Kampf-Engine (läuft im Browser und auf dem Server identisch)
+  - `js/core.js`, `balls.js`, `balls2.js`, `engine.js` - deterministische Kampf-Engine (läuft im Browser und auf dem Server identisch)
   - `js/boxsim.js` - Ballbox-Minispiel (deterministisch, der Server wählt den Seed)
-  - `js/pen.js`, `art.js`, `render.js` - Zeichen-Engine, alle Grafiken, Arena
+  - `js/boxes.js` - Ballboxen (Preise, Halloween-Zeitfenster bis 31.10.)
+  - `js/sk.js`, `ballart.js`, `art.js`, `render.js` - Handzeichen-Stil (wie Tonlinge), Bälle, Effekte, Arena
+  - `js/audio.js` - Sound und Musik (WebAudio-Synthesizer)
   - `js/ui.js` - Oberfläche
   - `js/tuning.js` - automatisch berechnete Schadens-Faktoren (`npm run balance`)
 - `src/worker.js` - Einstieg (`/api/*`)

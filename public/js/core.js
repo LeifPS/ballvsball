@@ -1,7 +1,7 @@
 // Deterministischer Kampfkern. Läuft identisch im Browser und im Worker.
 // Regeln: nur + - * / Math.sqrt Math.imul. Keine Math.sin/cos/random/hypot.
 export const DT = 1 / 60;
-export const BOX = 360;
+export const BOX = 300;
 export const MAX_T = 90;
 export const ENRAGE_T = 45;
 export const PI = 3.141592653589793;
@@ -61,7 +61,7 @@ export function addBall(sim, type, team, slot, x, y, deg, opt) {
   const b = {
     id: sim.nextId++, type, def, team, slot, x, y, vx: 0, vy: 0, speed: def.speed, r: def.r,
     hp: def.hp, maxHp: def.hp, dead: false, stun: 0, stunImm: 0, flash: 0, hitCd: {}, st: {}, age: 0,
-    lvl: 0, noMove: false
+    lvl: 0, noMove: false, burn: 0, burnDps: 0, burnSrc: 0
   };
   b.vx = d[0] * b.speed; b.vy = d[1] * b.speed;
   if (def.init) def.init(b, sim, opt || {});
@@ -129,6 +129,16 @@ export function hurt(sim, t, amt, src, kind) {
   if (d.onHurt) d.onHurt(t, amt, src, kind, sim);
   return amt;
 }
+export function heal(sim, b, amt) {
+  if (b.dead || amt <= 0) return;
+  b.hp = Math.min(b.maxHp, b.hp + amt);
+  fx(sim, 'heal', b.x, b.y, amt);
+}
+export function burn(sim, t, src, secs, dps) {
+  if (t.dead) return;
+  if (t.burn < secs) t.burn = secs;
+  t.burnDps = dps; t.burnSrc = src ? src.id : 0;
+}
 export function stun(sim, t, secs) {
   if (t.dead || t.stunImm > 0 || t.stun > 0) return;
   t.stun = secs;
@@ -181,6 +191,7 @@ export function stepSim(sim) {
     if (b.dead) continue;
     b.age += DT;
     if (b.flash > 0) b.flash -= DT;
+    if (b.burn > 0) { b.burn -= DT; hurt(sim, b, b.burnDps * DT, sim.byId[b.burnSrc] || null, 'dot'); }
     if (b.stun > 0) { b.stun -= DT; if (b.stun <= 0) { b.stun = 0; b.stunImm = 1.5; } }
     else if (b.stunImm > 0) b.stunImm -= DT;
     b.noMove = false;
@@ -197,6 +208,7 @@ export function stepSim(sim) {
       if (b.dead) continue;
       const dx = b.x - a.x, dy = b.y - a.y, rs = a.r + b.r;
       if (dx * dx + dy * dy >= rs * rs) continue;
+      if (a.st.ghost || b.st.ghost) continue;
       const grabbed = (a.st.grab && a.st.grab.id === b.id) || (b.st.grab && b.st.grab.id === a.id);
       if (!grabbed) {
         const d = Math.sqrt(dx * dx + dy * dy) || .0001, nx = dx / d, ny = dy / d, over = (rs - d) / 2;

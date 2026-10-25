@@ -2,7 +2,7 @@
 import { DM } from './tuning.js';
 import {
   DT, BOX, PI, TAU, dsin, dcos, len, segDist, hurt, stun, spawn, fx, rand, setDir, rotateVel, steer,
-  nearestEnemy, addBall
+  nearestEnemy, addBall, heal, burn
 } from './core.js';
 
 export const RARITY = {
@@ -12,26 +12,31 @@ export const RARITY = {
   legendaer: { name: 'Legendär', color: '#e0a800', weight: 2, order: 3 }
 };
 
-function ready(o, e, sim, cd) {
+export function postHit(sim, o, e, d, ow) {
+  if (o.stun) stun(sim, e, o.stun);
+  if (o.burnS) burn(sim, e, ow, o.burnS, o.burnD);
+  if (o.leech && ow && !ow.dead) heal(sim, ow, d * o.leech);
+}
+export function ready(o, e, sim, cd) {
   const k = o.cd;
   if (sim.t < (k[e.id] || 0)) return false;
   k[e.id] = sim.t + cd;
   return true;
 }
-function clampPt(v) { return v < 6 ? 6 : v > BOX - 6 ? BOX - 6 : v; }
+export function clampPt(v) { return v < 6 ? 6 : v > BOX - 6 ? BOX - 6 : v; }
 // Richtung mit teilweisem Vorhalt
-function aimVel(b, e, speed, lead) {
+export function aimVel(b, e, speed, lead) {
   const d = len(e.x - b.x, e.y - b.y), tt = d / speed * lead;
   const tx = clampPt(e.x + e.vx * tt), ty = clampPt(e.y + e.vy * tt);
   const dx = tx - b.x, dy = ty - b.y, l = len(dx, dy) || 1;
   return [dx / l * speed, dy / l * speed];
 }
-function foes(sim, team) {
+export function foes(sim, team) {
   const out = [];
   for (const b of sim.balls) if (!b.dead && b.team !== team) out.push(b);
   return out;
 }
-function own(sim, o) { return sim.byId[o.owner]; }
+export function own(sim, o) { return sim.byId[o.owner]; }
 
 /* ================= Objekte ================= */
 export const OBJS = {
@@ -50,7 +55,11 @@ export const OBJS = {
       if (o.life <= 0 || o.x < -8 || o.x > BOX + 8 || o.y < -8 || o.y > BOX + 8) { o.dead = true; return; }
       for (const e of foes(sim, o.team)) {
         const dx = e.x - o.x, dy = e.y - o.y, rr = e.r + o.r;
-        if (dx * dx + dy * dy < rr * rr) { hurt(sim, e, o.dmg, own(sim, o), 'proj'); o.dead = true; return; }
+        if (dx * dx + dy * dy < rr * rr) {
+          const ow = own(sim, o);
+          if (o.pierce) { if (ready(o, e, sim, o.pcd || .4)) { const d = hurt(sim, e, o.dmg, ow, 'proj'); postHit(sim, o, e, d, ow); } }
+          else { const d = hurt(sim, e, o.dmg, ow, 'proj'); postHit(sim, o, e, d, ow); o.dead = true; return; }
+        }
       }
     }
   },
@@ -91,7 +100,7 @@ export const OBJS = {
       o.x += o.vx * DT; o.y += o.vy * DT;
       for (const e of foes(sim, o.team)) {
         const dx = e.x - o.x, dy = e.y - o.y, rr = e.r + o.r;
-        if (dx * dx + dy * dy < rr * rr && ready(o, e, sim, .5)) hurt(sim, e, o.dmg, ow, 'proj');
+        if (dx * dx + dy * dy < rr * rr && ready(o, e, sim, .5)) { const d = hurt(sim, e, o.dmg * (o.exec && e.hp < e.maxHp * .3 ? 2 : 1), ow, 'proj'); postHit(sim, o, e, d, ow); }
       }
     }
   },
@@ -100,10 +109,10 @@ export const OBJS = {
       o.fuse -= DT;
       if (o.fuse > 0) return;
       o.dead = true;
-      fx(sim, 'boom', o.x, o.y, o.r);
+      fx(sim, o.fxk || 'boom', o.x, o.y, o.r);
       const ow = own(sim, o);
       for (const e of foes(sim, o.team)) {
-        if (len(e.x - o.x, e.y - o.y) < o.r + e.r) hurt(sim, e, o.dmg, ow, 'area');
+        if (len(e.x - o.x, e.y - o.y) < o.r + e.r) { const d = hurt(sim, e, o.dmg, ow, 'area'); postHit(sim, o, e, d, ow); }
       }
     }
   },
@@ -112,10 +121,10 @@ export const OBJS = {
       o.fuse -= DT;
       if (o.fuse > 0) return;
       o.dead = true;
-      fx(sim, 'boom', o.x, o.y, o.r);
+      fx(sim, o.fxk || 'boom', o.x, o.y, o.r);
       const ow = own(sim, o);
       for (const e of foes(sim, o.team)) {
-        if (len(e.x - o.x, e.y - o.y) < o.r + e.r) hurt(sim, e, o.dmg, ow, 'area');
+        if (len(e.x - o.x, e.y - o.y) < o.r + e.r) { const d = hurt(sim, e, o.dmg, ow, 'area'); postHit(sim, o, e, d, ow); }
       }
     }
   },
@@ -131,7 +140,7 @@ export const OBJS = {
       const ow = own(sim, o);
       for (const e of foes(sim, o.team)) {
         const dx = e.x - o.x, dy = e.y - o.y, rr = e.r + o.r;
-        if (dx * dx + dy * dy < rr * rr && ready(o, e, sim, .6)) hurt(sim, e, o.dmg, ow, 'proj');
+        if (dx * dx + dy * dy < rr * rr && ready(o, e, sim, .6)) { const d = hurt(sim, e, o.dmg, ow, 'proj'); postHit(sim, o, e, d, ow); }
       }
     }
   },
@@ -144,13 +153,51 @@ export const OBJS = {
         const d = (e.x - o.x) * (e.x - o.x) + (e.y - o.y) * (e.y - o.y);
         if (d < bd) { bd = d; best = e; }
       }
-      if (best) steer(o, best.x, best.y, 3.4, o.speed);
+      if (best) steer(o, best.x, best.y, o.turn || 3.4, o.speed);
       o.x += o.vx * DT; o.y += o.vy * DT;
       if (o.x < 0) { o.x = 0; o.vx = Math.abs(o.vx); } else if (o.x > BOX) { o.x = BOX; o.vx = -Math.abs(o.vx); }
       if (o.y < 0) { o.y = 0; o.vy = Math.abs(o.vy); } else if (o.y > BOX) { o.y = BOX; o.vy = -Math.abs(o.vy); }
       for (const e of foes(sim, o.team)) {
         const dx = e.x - o.x, dy = e.y - o.y, rr = e.r + o.r;
-        if (dx * dx + dy * dy < rr * rr) { hurt(sim, e, o.dmg, own(sim, o), 'proj'); o.dead = true; return; }
+        if (dx * dx + dy * dy < rr * rr) {
+          const ow = own(sim, o);
+          if (o.pierce) { if (ready(o, e, sim, o.pcd || .35)) { const d = hurt(sim, e, o.dmg, ow, 'proj'); postHit(sim, o, e, d, ow); } }
+          else { const d = hurt(sim, e, o.dmg, ow, 'proj'); postHit(sim, o, e, d, ow); o.dead = true; return; }
+        }
+      }
+    }
+  },
+  wave: {
+    update(o, sim) {
+      o.rad += o.sp * DT;
+      if (o.rad >= o.maxR) { o.dead = true; return; }
+      const ow = own(sim, o);
+      for (const e of foes(sim, o.team)) {
+        if (o.hit[e.id]) continue;
+        const d = len(e.x - o.x, e.y - o.y);
+        if (Math.abs(d - o.rad) < e.r + 5) {
+          o.hit[e.id] = 1;
+          const dd = hurt(sim, e, o.dmg, ow, 'area'); postHit(sim, o, e, dd, ow);
+          if (o.push) setDir(e, e.x - o.x, e.y - o.y);
+        }
+      }
+    }
+  },
+  mine: {
+    update(o, sim) {
+      o.age = (o.age || 0) + DT; o.life -= DT;
+      if (o.life <= 0) { o.dead = true; return; }
+      if (o.age < o.arm) return;
+      const ow = own(sim, o);
+      for (const e of foes(sim, o.team)) {
+        if (len(e.x - o.x, e.y - o.y) < o.trig + e.r) {
+          o.dead = true;
+          fx(sim, o.fxk || 'boom', o.x, o.y, o.er);
+          for (const f of foes(sim, o.team)) {
+            if (len(f.x - o.x, f.y - o.y) < o.er + f.r) { const d = hurt(sim, f, o.dmg, ow, 'area'); postHit(sim, o, f, d, ow); }
+          }
+          return;
+        }
       }
     }
   },
@@ -170,7 +217,7 @@ export const OBJS = {
   }
 };
 
-function newObj(sim, k, b, x, y, extra) {
+export function newObj(sim, k, b, x, y, extra) {
   const o = { k, team: b.team, owner: b.id, x, y, vx: 0, vy: 0, cd: {}, dead: false };
   for (const key in extra) o[key] = extra[key];
   return spawn(sim, o);
@@ -199,7 +246,6 @@ export const DEFS = {
     name: 'Turretball', rarity: 'gewoehnlich', hp: 90, speed: 120, r: 18, dmg: 'Niedrig',
     desc: 'Schießt ununterbrochen Kugeln auf den Gegner. Viele Treffer, wenig Schaden pro Kugel.',
     strong: 'Große, langsame Gegner', weak: 'Schildball, Spiegelball nicht',
-    contact: () => 3,
     init(b) { b.st.cd = .5; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -228,6 +274,7 @@ export const DEFS = {
     desc: 'Zieht eine Feuerspur hinter sich her. Wer hineingerät, brennt.',
     strong: 'Große Gegner', weak: 'Schnelle Gegner, Wuchsball',
     contact: () => 4,
+    onContact(b, o, sim, d) { if (d > 0) burn(sim, o, b, 3, 4 + sim.t * .05); },
     init(b) { b.st.cd = 0; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -240,7 +287,6 @@ export const DEFS = {
     name: 'Bumerangball', rarity: 'gewoehnlich', hp: 95, speed: 140, r: 18, dmg: 'Mittel',
     desc: 'Wirft Bumerangs auf den Gegner, die zurückfliegen. Je länger der Kampf, desto öfter.',
     strong: 'Gegner mit gerader Bahn', weak: 'Schildball',
-    contact: () => 5,
     init(b) { b.st.cd = 1.2; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -273,7 +319,6 @@ export const DEFS = {
     name: 'Schwertball', rarity: 'selten', hp: 100, speed: 140, r: 18, dmg: 'Mittel',
     desc: 'Ein Dolch kreist um ihn. Im Kampf kommen bis zu 5 dazu und sie drehen sich immer schneller.',
     strong: 'Gegner im Nahkampf', weak: 'Fernkämpfer',
-    contact: () => 3,
     init(b) { b.st.ang = 0; },
     update(b, sim) {
       const n = Math.min(5, 1 + Math.floor(sim.t / 7));
@@ -347,7 +392,6 @@ export const DEFS = {
     name: 'Bombenball', rarity: 'selten', hp: 100, speed: 135, r: 18, dmg: 'Hoch',
     desc: 'Legt Bomben ab, die kurz darauf in einem großen Radius explodieren.',
     strong: 'Gegner mit festen Wegen', weak: 'Spiegelball',
-    contact: () => 3,
     init(b) { b.st.cd = 1.5; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -391,7 +435,6 @@ export const DEFS = {
     name: 'Echoball', rarity: 'selten', hp: 90, speed: 145, r: 17, dmg: 'Mittel',
     desc: 'Hinter ihm läuft sein Echo auf seiner alten Bahn und verletzt ebenfalls. Später kommen weitere Echos dazu.',
     strong: 'Gegner, die ihn jagen', weak: 'Schwarm, Spiegelball',
-    contact: () => 13,
     init(b) { b.st.h = []; },
     update(b, sim) {
       const h = b.st.h;
@@ -417,7 +460,6 @@ export const DEFS = {
     name: 'Giftball', rarity: 'selten', hp: 105, speed: 135, r: 18, dmg: 'Mittel',
     desc: 'Hinterlässt giftige Pfützen, die Gegner dauerhaft schwächen. Es werden immer mehr.',
     strong: 'Langsame, große Gegner', weak: 'Schnelle Gegner',
-    contact: () => 3,
     init(b) { b.st.cd = .6; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -473,7 +515,6 @@ export const DEFS = {
     name: 'Sägeball', rarity: 'episch', hp: 100, speed: 140, r: 18, dmg: 'Hoch',
     desc: 'Schleudert Sägeblätter, die viele Male von den Wänden abprallen. Je länger, desto mehr Blätter.',
     strong: 'Große Gegner, lange Kämpfe', weak: 'Schildball',
-    contact: () => 4,
     init(b) { b.st.cd = 1.5; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -489,7 +530,6 @@ export const DEFS = {
     name: 'Schwarmball', rarity: 'episch', hp: 90, speed: 140, r: 17, dmg: 'Mittel',
     desc: 'Schickt Bienen los, die den Gegner verfolgen. Der Schwarm wird immer dichter.',
     strong: 'Wendige Gegner', weak: 'Schildball, Flächenschaden',
-    contact: () => 3,
     init(b) { b.st.cd = 1; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -505,7 +545,6 @@ export const DEFS = {
     name: 'Eisball', rarity: 'episch', hp: 105, speed: 135, r: 18, dmg: 'Niedrig',
     desc: 'Frostgeschosse frieren den Gegner ein: Er kann dann keine Fähigkeiten nutzen und macht keinen Schaden.',
     strong: 'Fähigkeits-Bälle wie Schwert und Bomben', weak: 'Rammball, Stacheln',
-    contact: () => 9,
     init(b) { b.st.cd = 1.2; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -521,7 +560,6 @@ export const DEFS = {
     name: 'Meteorball', rarity: 'episch', hp: 100, speed: 135, r: 18, dmg: 'Hoch',
     desc: 'Ruft Meteore auf die Stelle, an der der Gegner gleich sein wird.',
     strong: 'Träge Gegner', weak: 'Flinke Gegner',
-    contact: () => 3,
     init(b) { b.st.cd = 1.8; },
     update(b, sim) {
       b.st.cd -= DT;
@@ -614,6 +652,7 @@ export const DEFS = {
   }
 };
 
+for (const id in DEFS) DEFS[id].box = 'standard';
 export const BALL_IDS = Object.keys(DEFS);
 export function ballsByRarity(r) { return BALL_IDS.filter(id => DEFS[id].rarity === r); }
 
