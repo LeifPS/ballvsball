@@ -7,7 +7,7 @@ import { simBox } from '../public/js/boxsim.js';
 
 const START_COINS = 200;
 const STARTER = ['stachel', 'turret', 'ramm', 'glas', 'feuer'];
-const MIN_FREE = 3;          // mindestens so viele freie Bälle müssen bleiben
+const MIN_FREE = 3;          // mindestens so viele verschiedene freie Sorten müssen bleiben
 const MARKET_FEE = 0.05;
 const DAY = 86400000;
 
@@ -75,6 +75,13 @@ export class Store extends DurableObject {
   userBy(tk) { return this.q('SELECT * FROM users WHERE token=?', tk)[0] || null; }
   userById(id) { return this.q('SELECT * FROM users WHERE id=?', id)[0] || null; }
   userByName(name) { return this.q('SELECT * FROM users WHERE name=?', name)[0] || null; }
+  // Anzahl verschiedener Sorten unter den freien Bällen nach einer Änderung (drei verschiedene braucht jeder für die Auswahl)
+  freeTypesAfter(id, remove, add) {
+    const rm = new Set(remove || []), types = new Set();
+    for (const b of this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', id)) if (!rm.has(b.uid)) types.add(b.type);
+    for (const uid of add || []) { const b = this.q('SELECT type FROM balls WHERE uid=?', uid)[0]; if (b) types.add(b.type); }
+    return types.size;
+  }
   freeCount(id) { return this.q('SELECT COUNT(*) c FROM balls WHERE owner=? AND lock=0', id)[0].c; }
   giveBall(owner, type) {
     const r = this.q('INSERT INTO balls(owner,type) VALUES(?,?) RETURNING uid', owner, type);
@@ -151,7 +158,7 @@ export class Store extends DurableObject {
     const cost = UP_COST[DEFS[b.type].rarity][b.stars];
     const fod = this.q('SELECT uid FROM balls WHERE owner=? AND type=? AND lock=0 AND uid<>? ORDER BY stars ASC, uid DESC LIMIT ?', u.id, b.type, b.uid, cost);
     if (fod.length < cost) return { err: 'need_dupes' };
-    if (this.freeCount(u.id) - cost < 3) return { err: 'min_balls' };
+    if (this.freeTypesAfter(u.id, fod.map(f => f.uid), []) < MIN_FREE) return { err: 'min_balls' };
     for (const f of fod) this.q('DELETE FROM balls WHERE uid=?', f.uid);
     this.q('UPDATE balls SET stars=stars+1 WHERE uid=?', b.uid);
     return { ok: true, uid: b.uid, stars: b.stars + 1, cost, me: this.profile(this.userBy(tk)) };
@@ -233,7 +240,7 @@ export class Store extends DurableObject {
     const b = this.q('SELECT * FROM balls WHERE uid=?', Number(uid))[0];
     if (!b || b.owner !== u.id) return { err: 'not_yours' };
     if (b.lock !== 0) return { err: 'locked' };
-    if (this.freeCount(u.id) - 1 < MIN_FREE) return { err: 'min_balls' };
+    if (this.freeTypesAfter(u.id, [b.uid], []) < MIN_FREE) return { err: 'min_balls' };
     this.q('UPDATE balls SET lock=1, price=?, listed_at=? WHERE uid=?', p, Date.now(), b.uid);
     return { ok: true, me: this.profile(u) };
   }
@@ -333,7 +340,7 @@ export class Store extends DurableObject {
       const b = this.q('SELECT * FROM balls WHERE uid=?', uid)[0];
       if (!b || b.owner !== to.id || b.lock !== 0) return { err: 'not_theirs' };
     }
-    if (this.freeCount(u.id) - give.length + want.length < MIN_FREE) return { err: 'min_balls' };
+    if (this.freeTypesAfter(u.id, give, want) < MIN_FREE) return { err: 'min_balls' };
     const pend = this.q("SELECT COUNT(*) c FROM trades WHERE from_id=? AND status='pending'", u.id)[0].c;
     if (pend >= 10) return { err: 'too_many' };
     for (const uid of give) this.q('UPDATE balls SET lock=2 WHERE uid=?', uid);
@@ -366,8 +373,8 @@ export class Store extends DurableObject {
     }
     if (from.coins < t.coins_give) return { err: 'their_coins' };
     if (u.coins < t.coins_want) return { err: 'no_coins' };
-    if (this.freeCount(u.id) - want.length + give.length < MIN_FREE) return { err: 'min_balls' };
-    if (this.freeCount(from.id) + want.length < MIN_FREE) return { err: 'their_min' };
+    if (this.freeTypesAfter(u.id, want, give) < MIN_FREE) return { err: 'min_balls' };
+    if (this.freeTypesAfter(from.id, [], want) < MIN_FREE) return { err: 'their_min' };
     for (const uid of give) this.q('UPDATE balls SET owner=?, lock=0, price=0 WHERE uid=?', u.id, uid);
     for (const uid of want) this.q('UPDATE balls SET owner=?, lock=0, price=0 WHERE uid=?', from.id, uid);
     this.q('UPDATE users SET coins=coins-?+? WHERE id=?', t.coins_give, t.coins_want, from.id);

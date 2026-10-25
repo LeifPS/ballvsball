@@ -28,10 +28,10 @@ const ERR = {
   name_invalid: 'Name: 3 bis 16 Zeichen, nur Buchstaben, Zahlen, Leerzeichen, - und _.', name_taken: 'Dieser Name ist schon vergeben.',
   daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
   price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
-  not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 freie Bälle behalten.',
+  not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 verschiedene freie Bälle behalten.',
   gone: 'Das gibt es nicht mehr.', own: 'Das ist dein eigener Ball.', no_player: 'Spieler nicht gefunden.', self: 'Das bist du selbst.',
   empty: 'Das Angebot ist leer.', not_theirs: 'Der Ball gehört dem anderen nicht mehr.', too_many: 'Zu viele offene Angebote.',
-  their_coins: 'Der andere hat nicht genug Münzen.', their_min: 'Der andere müsste zu wenig Bälle behalten.',
+  their_coins: 'Der andere hat nicht genug Münzen.', their_min: 'Der andere hätte danach zu wenige verschiedene Bälle.',
   max_stars: 'Schon auf der höchsten Stufe.', need_dupes: 'Dafür fehlen gleiche Bälle.', room_unknown: 'Raum nicht gefunden.', room_full: 'Raum ist voll.', box_unknown: 'Unbekannte Box.', bad: 'Ungültige Anfrage.'
 };
 const errText = c => ERR[c] || 'Etwas ist schiefgegangen (' + c + ').';
@@ -260,12 +260,12 @@ function detail(type) {
       if (b.lock === 0) {
         if (b.stars >= MAX_STARS) up = '<div class="small center" style="width:100%">Höchste Stufe erreicht!</div>';
         else {
-          const cost = UP_COST[d.rarity][b.stars], have = c.list.filter(x => !x.lock && x.uid !== b.uid).length, ok = have >= cost && freeN - cost >= 3;
+          const cost = UP_COST[d.rarity][b.stars], have = c.list.filter(x => !x.lock && x.uid !== b.uid).length, ok = have >= cost;
           up = '<button class="btn sm ' + (ok ? 'green' : '') + '" style="width:100%" data-act="upgrade" data-uid="' + b.uid + '" ' + (ok ? '' : 'disabled') + '>' + gi('star', 20, '#ffd45a') + ' Verbessern auf ' + (b.stars + 1) + ' (' + Math.min(have, cost) + ' von ' + cost + ' Duplikaten)</button>';
         }
       }
       return '<div class="card col" style="gap:6px"><div class="listrow" style="padding:0"><span class="small grow">Nr. ' + b.uid + ' ' + (b.stars ? starsHTML(b.stars, 17) : '<span class="mute">keine Sterne</span>') + '</span>' + r + '</div>' + up + '</div>';
-    }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden. Dafür werden gleiche Bälle verbraucht. Drei freie Bälle musst du immer behalten.</p>';
+    }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden. Dafür werden gleiche Bälle verbraucht. Drei verschiedene freie Bälle musst du immer behalten.</p>';
   } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.</p>';
   overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + esc(d.name) + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
     '<div class="hero pop">' + ball(type, 230, .66) + '</div>' +

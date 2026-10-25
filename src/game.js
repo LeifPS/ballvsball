@@ -37,7 +37,6 @@ function pickHand(inv) {
   const by = new Map();
   for (const b of inv) { const c = by.get(b.type); if (!c || (b.stars || 0) > (c.stars || 0)) by.set(b.type, b); }
   const hand = shuffle([...by.values()]).slice(0, 3);
-  if (hand.length < 3) for (const b of shuffle(inv)) { if (hand.length >= 3) break; if (!hand.includes(b)) hand.push(b); }
   return hand;
 }
 function botHand() {
