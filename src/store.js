@@ -133,6 +133,12 @@ export class Store extends DurableObject {
     this.q('UPDATE users SET coins=coins+?, tokens=tokens+?, last_daily=?, streak=? WHERE id=?', gain, tk5, today, streak, u.id);
     return { ok: true, gain, tokens: tk5, streak, me: this.profile(this.userBy(tk)) };
   }
+  testCoins(tk) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    this.q('UPDATE users SET coins=999999, tokens=999999 WHERE id=?', u.id);
+    return { ok: true, me: this.profile(this.userBy(tk)) };
+  }
   inventory(userId) {
     return this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', userId);
   }

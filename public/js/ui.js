@@ -198,6 +198,7 @@ function home() {
     '<div class="row gap6"><div class="grow">' + btn('Sammlung', 'collection') + '</div><div class="grow">' + btn('Ballboxen', 'box') + '</div></div>' +
     '<div class="row gap6"><div class="grow">' + btn('Markt', 'market') + '</div><div class="grow">' + btn('Tauschen', 'trades') + '</div></div>' +
     (me.dailyReady ? btn('Tagesbelohnung abholen' + (ev ? ' (+5 Marken)' : ''), 'daily', '', 'green') : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
+    (/[?&]test=1/.test(location.search) ? btn('TEST: unendlich Münzen und Marken', 'testcoins', '', 'red') : '') +
     '<p class="center small"><button data-act="rename" style="color:#fff;text-decoration:underline;text-shadow:1px 1px 0 var(--ink)">Name ändern</button></p></div>');
 }
 
@@ -690,6 +691,11 @@ const ACT = {
     if (r.err) { toast(errText(r.err)); return; }
     sfx('coin'); confetti(24);
     toast('+' + r.gain + ' Münzen' + (r.tokens ? ' und +' + r.tokens + ' Marken' : '') + ' (Tag ' + r.streak + ' in Folge)'); home();
+  },
+  async testcoins() {
+    const r = await api('/api/testcoins', { key: 'leif-test' });
+    if (r.err) { toast(errText(r.err)); return; }
+    sfx('coin'); toast('999999 Münzen und Marken'); home();
   },
   rename() {
     overlay('<div class="col"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Neuer Name</h2><div class="inp"><input id="nn" maxlength="16" value="' + esc(S.me.name) + '"></div><div class="err" id="err" style="color:#ffd0c8"></div>' + btn('Speichern', 'renamego', '', 'pri') + btn('Abbrechen', 'closeov') + '</div>');
