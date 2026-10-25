@@ -92,6 +92,14 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
     ok(x.err === 'not_yours', 'fremder Ball nicht verbesserbar');
   }
 }
+// Boxen: keine doppelten Bälle in der Schüssel
+{
+  const t = tok(); let x = await api('/api/login', t, { name: 'Tdp' + Math.floor(Math.random() * 1e6) });
+  await api('/api/testcoins', t, { key: 'leif-test' });
+  let dups = 0;
+  for (let i = 0; i < 25; i++) { x = await api('/api/box', t, { box: ['standard', 'weltraum', 'kueche', 'sport', 'elemente'][i % 5] }); if (new Set(x.cands).size !== 10) dups++; if (x.cands[x.win] !== x.ball.type) dups++; }
+  ok(dups === 0, 'Ballbox: 10 verschiedene Bälle, Gewinner stimmt (Fehler: ' + dups + ')');
+}
 // Botkampf
 function connect(token) {
   return new Promise(res => {

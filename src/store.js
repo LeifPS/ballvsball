@@ -178,8 +178,17 @@ export class Store extends DurableObject {
     const reward = randType(RAR_KEYS[rIdx], boxId);
     // Mitspieler in der Schüssel: auch mal seltene, damit man "knapp daneben" erlebt
     const decoyRar = () => RAR_KEYS[pickWeighted([40, 30, 20, 10])];
-    const cands = [];
-    for (let i = 0; i < 10; i++) cands.push(randType(decoyRar(), boxId));
+    // Keine zwei gleichen Bälle in der Schüssel (soweit die Box genug verschiedene hat)
+    const used = new Set([reward]), cands = [];
+    for (let i = 0; i < 10; i++) {
+      let t;
+      for (let tr = 0; tr < 60; tr++) { t = randType(decoyRar(), boxId); if (!used.has(t)) break; }
+      if (used.has(t)) {   // kleine Box: mit Bällen aus anderen Boxen auffüllen
+        const rest = BALL_IDS.filter(x => !used.has(x));
+        t = rest[Math.floor(rnd() * rest.length)];
+      }
+      cands.push(t); used.add(t);
+    }
     const winIdx = Math.floor(rnd() * 10);
     cands[winIdx] = reward;
     // Bait: ein besserer Ball soll knapp Zweiter oder Dritter werden
@@ -187,8 +196,11 @@ export class Store extends DurableObject {
     if (rIdx < 3 && rnd() < .7) {
       const higher = RAR_KEYS.slice(rIdx + 1);
       const w = higher.map((k, i) => i === 0 ? 55 : 30 / i);
-      const bt = randType(higher[pickWeighted(w)], boxId);
+      let bt;
+      for (let tr = 0; tr < 60; tr++) { bt = randType(higher[pickWeighted(w)], boxId); if (!cands.includes(bt) || tr === 59) break; }
       do { baitIdx = Math.floor(rnd() * 10); } while (baitIdx === winIdx);
+      const dup = cands.indexOf(bt);
+      if (dup >= 0 && dup !== baitIdx && dup !== winIdx) cands[dup] = cands[baitIdx];
       cands[baitIdx] = bt;
     }
     let seed = -1;

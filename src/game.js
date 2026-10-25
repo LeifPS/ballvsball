@@ -31,6 +31,21 @@ function botType() {
   return ids[0];
 }
 
+// Hand: drei verschiedene Bälle. Jede Sorte zählt gleich, egal wie viele Exemplare man besitzt;
+// von einer Sorte kommt das Exemplar mit den meisten Sternen.
+function pickHand(inv) {
+  const by = new Map();
+  for (const b of inv) { const c = by.get(b.type); if (!c || (b.stars || 0) > (c.stars || 0)) by.set(b.type, b); }
+  const hand = shuffle([...by.values()]).slice(0, 3);
+  if (hand.length < 3) for (const b of shuffle(inv)) { if (hand.length >= 3) break; if (!hand.includes(b)) hand.push(b); }
+  return hand;
+}
+function botHand() {
+  const types = [];
+  for (let i = 0; i < 40 && types.length < 3; i++) { const t = botType(); if (!types.includes(t)) types.push(t); }
+  return types.map((type, i) => ({ uid: -100 - i, type }));
+}
+
 export class Game extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -255,11 +270,11 @@ export class Game extends DurableObject {
     for (const p of m.players) {
       p.pick = null; p.dir = null; p.ready = false;
       if (p.bot || p.left) {
-        p.hand = [botType(), botType(), botType()].map((type, i) => ({ uid: -100 - i, type }));
+        p.hand = botHand();
         p.pick = p.hand[rint(3)];
         continue;
       }
-      p.hand = shuffle(p.inv).slice(0, 3);
+      p.hand = pickHand(p.inv);
     }
     m.deadline = Date.now() + PICK_SECS * 1000;
     for (const p of m.players) {
