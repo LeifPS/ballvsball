@@ -52,8 +52,6 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
   // Wackeln
   if (fxState.shake > .05) { g.translate((Math.random() - .5) * fxState.shake * 1.6, (Math.random() - .5) * fxState.shake * 1.6); fxState.shake *= Math.pow(.02, dt); }
   g.translate(ax, ay); const k = AS / BOX; g.scale(k, k);
-  const Z = fxState.zoom;
-  if (Z) { Z.t -= dt; if (Z.t <= 0) fxState.zoom = null; else { const p = Z.t / Z.T, zs = 1 + .5 * Math.sin(Math.PI * Math.min(1, (1 - p) * 1.6)) * (p > .25 ? 1 : p / .25); g.translate(Z.x, Z.y); g.scale(zs, zs); g.translate(-Z.x, -Z.y); } }
   for (const e of sim.fx) addFx(e);
   sim.fx.length = 0;
   const objs = sim.objs, myTeam = players && mySlot >= 0 && players[mySlot] ? players[mySlot].team : 0;

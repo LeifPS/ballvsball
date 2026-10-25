@@ -108,10 +108,4 @@ canvas.view{display:block;touch-action:none;margin:0 auto;max-width:100%}
 .sheet-ball{position:relative}
 @media (max-width:360px){.grid3{gap:7px}.btn.big{font-size:30px}}
 
-/* Seltenheit sichtbar machen */
-.cell.r-selten:not(.locked){background:linear-gradient(#e8f2ff,#f6efd9 70%);box-shadow:2px 3px 0 var(--ink),0 0 12px rgba(74,143,224,.55)}
-.cell.r-episch:not(.locked){background:linear-gradient(#f0e2ff,#f6efd9 70%);box-shadow:2px 3px 0 var(--ink),0 0 16px rgba(154,82,224,.7)}
-.cell.r-legendaer:not(.locked){background:linear-gradient(#fff2b8,#f6efd9 70%);box-shadow:2px 3px 0 var(--ink),0 0 20px rgba(255,180,0,.9);animation:legend 2.2s ease-in-out infinite}
-@keyframes legend{50%{box-shadow:2px 3px 0 var(--ink),0 0 30px rgba(255,200,40,1)}}
-.pickrow.rbar{background:linear-gradient(90deg,var(--paper),var(--paper))}
 .stars .gi{margin:0 -1px}

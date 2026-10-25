@@ -47,12 +47,6 @@ const rarHTML = r => '<span class="rar" style="color:' + RARITY[r].color + '">' 
 const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
 
 const starsHTML = (n, size) => n ? '<span class="stars" style="white-space:nowrap">' + Array.from({ length: n }, () => gi('star', size || 15, '#ffd45a')).join('') + '</span>' : '';
-const PERK = {
-  gewoehnlich: null,
-  selten: 'Schild: fängt am Anfang 18 % des Lebens ab.',
-  episch: 'Wut: unter der Hälfte Leben +30 % Schaden und eine Druckwelle.',
-  legendaer: 'Ultimativ: unter 45 % Leben einmalig riesige Welle, betäubt Gegner, heilt 12 % und +25 % Schaden.'
-};
 function decorate(root) {
   root.querySelectorAll('canvas.ball').forEach(cv => {
     if (cv._init) return; cv._init = 1;
@@ -276,7 +270,7 @@ function detail(type) {
   overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + esc(d.name) + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
     '<div class="hero pop">' + ball(type, 230, .66) + '</div>' +
     '<div class="panel"><div class="row sb wrap">' + rarHTML(d.rarity) + '<span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p>' +
-    (PERK[d.rarity] ? '<p class="mt" style="color:' + RARITY[d.rarity].color + '"><b>' + PERK[d.rarity] + '</b></p>' : '') + (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
+    (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
     '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' + own + '</div>');
 }
 

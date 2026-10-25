@@ -3,12 +3,12 @@ import { DM } from './tuning.js';
 import { DT, BOX, PI, dsin, dcos, len, hurt, stun, fx, rand, setDir, rotateVel, steer, nearestEnemy, heal, burn } from './core.js';
 import { DEFS, OBJS, BALL_IDS, newObj, aimVel, clampPt, foes, own, ready, postHit } from './balls.js';
 
-function rot2(v, ang) {
+export function rot2(v, ang) {
   const c = dcos(ang), s = dsin(ang);
   return [v[0] * c - v[1] * s, v[0] * s + v[1] * c];
 }
 // Standard-Geschoss
-function shot(sim, b, e, sp, ang) {
+export function shot(sim, b, e, sp, ang) {
   let v = aimVel(b, e, sp.speed, sp.lead == null ? .4 : sp.lead);
   if (ang) v = rot2(v, ang);
   return newObj(sim, sp.k || 'bullet', b, b.x, b.y, {
@@ -17,8 +17,8 @@ function shot(sim, b, e, sp, ang) {
   });
 }
 // Zeitgeber: gibt true zurück, wenn ausgelöst wird
-function tick(b, next) { b.st.cd -= DT; if (b.st.cd > 0) return false; b.st.cd = next; return true; }
-function wave(sim, b, x, y, ex) {
+export function tick(b, next) { b.st.cd -= DT; if (b.st.cd > 0) return false; b.st.cd = next; return true; }
+export function wave(sim, b, x, y, ex) {
   return newObj(sim, 'wave', b, x, y, Object.assign({ rad: 2, hit: {}, sp: 150, maxR: 90, dmg: 10, r: 2 }, ex));
 }
 function nobj(sim, b, k) { let n = 0; for (const o of sim.objs) if (o.k === k && o.owner === b.id && !o.dead) n++; return n; }

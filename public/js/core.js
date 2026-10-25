@@ -63,11 +63,10 @@ export function addBall(sim, type, team, slot, x, y, deg, opt) {
   const b = {
     id: sim.nextId++, type, def, team, slot, x, y, vx: 0, vy: 0, speed: def.speed, r: def.r,
     hp: def.hp, maxHp: def.hp, dead: false, stun: 0, stunImm: 0, flash: 0, hitCd: {}, st: {}, age: 0,
-    lvl: 0, noMove: false, burn: 0, burnDps: 0, burnSrc: 0, stars: 0, pm: 1, shield: 0, phase: 0
+    lvl: 0, noMove: false, burn: 0, burnDps: 0, burnSrc: 0, stars: 0, pm: 1
   };
   const stars = (opt && opt.stars) || 0;
   if (stars) { b.stars = stars; const k = 1 + STAR_BONUS * stars; b.hp *= k; b.maxHp *= k; b.pm = k; }
-  if (def.rarity === 'selten') b.shield = b.maxHp * .18;
   b.vx = d[0] * b.speed; b.vy = d[1] * b.speed;
   if (def.init) def.init(b, sim, opt || {});
   const l0 = len(b.vx, b.vy) || 1;
@@ -127,12 +126,6 @@ export function hurt(sim, t, amt, src, kind) {
   // Anlaufphase: am Anfang wird weniger Schaden gemacht, damit kein Kampf unter ca. 8 s endet
   if (sim.t < 8 && kind !== 'reflect') amt *= .3 + .7 * (sim.t / 8);
   if (d.takes) amt *= d.takes(t, sim, kind);
-  if (t.shield > 0) {
-    const ab = Math.min(t.shield, amt); t.shield -= ab; amt -= ab;
-    if (t.shield <= 0) { t.shield = 0; fx(sim, 'shieldbreak', t.x, t.y, t.r); }
-    else if (kind !== 'dot') fx(sim, 'block', t.x, t.y, 0);
-    if (amt <= 0) return 0;
-  }
   t.hp -= amt;
   if (kind !== 'dot') t.flash = .12;
   if (src) sim.dealt[src.team] = (sim.dealt[src.team] || 0) + amt;
@@ -202,7 +195,6 @@ export function stepSim(sim) {
     if (b.dead) continue;
     b.age += DT;
     if (b.flash > 0) b.flash -= DT;
-    if (sim.perk) sim.perk(sim, b);
     if (b.burn > 0) { b.burn -= DT; hurt(sim, b, b.burnDps * DT, sim.byId[b.burnSrc] || null, 'dot'); }
     if (b.stun > 0) { b.stun -= DT; if (b.stun <= 0) { b.stun = 0; b.stunImm = 1.5; } }
     else if (b.stunImm > 0) b.stunImm -= DT;

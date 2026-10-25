@@ -54,42 +54,6 @@ export function star(g, x, y, r, col, rot) {
 }
 
 
-/* ---------- Seltenheits-Optik ---------- */
-export const RCOL = { selten: ['#4a8fe0', '#bfe0ff'], episch: ['#9a52e0', '#e8c8ff'], legendaer: ['#ffb400', '#fff0a0'] };
-function glow(g, r, col, a) {
-  const gr = g.createRadialGradient(0, 0, r * .15, 0, 0, r);
-  gr.addColorStop(0, col.replace('1)', a + ')')); gr.addColorStop(1, col.replace('1)', '0)'));
-  g.fillStyle = gr; g.beginPath(); g.arc(0, 0, r, 0, 7); g.fill();
-}
-const GL = { selten: 'rgba(90,160,255,1)', episch: 'rgba(160,90,240,1)', legendaer: 'rgba(255,196,40,1)' };
-// Aura hinter dem Ball. Koordinaten relativ zum Ball, r = Körperradius
-export function rarAura(g, rar, r, tm, tf, seed, big) {
-  if (!GL[rar]) return;
-  const pul = 1 + .08 * Math.sin(tm * 3 + seed);
-  const sc = rar === 'legendaer' ? 2.7 : rar === 'episch' ? 2.2 : 1.8;
-  glow(g, r * sc * pul, GL[rar], rar === 'legendaer' ? .65 : rar === 'episch' ? .5 : .38);
-  if (rar === 'legendaer') {
-    g.save(); g.rotate(tm * .5 + seed);
-    for (let i = 0; i < 10; i++) {
-      const a = i * .6283, w = .11, L = r * (3.1 + (i % 2) * .5);
-      g.fillStyle = 'rgba(255,214,80,' + (i % 2 ? .22 : .34) + ')';
-      g.beginPath(); g.moveTo(Math.cos(a - w) * r * 1.1, Math.sin(a - w) * r * 1.1); g.lineTo(Math.cos(a) * L, Math.sin(a) * L); g.lineTo(Math.cos(a + w) * r * 1.1, Math.sin(a + w) * r * 1.1); g.closePath(); g.fill();
-    }
-    g.restore();
-  }
-  if (rar === 'episch') {
-    g.save(); g.rotate(-tm * 1.1 + seed); g.setLineDash([r * .5, r * .4]); g.strokeStyle = 'rgba(190,130,255,.85)'; g.lineWidth = Math.max(1.4, r * .08);
-    g.beginPath(); g.arc(0, 0, r * 1.55, 0, 7); g.stroke(); g.setLineDash([]); g.restore();
-    for (let i = 0; i < 3; i++) { const a = tm * 1.6 + i * 2.094 + seed; star(g, Math.cos(a) * r * 1.55, Math.sin(a) * r * 1.55, Math.max(2.4, r * .17), '#e0b8ff', a * 2); }
-  }
-  if (rar === 'selten') {
-    for (let i = 0; i < 3; i++) {
-      const ph = (tm * .9 + i * .33 + seed * .13) % 1, a = i * 2.1 + seed + tm * .3;
-      g.globalAlpha = Math.sin(ph * 3.14159); star(g, Math.cos(a) * r * 1.45, Math.sin(a) * r * 1.45, Math.max(2, r * .13), '#d6ecff', a); g.globalAlpha = 1;
-    }
-  }
-}
-
 /* ---------- Ball ---------- */
 // Koordinaten in Arena-Einheiten; tf = Boil-Frame, tm = Sekunden
 export function drawBall(g, b, sim, tf, tm, tint) {
@@ -112,22 +76,6 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   else if (type === 'supernova' && st.ch > 0) { const rr = b.r * (1.5 + st.ch * 2), gr = g.createRadialGradient(0, 0, 0, 0, 0, rr); gr.addColorStop(0, 'rgba(255,240,150,' + (.15 + st.ch * .5) + ')'); gr.addColorStop(1, 'rgba(255,240,150,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rr, 0, 7); g.fill(); }
   else if (type === 'schwarzloch') { ringJ(g, 0, 0, 38 + Math.sin(tm * 3) * 4, 1.2, 'rgba(139,79,201,.4)', tf, b.id); }
   else if (type === 'tornado') { const p = partSprite('swirl'); spr(g, p, 0, 0, f, (b.r + 14) / p.rad, tm * 4, .55); }
-  if (RCOL[d.rarity] && !ghost) {
-    rarAura(g, d.rarity, b.r, tm, tf, b.id, false);
-    if (!b.preview && (d.rarity !== 'selten')) {
-      if (!(tm - (v.tr || 0) < (d.rarity === 'legendaer' ? .05 : .11))) {
-        v.tr = tm;
-        const col = d.rarity === 'legendaer' ? (b.id % 2 ? '#ffd45a' : '#fff0a0') : '#d0a0ff';
-        pt({ k: 'spark', x: x + (rnd() - .5) * b.r, y: y + (rnd() - .5) * b.r, vx: -b.vx * .05 + (rnd() - .5) * 30, vy: -b.vy * .05 + (rnd() - .5) * 30 - 8, age: 0, life: .55, col, sz: 2.4 + rnd() * 2, rot: rnd() * 6 });
-      }
-    }
-  }
-  if (b.phase) {
-    const lg = d.rarity === 'legendaer', pr = lg ? 'rgba(255,170,30,1)' : 'rgba(210,60,120,1)';
-    glow(g, b.r * (lg ? 2.2 : 1.9) * (1 + .1 * Math.sin(tm * 9)), pr, .55);
-    const p = objSprite('fireZone');
-    for (let i = 0; i < 4; i++) spr(g, p, (i - 1.5) * b.r * .5, b.r * .2 - Math.abs(Math.sin(tm * 7 + i * 1.3)) * b.r * .8, f + i, .42, 0, .8);
-  }
   /* Körper */
   g.save(); g.rotate(tilt); g.scale(sx * bob * k, sy * bob * k);
   const sp = bodySprite(type);
@@ -167,17 +115,6 @@ export function drawBall(g, b, sim, tf, tm, tint) {
     const ax = st.ax, ay = st.ay, p = objSprite('fireZone');
     for (let i = 0; i < 9; i++) { const dist = b.r + 8 + i * 15, w = .45 + i * .1; spr(g, p, ax * dist, ay * dist, f + i, w * (.9 + .15 * Math.sin(tm * 14 + i)), 0, .88); }
   }
-  if (b.shield > 0) {
-    const sa = Math.min(1, .35 + b.shield / (b.maxHp * .18) * .65);
-    g.save(); g.globalAlpha = sa; g.fillStyle = 'rgba(150,205,255,.22)'; g.beginPath(); g.arc(0, 0, b.r + 5, 0, 7); g.fill();
-    ringJ(g, 0, 0, b.r + 5, 2.2, 'rgba(110,180,255,.95)', tf, b.id + 3); g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = 1.8; g.beginPath(); g.arc(0, 0, b.r + 5, -2.6, -1.9); g.stroke(); g.restore();
-  }
-  if (d.rarity === 'legendaer') {
-    for (let i = 0; i < 6; i++) {
-      const ph = ((tm * (.4 + i * .08) + i * .17) % 1), a = i * 1.7 + tm * .5, dist = b.r * (1.5 + (i % 3) * .25);
-      star(g, Math.cos(a) * dist, Math.sin(a) * dist - ph * 14, 2.4 + (i % 2), 'rgba(255,230,120,' + (1 - ph).toFixed(2) + ')', a);
-    }
-  }
   if (b.burn > 0) {
     const p = objSprite('fireZone');
     for (let i = 0; i < 3; i++) spr(g, p, (i - 1) * b.r * .5, -b.r * .7 - Math.abs(Math.sin(tm * 8 + i)) * 4, f + i, .5, 0, .85);
@@ -196,7 +133,6 @@ export function drawBallIn(ctx, type, size, tm, tf, fit, dark) {
   const sp = bodySprite(type);
   const w = size * (fit || .62) * (BIG[type] || 1) * 2.15;
   ctx.save(); ctx.translate(size / 2, size / 2 + Math.sin(tm * 3 + type.length) * size * .012);
-  if (!dark && RCOL[DEFS[type].rarity]) rarAura(ctx, DEFS[type].rarity, size * .24, tm, tf, type.length * 1.3, true);
   if (dark) { ctx.filter = 'brightness(0)'; ctx.globalAlpha = .22; }
   ctx.drawImage(sp.fr[((tf % 3) + 3) % 3], -w / 2, -w / 2, w, w);
   ctx.restore();
@@ -305,23 +241,6 @@ export function addFx(e) {
   else if (k === 'levelup') { pt({ k: 'star', x, y, age: 0, life: .9, vx: 0, vy: -40, sz: 7 }); snd('coin', .6); }
   else if (k === 'grab') { sparks(x, y, 5, '#c9aeee', 70, .35, 3); snd('hit', .6); }
   else if (k === 'breath') { snd('whoosh'); }
-  else if (k === 'phase') {
-    pt({ k: 'ring', x, y, age: 0, life: .6, r: 70, col: '#b46af0' }); pt({ k: 'ring', x, y, age: 0, life: .4, r: 42, col: '#fff' });
-    sparks(x, y, 16, '#c98cff', 170, .6, 3.6); puffs(x, y, 4, 'rgba(180,106,240,.7)', 50, 8);
-    pt({ k: 'num', x, y: y - 24, age: 0, life: 1.1, txt: 'Wut!', sz: 17, col: '#d9a8ff' });
-    fxState.shake = Math.max(fxState.shake, 6); fxState.hitstop = Math.max(fxState.hitstop, .1); snd('whoosh'); snd('hit2');
-  } else if (k === 'ult') {
-    const nm = (DEFS[e.e] && DEFS[e.e].name) || '';
-    pt({ k: 'ring', x, y, age: 0, life: .9, r: 150, col: '#ffc21a' }); pt({ k: 'ring', x, y, age: 0, life: .6, r: 100, col: '#fff6c0' }); pt({ k: 'ring', x, y, age: 0, life: 1.2, r: 190, col: '#ff8a2a' });
-    sparks(x, y, 34, '#ffd45a', 260, .9, 4.6); puffs(x, y, 8, 'rgba(255,214,90,.8)', 90, 10);
-    for (let i = 0; i < 6; i++) pt({ k: 'star', x, y, age: 0, life: 1, vx: (rnd() - .5) * 220, vy: -90 - rnd() * 90, sz: 5 + rnd() * 4 });
-    pt({ k: 'num', x, y: y - 30, age: 0, life: 1.6, txt: 'ULTIMATIV!', sz: 24, col: '#ffd45a' });
-    if (nm) pt({ k: 'num', x, y: y - 8, age: 0, life: 1.6, txt: nm, sz: 14, col: '#ffffff' });
-    fxState.shake = 12; fxState.hitstop = Math.max(fxState.hitstop, .22); fxState.ko = Math.max(fxState.ko, .9);
-    fxState.zoom = { t: 1.1, T: 1.1, x, y }; snd('nova'); snd('legend');
-  } else if (k === 'shieldbreak') {
-    pt({ k: 'ring', x, y, age: 0, life: .4, r: e.a * 3, col: '#8fd0ff' }); sparks(x, y, 12, '#bfe6ff', 150, .45, 3); snd('block');
-  }
 }
 export function burst(x, y, n, cols) {   // Konfetti für Sieg
   for (let i = 0; i < n; i++) pt({ k: 'conf', x: x + (rnd() - .5) * 40, y, age: 0, life: 1.6 + rnd() * .8, vx: (rnd() - .5) * 260, vy: -160 - rnd() * 200, col: cols[i % cols.length], sz: 3 + rnd() * 3, rot: rnd() * 6 });
