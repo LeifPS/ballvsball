@@ -53,7 +53,7 @@ function face(c, s, o) {
   c.stroke();
 }
 function spike(c, x, y, a, l, w, col) { c.save(); c.translate(x, y); c.rotate(a); c.beginPath(); c.moveTo(-w, 0); c.lineTo(0, -l); c.lineTo(w, 0); c.closePath(); FS(c, col); c.restore(); }
-function glow(c, s, col, k) { const g = c.createRadialGradient(0, 0, s * .1, 0, 0, s * (k || .8)); g.addColorStop(0, hexA(col, .5)); g.addColorStop(1, hexA(col, 0)); c.fillStyle = g; c.beginPath(); c.arc(0, 0, s * (k || .8), 0, 7); c.fill(); }
+function glow() { }   // Leuchten hinter den Bällen ist abgeschafft (Aufrufe bleiben als Platzhalter)
 function wing(c, d, r, col, o) { o = o || {}; const k = o.k || 1; c.beginPath(); c.moveTo(d * r * .8, -r * .2); c.quadraticCurveTo(d * r * 1.6 * k, -r * 1.2 * k, d * r * 1.7 * k, -r * .1); c.quadraticCurveTo(d * r * 1.4 * k, -r * .3, d * r * 1.25 * k, r * .2); c.quadraticCurveTo(d * r * 1.0 * k, 0, d * r * .8, r * .3); c.closePath(); FS(c, col); }
 function stars(c, pts, col) { pts.forEach(p => { c.save(); c.translate(p[0], p[1]); c.beginPath(); for (let i = 0; i < 10; i++) { const a = -PI / 2 + i * PI / 5, q = i % 2 ? p[2] * .45 : p[2]; c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * q, Math.sin(a) * q); } c.closePath(); FS(c, col || '#ffd45a'); c.restore(); }); }
 function flame(c, x, y, w, h, col1, col2) {
