@@ -250,7 +250,7 @@ function home() {
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
     '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
     (ev ? '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="halloween">' + gi('token', 46) + '<div class="grow"><h3>Halloween-Box ist da!</h3><span class="small">' + timeLeft(me.eventEnd - now()) + ' - 6 neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>' : '') +
-    btn('Kampf', 'queue1', '', 'pri big') + btn('Mit Freunden spielen', 'friends') +
+    btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'queue1', '', 'fight') + btn('Mit Freunden spielen', 'friends') +
     '<div class="row gap6"><div class="grow">' + btn('Sammlung', 'collection') + '</div><div class="grow">' + btn('Ballboxen', 'box') + '</div></div>' +
     '<div class="row gap6"><div class="grow">' + btn('Markt', 'market') + '</div><div class="grow">' + btn('Tauschen', 'trades') + '</div></div>' +
     (me.dailyReady ? btn('Tagesbelohnung abholen' + (ev ? ' (+5 Marken)' : ''), 'daily', '', 'green') : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
