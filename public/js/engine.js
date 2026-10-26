@@ -3,6 +3,7 @@ import { makeSim, stepSim, runToEnd, DT, BOX, MAX_T, ENRAGE_T, STAR_BONUS, MAX_S
 import { DEFS, OBJS, BALL_IDS, RARITY, ballsByRarity } from './balls.js';
 import { BOX_IDS, ballsInBox } from './balls2.js';
 import './balls3.js';
+import './balls4.js';
 
 export { STAR_BONUS, MAX_STARS, DT, BOX, MAX_T, ENRAGE_T, DEFS, OBJS, BALL_IDS, RARITY, ballsByRarity, stepSim, BOX_IDS, ballsInBox };
 
