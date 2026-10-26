@@ -31,12 +31,23 @@ function botType() {
   return ids[0];
 }
 
-// Hand: drei verschiedene Bälle. Jede Sorte zählt gleich, egal wie viele Exemplare man besitzt;
-// von einer Sorte kommt das Exemplar mit den meisten Sternen.
+// Hand: drei verschiedene Sorten. Jede Sorte zählt gleich, egal wie viele Exemplare man besitzt.
+// Pro Platz wird erst eine Seltenheit gewürfelt (nur unter den Stufen, die man noch zur Verfügung hat), dann eine Sorte darin.
+// So verdünnen zusätzliche Bälle einer Stufe die Chancen der anderen Stufen nicht.
+const HAND_W = { gewoehnlich: 40, selten: 30, episch: 20, legendaer: 10 };
 function pickHand(inv) {
   const by = new Map();
   for (const b of inv) { const c = by.get(b.type); if (!c || (b.stars || 0) > (c.stars || 0)) by.set(b.type, b); }
-  const hand = shuffle([...by.values()]).slice(0, 3);
+  const pools = {};
+  for (const b of by.values()) (pools[DEFS[b.type].rarity] = pools[DEFS[b.type].rarity] || []).push(b);
+  const hand = [];
+  while (hand.length < 3) {
+    const rars = Object.keys(pools).filter(r => pools[r].length);
+    if (!rars.length) break;
+    let r = rnd() * rars.reduce((a, k) => a + HAND_W[k], 0), pick = rars[rars.length - 1];
+    for (const k of rars) { r -= HAND_W[k]; if (r < 0) { pick = k; break; } }
+    hand.push(pools[pick].splice(rint(pools[pick].length), 1)[0]);
+  }
   return hand;
 }
 // Bots spielen Bälle der Seltenheiten, die auch die Menschen im Kampf haben; nur selten eine Stufe daneben.
