@@ -616,7 +616,13 @@ function fightScreen(m) {
     $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext', '', 'pri') + '</div>';
     window.scrollTo(0, document.body.scrollHeight);
   };
-  S.fightNext = () => { if (!sentReady) { sentReady = true; wsSend({ t: 'ready' }); const b = $('#fbtn'); if (b) b.innerHTML = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Warte auf die anderen ...</p>'; } };
+  // "Weiter": Bereitmeldung senden und alle 2,5 s wiederholen, bis die nächste Runde kommt (bei kurzem Verbindungsabbruch ging die Meldung sonst verloren)
+  S.fightNext = () => {
+    if (sentReady) return; sentReady = true;
+    const b = $('#fbtn'); if (b) b.innerHTML = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Warte auf die anderen ...</p>';
+    const send = () => { if (S.wsOK && S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify({ t: 'ready' })); };
+    send(); every(send, 2500);
+  };
   S.fightSkip = () => {
     if (phase === 'ko' || phase === 'done') return; sim.noFx = true; let g2 = 6000;
     while (!sim.over && g2-- > 0 && sim.step < m.steps + 5) stepSim(sim);
