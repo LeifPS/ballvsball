@@ -168,6 +168,5 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   });
   // vordere Becherkante, damit die Bälle im Becher liegen
   g.save(); g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.moveTo(CUP.x0, CUP.y0 + 6); g.lineTo(CUP.x0 + 8, CUP.y1); g.lineTo(CUP.x1 - 8, CUP.y1); g.lineTo(CUP.x1, CUP.y0 + 6); g.closePath(); g.fill(); g.restore();
-  for (let i = 0; i < 3; i++) star(g, BW / 2 + (i - 1) * 18, 352 + ((tf + i) % 2) * 2 - Math.abs(Math.sin(tm * 3 + i)) * 3, 4.5, '#ffd45a', tm * 2 + i);
   g.restore();
 }
