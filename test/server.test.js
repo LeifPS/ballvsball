@@ -170,6 +170,6 @@ ok(!!end, 'Match nach ' + Math.round((Date.now() - t0) / 1000) + ' s beendet (' 
 ok(fightOk, 'Client-Simulation stimmt mit Server-Ergebnis überein');
 if (end) {
   const after = (await api('/api/me', t1)).me.coins;
-  ok(after - before === end.coins && end.coins === (end.win ? 20 : 3), 'Belohnung gebucht: ' + end.coins);
+  ok(after - before === end.coins && end.coins === (end.win ? 40 : 10), 'Belohnung gebucht: ' + end.coins);
 }
 process.exit(process.exitCode || 0);

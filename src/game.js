@@ -394,7 +394,7 @@ export class Game extends DurableObject {
       let coins = 0, tokens = 0;
       if (!m.friendly && !p.left) {
         const botOpp = m.players.some(o => o.bot && o.team !== p.team);
-        coins = win ? (botOpp ? 20 : 30) : (botOpp ? 3 : 8);
+        coins = win ? (botOpp ? 40 : 60) : (botOpp ? 10 : 20);   // Münzen pro Kampf: gegen Bot 40 / 10, gegen Menschen 60 / 20
         try { tokens = await this.store().reward(p.userId, coins, win, win ? (botOpp ? 2 : 3) : 1) || 0; } catch (e) { console.log('reward', e); }
       }
       results.push({ p, win, coins, tokens });
