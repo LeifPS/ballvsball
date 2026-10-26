@@ -259,22 +259,23 @@ function detail(type) {
   const sugg = { gewoehnlich: 40, selten: 100, episch: 250, legendaer: 700 }[d.rarity];
   let own = '';
   if (c) {
-    const freeN = S.me.balls.filter(x => !x.lock).length;
-    own = '<h3>Du besitzt ' + c.n + 'x</h3>' + c.list.slice().sort((a, z) => z.stars - a.stars || a.uid - z.uid).map(b => {
+    const lvl = Math.max(...c.list.map(x => x.stars)), free = c.list.filter(x => !x.lock);
+    let up = '';
+    if (free.length) {
+      if (lvl >= MAX_STARS) up = '<div class="small center">Höchste Stufe erreicht!</div>';
+      else {
+        const cost = UP_COST[d.rarity][lvl], have = free.length - 1, ok = have >= cost;
+        up = '<button class="btn sm ' + (ok ? 'green' : '') + '" style="width:100%" data-act="upgrade" data-uid="' + free[0].uid + '" ' + (ok ? '' : 'disabled') + '>' + gi('star', 20, '#ffd45a') + ' Verbessern auf ' + (lvl + 1) + ' (' + Math.min(have, cost) + ' von ' + cost + ' Duplikaten)</button>';
+      }
+    }
+    own = '<h3>Du besitzt ' + c.n + 'x</h3><div class="card col" style="gap:6px"><div class="small">Stufe: ' + (lvl ? starsHTML(lvl, 17) : '<span class="mute">keine Sterne</span>') + '</div>' + up + '</div>' +
+      c.list.slice().sort((a, z) => a.uid - z.uid).map(b => {
       let r;
       if (b.lock === 1) r = '<span class="small">Auf dem Markt für ' + coinHTML(b.price) + '</span><button class="btn sm" data-act="mkcancel" data-uid="' + b.uid + '">Zurückziehen</button>';
       else if (b.lock === 2) r = '<span class="small">' + gi('lock', 20) + ' Im Tausch</span>';
       else r = '<div class="inp" style="width:90px"><input type="number" inputmode="numeric" min="10" id="pr' + b.uid + '" value="' + sugg + '"></div><button class="btn sm pri" data-act="mklist" data-uid="' + b.uid + '">Verkaufen</button>';
-      let up = '';
-      if (b.lock === 0) {
-        if (b.stars >= MAX_STARS) up = '<div class="small center" style="width:100%">Höchste Stufe erreicht!</div>';
-        else {
-          const cost = UP_COST[d.rarity][b.stars], have = c.list.filter(x => !x.lock && x.uid !== b.uid).length, ok = have >= cost;
-          up = '<button class="btn sm ' + (ok ? 'green' : '') + '" style="width:100%" data-act="upgrade" data-uid="' + b.uid + '" ' + (ok ? '' : 'disabled') + '>' + gi('star', 20, '#ffd45a') + ' Verbessern auf ' + (b.stars + 1) + ' (' + Math.min(have, cost) + ' von ' + cost + ' Duplikaten)</button>';
-        }
-      }
-      return '<div class="card col" style="gap:6px"><div class="listrow" style="padding:0"><span class="small grow">Nr. ' + b.uid + ' ' + (b.stars ? starsHTML(b.stars, 17) : '<span class="mute">keine Sterne</span>') + '</span>' + r + '</div>' + up + '</div>';
-    }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden. Dafür werden gleiche Bälle verbraucht. Drei verschiedene freie Bälle musst du immer behalten.</p>';
+      return '<div class="card col" style="gap:6px"><div class="listrow" style="padding:0"><span class="small grow">Exemplar Nr. ' + b.uid + '</span>' + r + '</div></div>';
+    }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden und gilt für die ganze Sorte, egal wie viele Exemplare du hast. Zum Verbessern werden gleiche Bälle verbraucht. Drei verschiedene freie Bälle musst du immer behalten.</p>';
   } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.</p>';
   const known = !!c;
   overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + (known ? esc(d.name) : '???') + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +

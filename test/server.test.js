@@ -103,6 +103,7 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
     ok(x.ok && x.stars === 1 && x.me.balls.length === me.balls.length - x.cost, 'Verbessern: 1 Stern, ' + x.cost + ' Duplikate verbraucht');
     const b = x.me.balls.find(q => q.uid === dup[0].uid);
     ok(b && b.stars === 1, 'Stern am Ball gespeichert');
+    ok(x.me.balls.filter(q => q.type === b.type).every(q => q.stars === 1), 'Sterne gelten für alle Exemplare der Sorte');
     x = await api('/api/upgrade', t, { uid: 999999999 });
     ok(x.err === 'not_yours', 'fremder Ball nicht verbesserbar');
   }

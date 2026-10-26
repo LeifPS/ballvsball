@@ -67,6 +67,10 @@ export class Store extends DurableObject {
     const cols = this.q('PRAGMA table_info(users)').map(c => c.name);
     const bcols = this.q('PRAGMA table_info(balls)').map(c => c.name);
     if (!bcols.includes('stars')) this.sql.exec('ALTER TABLE balls ADD COLUMN stars INTEGER NOT NULL DEFAULT 0');
+    // Sterne gehören zur Sorte, nicht zum einzelnen Exemplar: alte Exemplar-Sterne auf die Sorte (höchster Wert) übertragen
+    this.sql.exec('CREATE TABLE IF NOT EXISTS tstars(owner INTEGER NOT NULL, type TEXT NOT NULL, stars INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(owner,type))');
+    this.sql.exec('INSERT INTO tstars(owner,type,stars) SELECT owner,type,MAX(stars) FROM balls WHERE stars>0 GROUP BY owner,type ON CONFLICT(owner,type) DO UPDATE SET stars=MAX(stars,excluded.stars)');
+    this.sql.exec('UPDATE balls SET stars=0 WHERE stars>0');
     if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
   }
 
@@ -81,13 +85,19 @@ export class Store extends DurableObject {
     for (const uid of add || []) { const b = this.q('SELECT type FROM balls WHERE uid=?', uid)[0]; if (b) types.add(b.type); }
     return types.size;
   }
+  levels(owner) {
+    const lv = {};
+    for (const r of this.q('SELECT type,stars FROM tstars WHERE owner=?', owner)) lv[r.type] = r.stars;
+    return lv;
+  }
   freeCount(id) { return this.q('SELECT COUNT(*) c FROM balls WHERE owner=? AND lock=0', id)[0].c; }
   giveBall(owner, type) {
     const r = this.q('INSERT INTO balls(owner,type) VALUES(?,?) RETURNING uid', owner, type);
     return { uid: r[0].uid, type };
   }
   profile(u) {
-    const balls = this.q('SELECT uid,type,lock,price,stars FROM balls WHERE owner=? ORDER BY uid', u.id);
+    const lv = this.levels(u.id);
+    const balls = this.q('SELECT uid,type,lock,price FROM balls WHERE owner=? ORDER BY uid', u.id).map(b => ({ ...b, stars: lv[b.type] || 0 }));
     const now = Date.now(), today = Math.floor(now / DAY);
     const live = eventActive(now);
     if (!live && u.tokens) this.q('UPDATE users SET tokens=0 WHERE id=?', u.id);
@@ -152,17 +162,19 @@ export class Store extends DurableObject {
     const b = this.q('SELECT * FROM balls WHERE uid=?', Number(uid))[0];
     if (!b || b.owner !== u.id) return { err: 'not_yours' };
     if (b.lock !== 0) return { err: 'locked' };
-    if (b.stars >= MAX_STARS) return { err: 'max_stars' };
-    const cost = UP_COST[DEFS[b.type].rarity][b.stars];
-    const fod = this.q('SELECT uid FROM balls WHERE owner=? AND type=? AND lock=0 AND uid<>? ORDER BY stars ASC, uid DESC LIMIT ?', u.id, b.type, b.uid, cost);
+    const stars = this.levels(u.id)[b.type] || 0;
+    if (stars >= MAX_STARS) return { err: 'max_stars' };
+    const cost = UP_COST[DEFS[b.type].rarity][stars];
+    const fod = this.q('SELECT uid FROM balls WHERE owner=? AND type=? AND lock=0 AND uid<>? ORDER BY uid DESC LIMIT ?', u.id, b.type, b.uid, cost);
     if (fod.length < cost) return { err: 'need_dupes' };
     if (this.freeTypesAfter(u.id, fod.map(f => f.uid), []) < MIN_FREE) return { err: 'min_balls' };
     for (const f of fod) this.q('DELETE FROM balls WHERE uid=?', f.uid);
-    this.q('UPDATE balls SET stars=stars+1 WHERE uid=?', b.uid);
-    return { ok: true, uid: b.uid, stars: b.stars + 1, cost, me: this.profile(this.userBy(tk)) };
+    this.q('INSERT INTO tstars(owner,type,stars) VALUES(?,?,?) ON CONFLICT(owner,type) DO UPDATE SET stars=excluded.stars', u.id, b.type, stars + 1);
+    return { ok: true, uid: b.uid, stars: stars + 1, cost, me: this.profile(this.userBy(tk)) };
   }
   inventory(userId) {
-    return this.q('SELECT uid,type,stars FROM balls WHERE owner=? AND lock=0', userId);
+    const lv = this.levels(userId);
+    return this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', userId).map(b => ({ ...b, stars: lv[b.type] || 0 }));
   }
   reward(userId, coins, win, tokens) {
     const tk = eventActive(Date.now()) ? (tokens || 0) : 0;
