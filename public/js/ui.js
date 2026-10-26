@@ -267,11 +267,12 @@ function detail(type) {
       return '<div class="card col" style="gap:6px"><div class="listrow" style="padding:0"><span class="small grow">Nr. ' + b.uid + ' ' + (b.stars ? starsHTML(b.stars, 17) : '<span class="mute">keine Sterne</span>') + '</span>' + r + '</div>' + up + '</div>';
     }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden. Dafür werden gleiche Bälle verbraucht. Drei verschiedene freie Bälle musst du immer behalten.</p>';
   } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.</p>';
-  overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + esc(d.name) + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
-    '<div class="hero pop">' + ball(type, 230, .66) + '</div>' +
-    '<div class="panel"><div class="row sb wrap">' + rarHTML(d.rarity) + '<span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p>' +
+  const known = !!c;
+  overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + (known ? esc(d.name) : '???') + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
+    '<div class="hero pop">' + ball(type, 230, .66, known ? '' : 'data-dark="1"') + '</div>' +
+    '<div class="panel"><div class="row sb wrap">' + rarHTML(d.rarity) + (known ? '<span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span>' : '') + '</div>' + (known ? '<p class="mt">' + esc(d.desc) + '</p>' : '<p class="mt mute">Noch nicht entdeckt. Finde diesen Ball, um mehr zu erfahren.</p>') +
     (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
-    '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' + own + '</div>');
+    (known ? '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' : '') + own + '</div>');
 }
 
 /* ================= Ballboxen ================= */
@@ -301,7 +302,7 @@ function boxDetail(id) {
     '<div class="hero bounce" style="margin-top:6px">' + gi('bx_' + b.id, 130) + '</div>' +
     (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am 1. November. ' + timeLeft(b.until - now()) + '.<div class="small mt">Halloween-Marken bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Marken verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
     '<div class="panel"><h3>Das kann drin sein</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
-    st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? '' : '') + esc(DEFS[t].name.replace('ball', '')) + '</div></button>').join('') +
+    st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name.replace('ball', '')) : '???') + '</div></button>').join('') +
     '</div></div>' +
     '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + r[1] + ' Bälle)</span></span><span>' + RARITY[r[0]].weight + ' %</span></div>').join('') + '</div>' +
     btn('Öffnen für ' + priceHTML(b), 'openbox', (ok ? '' : 'disabled') + ' data-id="' + id + '"', 'pri big') +
