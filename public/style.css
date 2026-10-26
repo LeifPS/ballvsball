@@ -123,18 +123,15 @@ canvas.boxart{display:block}
 .boxtile .nm{font:400 25px/1.1 var(--f-display);color:#fff;text-shadow:2px 2px 0 var(--ink)}
 .boxtile .tag{position:absolute;top:6px;right:8px;transform:rotate(6deg)}
 
-/* Kampf-Knopf: groß, leicht schief, atmet, mit Glanzstreifen und zwei Schwertern, die zusammenschlagen */
+/* Kampf-Knopf: groß, gerade und ruhig, mit Glanzstreifen und zwei Schwertern */
 .btn.fight{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;gap:10px;min-height:92px;font:400 48px/1 var(--f-display);letter-spacing:1px;color:#fff;
   background:repeating-linear-gradient(115deg,rgba(255,255,255,.14) 0 10px,transparent 10px 22px),linear-gradient(#ff9a2e,#e8561f);
   border:3.5px solid var(--ink);border-radius:18px 8px 20px 9px / 9px 20px 8px 18px;box-shadow:3px 6px 0 var(--ink),inset 0 -9px 0 rgba(150,40,10,.3),inset 0 4px 0 rgba(255,255,255,.35);
-  transform:rotate(-1.2deg);animation:fpulse 1.7s ease-in-out infinite}
+  }
 .btn.fight .ftx{text-shadow:3px 3px 0 var(--ink),-1.5px -1.5px 0 var(--ink),1.5px -1.5px 0 var(--ink),-1.5px 1.5px 0 var(--ink)}
 .btn.fight::after{content:"";position:absolute;top:-20%;left:-40%;width:22%;height:140%;background:rgba(255,255,255,.55);transform:skewX(-22deg);animation:fshine 3.2s ease-in-out infinite}
 .btn.fight .fsw{display:inline-flex;transform-origin:50% 90%}
-.btn.fight .fsw.l{animation:fclashl 1.7s ease-in-out infinite}
-.btn.fight .fsw.r{transform:scaleX(-1);animation:fclashr 1.7s ease-in-out infinite}
-.btn.fight:active{transform:rotate(-1.2deg) translateY(3px) scale(.98);box-shadow:1px 2px 0 var(--ink),inset 0 -9px 0 rgba(150,40,10,.3)}
-@keyframes fpulse{0%,100%{transform:rotate(-1.2deg) scale(1)}50%{transform:rotate(.6deg) scale(1.035)}}
+.btn.fight .fsw.l{transform:rotate(-14deg)}
+.btn.fight .fsw.r{transform:scaleX(-1) rotate(-14deg)}
+.btn.fight:active{transform:translateY(3px);box-shadow:1px 2px 0 var(--ink),inset 0 -9px 0 rgba(150,40,10,.3)}
 @keyframes fshine{0%,55%{left:-40%}85%,100%{left:130%}}
-@keyframes fclashl{0%,100%{transform:rotate(-24deg)}45%{transform:rotate(8deg)}55%{transform:rotate(8deg)}}
-@keyframes fclashr{0%,100%{transform:scaleX(-1) rotate(-24deg)}45%{transform:scaleX(-1) rotate(8deg)}55%{transform:scaleX(-1) rotate(8deg)}}
