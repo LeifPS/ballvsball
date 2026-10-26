@@ -56,7 +56,8 @@ me = (await api('/api/me', t1)).me;
 ok(me.coins === coins1 + 38, 'Verkäufer bekommt 38 (5 % Gebühr): ' + me.coins);
 // Handel
 const p2 = (await api('/api/me', t2)).me;
-r = await api('/api/trade/create', t1, { to: n2, give: [me.balls[0].uid], want: [p2.balls.find(b => !me.balls.some(m => m.type === b.type)).uid] });
+const give0 = me.balls[0], want0 = p2.balls.find(b => b.type === give0.type) || p2.balls.find(b => !me.balls.some(m => m.type === b.type));   // gleiche Sorte tauschen, damit beide drei Sorten behalten
+r = await api('/api/trade/create', t1, { to: n2, give: [give0.uid], want: [want0.uid] });
 ok(r.ok, 'Tauschangebot');
 r = await api('/api/trades', t2);
 ok(r.incoming.length === 1, 'Angebot kommt an');
