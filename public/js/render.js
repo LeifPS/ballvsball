@@ -1,5 +1,6 @@
 // Arena und Ballbox-Minispiel zeichnen.
 import { BOX } from './engine.js';
+import { insetOf } from './core.js';
 import { SEGS, PEGS, SHELVES, SPINNERS, BW, BH, BR, EXIT_Y } from './boxsim.js';
 import { DEFS, RARITY } from './engine.js';
 import { INK, DPR, mkSprite, sketchCtx, strSeed } from './sk.js';
@@ -64,6 +65,15 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
   }
   for (const b of sim.balls) if (!b.dead) drawBall(g, b, sim, tf, tm, opt.tint && opt.tint[b.id]);
   for (let i = 0; i < objs.length; i++) if (!GROUND[objs[i].k]) drawObj(g, objs[i], sim, tf, tm);
+  // Zusammenrückende Wände (Wut-Phase): gestreifter Warnrand und neue Wandlinie
+  const ins = insetOf(sim);
+  if (ins > .5) {
+    g.save(); g.fillStyle = 'rgba(224,83,58,.22)';
+    g.fillRect(0, 0, BOX, ins); g.fillRect(0, BOX - ins, BOX, ins); g.fillRect(0, ins, ins, BOX - 2 * ins); g.fillRect(BOX - ins, ins, ins, BOX - 2 * ins);
+    g.strokeStyle = 'rgba(224,83,58,.35)'; g.lineWidth = 3; g.beginPath(); for (let i = -BOX; i < BOX * 2; i += 16) { g.moveTo(i, 0); g.lineTo(i + BOX, BOX); } g.save(); g.beginPath(); g.rect(0, 0, BOX, BOX); g.rect(ins, ins, BOX - 2 * ins, BOX - 2 * ins); g.clip('evenodd'); g.stroke(); g.restore();
+    g.lineWidth = 3.2; g.strokeStyle = INK; g.lineJoin = 'round'; g.strokeRect(ins, ins, BOX - 2 * ins, BOX - 2 * ins);
+    g.restore();
+  }
   for (const b of sim.balls) if (!b.dead && !opt.noBars) drawHpBar(g, b, myTeam, '#4f90e8', '#e4574a');
   drawFx(g, dt, tf);
   g.restore();

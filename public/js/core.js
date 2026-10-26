@@ -153,25 +153,28 @@ export function stun(sim, t, secs) {
   fx(sim, 'stun', t.x, t.y, secs);
 }
 
+// Arena schrumpft in langen Kämpfen: nach ENRAGE_T rücken die Wände von allen Seiten zusammen (bis auf etwa die halbe Kantenlänge)
+export function insetOf(sim) { return sim.t > ENRAGE_T ? Math.min(75, (sim.t - ENRAGE_T) * 1.8) : 0; }
 function wallHit(sim, b, side) {
   if (b.stun > 0 || !b.def.onWall) return;
   let px, py;
-  if (side === 'l') { px = 0; py = b.y; } else if (side === 'r') { px = BOX; py = b.y; }
-  else if (side === 't') { px = b.x; py = 0; } else { px = b.x; py = BOX; }
+  const ins = insetOf(sim);
+  if (side === 'l') { px = ins; py = b.y; } else if (side === 'r') { px = BOX - ins; py = b.y; }
+  else if (side === 't') { px = b.x; py = ins; } else { px = b.x; py = BOX - ins; }
   b.def.onWall(b, sim, side, px, py);
 }
 function moveBall(sim, b) {
   b.x += b.vx * DT; b.y += b.vy * DT;
-  const r = b.r;
-  if (b.x < r) { b.x = r; if (b.vx < 0) b.vx = -b.vx; wallHit(sim, b, 'l'); }
-  else if (b.x > BOX - r) { b.x = BOX - r; if (b.vx > 0) b.vx = -b.vx; wallHit(sim, b, 'r'); }
-  if (b.y < r) { b.y = r; if (b.vy < 0) b.vy = -b.vy; wallHit(sim, b, 't'); }
-  else if (b.y > BOX - r) { b.y = BOX - r; if (b.vy > 0) b.vy = -b.vy; wallHit(sim, b, 'b'); }
+  const ins = insetOf(sim), lo = b.r + ins, hi = BOX - b.r - ins;
+  if (b.x < lo) { b.x = lo; if (b.vx < 0) b.vx = -b.vx; wallHit(sim, b, 'l'); }
+  else if (b.x > hi) { b.x = hi; if (b.vx > 0) b.vx = -b.vx; wallHit(sim, b, 'r'); }
+  if (b.y < lo) { b.y = lo; if (b.vy < 0) b.vy = -b.vy; wallHit(sim, b, 't'); }
+  else if (b.y > hi) { b.y = hi; if (b.vy > 0) b.vy = -b.vy; wallHit(sim, b, 'b'); }
 }
-function clampBall(b) {
-  const r = b.r;
-  if (b.x < r) b.x = r; else if (b.x > BOX - r) b.x = BOX - r;
-  if (b.y < r) b.y = r; else if (b.y > BOX - r) b.y = BOX - r;
+function clampBall(b, sim) {
+  const ins = sim ? insetOf(sim) : 0, lo = b.r + ins, hi = BOX - b.r - ins;
+  if (b.x < lo) b.x = lo; else if (b.x > hi) b.x = hi;
+  if (b.y < lo) b.y = lo; else if (b.y > hi) b.y = hi;
 }
 function dealContact(sim, a, b) {
   if (a.stun > 0) return;
@@ -226,7 +229,7 @@ export function stepSim(sim) {
         if (va > 0) { a.vx -= 2 * va * nx; a.vy -= 2 * va * ny; }
         const vb = b.vx * nx + b.vy * ny;
         if (vb < 0) { b.vx -= 2 * vb * nx; b.vy -= 2 * vb * ny; }
-        clampBall(a); clampBall(b);
+        clampBall(a, sim); clampBall(b, sim);
       }
       if (a.team !== b.team) { dealContact(sim, a, b); dealContact(sim, b, a); }
     }
