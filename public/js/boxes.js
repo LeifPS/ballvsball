@@ -16,10 +16,10 @@ export function boxActive(id, now) { const b = BOX_BY_ID[id]; return !!b && (!b.
 export function eventActive(now) { return now < EVENT_END; }
 
 // Sterne: Duplikate verbessern einen Ball (je Stern +8 % Leben und Schaden, höchstens 5 Sterne).
-// Kosten = Anzahl gleicher freier Bälle, die dafür verbraucht werden; je nach Seltenheit.
+// Kosten = Anzahl gleicher freier Bälle, die dafür verbraucht werden; für alle Seltenheiten gleich.
 export const UP_COST = {
   gewoehnlich: [2, 3, 4, 5, 6],
-  selten: [2, 3, 3, 4, 5],
-  episch: [1, 2, 3, 3, 4],
-  legendaer: [1, 1, 2, 2, 3]
+  selten: [2, 3, 4, 5, 6],
+  episch: [2, 3, 4, 5, 6],
+  legendaer: [2, 3, 4, 5, 6]
 };
