@@ -354,9 +354,9 @@ export class Game extends DurableObject {
       balls: m.players.map(p => ({ type: p.pick.type, team: p.team, deg: Math.round(p.dir * 10) / 10, stars: p.pick.stars || 0 }))
     };
     const res = runFight(cfg);
-    const loser = 1 - res.winner;
-    m.lives[loser]--;
-    const over = m.lives[loser] <= 0;
+    const draw = res.winner < 0;   // Unentschieden: keine Leben abziehen
+    if (!draw) m.lives[1 - res.winner]--;
+    const over = !draw && m.lives[1 - res.winner] <= 0;
     m.fight = { cfg, steps: res.steps, winner: res.winner, reason: res.reason, lives: m.lives.slice(), over, round: m.round };
     m.phase = 'fight';
     for (const p of m.players) {

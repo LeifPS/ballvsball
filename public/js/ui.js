@@ -638,11 +638,12 @@ function fightScreen(m) {
   const cdw = $('#cdwrap');
   const finish = () => {
     resShown = true;
-    const win = m.winner === myTeam;
+    const win = m.winner === myTeam, draw = m.winner < 0;
     M.lives = m.lives; const mh = $('#mh'); if (mh) mh.outerHTML = matchHeader();
     sfx(win ? 'win' : 'lose');
     if (win) { confetti(46); }
-    $('#fres').innerHTML = '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:' + (win ? '#2f8a3a' : '#c93030') + '">' + (win ? 'Runde gewonnen!' : 'Runde verloren!') + '</h2><p class="small mute">' +
+    $('#fres').innerHTML = draw ? '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:#8a6a1a">Unentschieden!</h2><p class="small mute">Beide waren gleichzeitig besiegt. Niemand verliert ein Leben.</p></div>' :
+      '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:' + (win ? '#2f8a3a' : '#c93030') + '">' + (win ? 'Runde gewonnen!' : 'Runde verloren!') + '</h2><p class="small mute">' +
       (m.over ? (win ? 'Das war der letzte Kampf.' : 'Das war dein letztes Leben.') : (win ? 'Der Gegner verliert ein Leben.' : 'Du verlierst ein Leben.')) + '</p></div>';
     $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext', '', 'pri') + '</div>';
     window.scrollTo(0, document.body.scrollHeight);

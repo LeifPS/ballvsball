@@ -259,7 +259,7 @@ export function stepSim(sim) {
   if (teams <= 1) {
     sim.over = true;
     if (teams === 1) { sim.winner = Number(Object.keys(alive)[0]); sim.reason = 'ko'; }
-    else { sim.winner = sim.rng() < .5 ? 0 : 1; sim.reason = 'doppel'; }
+    else { sim.winner = -1; sim.reason = 'doppel'; }   // beide gleichzeitig K.O.: Unentschieden, niemand verliert ein Leben
   } else if (sim.t >= MAX_T) {
     const sum = {};
     for (const b of balls) if (!b.dead) sum[b.team] = (sum[b.team] || 0) + b.hp;
