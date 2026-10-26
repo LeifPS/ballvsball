@@ -3,6 +3,7 @@
 import { mulberry } from './core.js';
 
 export const BW = 300, BH = 440, BR = 12, EXIT_Y = 405, BDT = 1 / 120;
+export const POUR_START = 60;   // ab diesem Schritt kommen die Bälle aus der gekippten Box
 const GRAV = 170, MAXV = 230, MAX_STEPS = 120 * 18;
 
 // Wände als Strecken [x1,y1,x2,y2]
@@ -22,11 +23,12 @@ export const PEGS = [
 export function createBox(seed, n) {
   const rng = mulberry(seed >>> 0);
   const balls = [];
+  // Die Box wird oben ausgeschüttet: die Bälle kommen nacheinander aus dem Rand der gekippten Box (links von der Mitte)
   for (let i = 0; i < n; i++) {
     balls.push({
-      x: 45 + (((i * 3) % 5) + .5) * 42 + (rng() - .5) * 20, y: -30 - Math.floor(i / 5) * 34 - rng() * 10,
-      vx: (rng() - .5) * 70, vy: rng() * 30, rot: rng() * 6.28, vr: (rng() - .5) * 6,
-      done: false
+      x: 138 + (rng() - .5) * 22, y: -74 - rng() * 8,
+      vx: 10 + rng() * 85, vy: 15 + rng() * 25, rot: rng() * 6.28, vr: (rng() - .5) * 6,
+      spawn: POUR_START + Math.round(i * 4 + rng() * 4), on: false, done: false
     });
   }
   return { n, rng, balls, step: 0, t: 0, order: [], times: [], done: false };
@@ -57,10 +59,11 @@ export function stepBox(s) {
   const B = s.balls;
   // gelegentlicher kleiner Stoß gegen Verklemmen (deterministisch)
   if (s.step % 120 === 0) {
-    for (const b of B) if (!b.done && b.y > 100 && b.y < 380) { b.vx += (s.rng() - .5) * 50; b.vy -= s.rng() * 25; }
+    for (const b of B) if (!b.done && b.on && b.y > 100 && b.y < 380) { b.vx += (s.rng() - .5) * 50; b.vy -= s.rng() * 25; }
   }
   for (let i = 0; i < B.length; i++) {
     const b = B[i];
+    if (!b.on) { if (s.step >= b.spawn) b.on = true; else continue; }
     if (b.done) { b.vy += GRAV * BDT; b.y += b.vy * BDT; continue; }
     b.vy += GRAV * BDT;
     if (b.vy > MAXV) b.vy = MAXV;
@@ -72,10 +75,10 @@ export function stepBox(s) {
   }
   for (let i = 0; i < B.length; i++) {
     const a = B[i];
-    if (a.done) continue;
+    if (a.done || !a.on) continue;
     for (let j = i + 1; j < B.length; j++) {
       const b = B[j];
-      if (b.done) continue;
+      if (b.done || !b.on) continue;
       const dx = b.x - a.x, dy = b.y - a.y, d2 = dx * dx + dy * dy, rr = BR * 2;
       if (d2 >= rr * rr) continue;
       const d = Math.sqrt(d2) || .0001, nx = dx / d, ny = dy / d, over = (rr - d) / 2;
@@ -89,7 +92,7 @@ export function stepBox(s) {
   }
   for (let i = 0; i < B.length; i++) {
     const b = B[i];
-    if (!b.done && b.y > EXIT_Y) { b.done = true; s.order.push(i); s.times.push(s.t); }
+    if (!b.done && b.on && b.y > EXIT_Y) { b.done = true; s.order.push(i); s.times.push(s.t); }
   }
   if (s.order.length >= s.n || s.step >= MAX_STEPS) {
     s.done = true;

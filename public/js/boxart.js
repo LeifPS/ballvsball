@@ -111,26 +111,27 @@ function bat(c, x, y, t) {
   c.quadraticCurveTo(x + 3, y + 1, x + 6, y + 3); c.quadraticCurveTo(x + 9, y + 1, x + 13, y - 1); c.quadraticCurveTo(x + 7, y - 7 - fl * 5, x, y); c.closePath(); FS(c, '#4a3566');
 }
 
-export function drawBoxArt(g, id, t, size) {
+export function drawBoxArt(g, id, t, size, opts) {
   const th = THEMES[id] || THEMES.standard, T = t + hashId(id) * .37;
   const frame = Math.floor(T * 7) % 3;
+  const forced = opts && opts.open != null;   // Ausschüttanimation: Deckel fest offen, kein Wackeln, kein Lichtkegel
   g.save(); g.scale(size / 100, size / 100);
   g.translate(50, 96); g.scale(1.04, 1.04); g.translate(-50, -96);
   g.lineJoin = g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3;
   const c = sketchCtx(g, strSeed('bx' + id) + frame * 1.713, 22); c.lineWidth = 3;
   // Rhythmus: kurzes Wackeln, dann springt der Deckel auf
   const cyc = (T % 3.8) / 3.8, wob = cyc > .42 && cyc < .55 ? Math.sin((cyc - .42) * 120) * (1 - (cyc - .42) / .13) : 0;
-  const x0 = (cyc - .55) / .27, open = x0 > 0 && x0 < 1 ? Math.sin(Math.pow(x0, .7) * Math.PI) : 0;
-  const bob = Math.sin(T * 2.2) * 1.4, sq = 1 - open * .04;
+  const x0 = (cyc - .55) / .27, open = forced ? opts.open : x0 > 0 && x0 < 1 ? Math.sin(Math.pow(x0, .7) * Math.PI) : 0;
+  const bob = forced ? 0 : Math.sin(T * 2.2) * 1.4, sq = 1 - (forced ? 0 : open) * .04;
   // Schatten
-  g.fillStyle = 'rgba(29,39,66,.22)'; g.beginPath(); g.ellipse(50, 92, 30 - bob, 4, 0, 0, 7); g.fill();
-  g.translate(50, 88); g.rotate(wob * .04); g.scale(1 / sq, sq); g.translate(-50, -88 + bob * .5);
+  if (!forced) { g.fillStyle = 'rgba(29,39,66,.22)'; g.beginPath(); g.ellipse(50, 92, 30 - bob, 4, 0, 0, 7); g.fill(); }
+  g.translate(50, 88); g.rotate((forced ? 0 : wob) * .04); g.scale(1 / sq, sq); g.translate(-50, -88 + bob * .5);
   // Glanz aus der Kiste
-  if (open > 0) {
+  if (open > 0 && !forced) {
     const gr = g.createLinearGradient(0, 50, 0, 12); gr.addColorStop(0, th.glow); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.globalAlpha = open * .9; g.fillStyle = gr; g.beginPath(); g.moveTo(24, 52); g.lineTo(76, 52); g.lineTo(92, 12); g.lineTo(8, 12); g.closePath(); g.fill(); g.globalAlpha = 1;
   }
-  if (id === 'sport' && open > .05) {   // Ball hüpft heraus
+  if (id === 'sport' && open > .05 && !forced) {   // Ball hüpft heraus
     const by = 46 - open * 22 - Math.abs(Math.sin(T * 7)) * 6;
     c.lineWidth = 3; c.beginPath(); c.arc(62, by, 8, 0, 7); FS(c, '#fff'); c.beginPath(); c.moveTo(54.5, by - 2); c.quadraticCurveTo(62, by + 3, 69.5, by - 2); c.stroke();
   }
@@ -138,13 +139,13 @@ export function drawBoxArt(g, id, t, size) {
   c.beginPath(); c.rect(20, 50, 60, 38); FS(c, th.body);
   (BODY[id] || BODY.standard)(c, T);
   // Deckel
-  g.save(); g.translate(15, 52 - open * 5); g.rotate(-open * .42);
+  g.save(); g.translate(15, 52 - open * 5); g.rotate(-open * (forced ? .9 : .42));
   c.beginPath(); c.rect(0, -16, 70, 16); FS(c, th.lid);
   (LID[id] || LID.standard)(c, T);
   g.restore();
   if (id === 'halloween') bat(c, 50 + Math.cos(T * 1.3) * 38, 22 + Math.sin(T * 2.6) * 6, T);
   // Funken beim Öffnen
-  if (open > .05) for (let i = 0; i < 5; i++) { const ph = (T * 1.4 + i * .21) % 1, x = 28 + i * 11 + Math.sin(T * 5 + i) * 3, y = 48 - ph * 36; g.globalAlpha = open * (1 - ph); star4(c, x, y, 3 + (i % 2) * 1.6, i % 2 ? '#fff' : th.glow); }
+  if (open > .05 && !forced) for (let i = 0; i < 5; i++) { const ph = (T * 1.4 + i * .21) % 1, x = 28 + i * 11 + Math.sin(T * 5 + i) * 3, y = 48 - ph * 36; g.globalAlpha = open * (1 - ph); star4(c, x, y, 3 + (i % 2) * 1.6, i % 2 ? '#fff' : th.glow); }
   g.globalAlpha = 1;
   g.restore();
 }

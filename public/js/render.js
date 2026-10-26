@@ -5,6 +5,7 @@ import { DEFS, RARITY } from './engine.js';
 import { INK, DPR, mkSprite, sketchCtx, strSeed } from './sk.js';
 import { bodySprite, drawBall, drawObj, drawFx, addFx, drawHpBar, ringJ, star, fxState, GROUND } from './art.js';
 import { R0 } from './ballart.js';
+import { drawBoxArt } from './boxart.js';
 
 export const TEAM_COL = ['#2b6fd0', '#d33a3a'];
 
@@ -69,44 +70,80 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
 }
 
 /* ---------- Ballbox ---------- */
+// Spielfeld: oben kippt eine Kiste und schüttet die Bälle aus, unten fängt ein geschlossener Becher den Gewinner auf.
 const BOARD = {};
-export const BOX_H = BH + 40;
+const TOP = 190;                       // Platz über dem Spielfeld für die Kiste (Weltkoordinaten -TOP..)
+export const BOX_H = BH + 186;         // sichtbare Höhe: von y = -170 bis unter den Becher
+const CUP = { x0: 96, x1: 204, y0: 376, y1: 442 };
 function boardSprite(col) {
   if (BOARD[col]) return BOARD[col];
-  const sc = Math.min(2, DPR), W = BW + 40, H = BH + 110, fr = [];
+  const sc = Math.min(2, DPR), W = BW + 40, H = BH + TOP + 50, fr = [];
   for (let f = 0; f < 3; f++) {
     const cv = document.createElement('canvas'); cv.width = Math.ceil(W * sc); cv.height = Math.ceil(H * sc);
-    const x = cv.getContext('2d'); x.scale(sc, sc); x.translate(20, 70);
+    const x = cv.getContext('2d'); x.scale(sc, sc); x.translate(20, TOP);
     x.lineJoin = x.lineCap = 'round';
     const sk = sketchCtx(x, strSeed(col) + f * 1.9, 120); x.strokeStyle = INK; x.lineWidth = 3.6; sk.lineWidth = 3.6;
     // Hintergrund in Boxfarbe, begrenzt durch Wände
-    x.save(); x.beginPath(); x.moveTo(0, -60); x.lineTo(BW, -60); x.lineTo(BW, 175); x.lineTo(BW - 135, 372); x.lineTo(BW - 135, 392); x.lineTo(135, 392); x.lineTo(135, 372); x.lineTo(0, 175); x.closePath(); x.clip();
-    x.fillStyle = '#f6efd9'; x.fillRect(-20, -70, W, H);
-    x.globalAlpha = .22; x.fillStyle = col; x.fillRect(-20, -70, W, H); x.globalAlpha = 1;
-    x.strokeStyle = 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; for (let i = -70; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
+    x.save(); x.beginPath(); x.moveTo(0, -TOP); x.lineTo(BW, -TOP); x.lineTo(BW, 175); x.lineTo(BW - 135, 372); x.lineTo(BW - 135, 392); x.lineTo(135, 392); x.lineTo(135, 372); x.lineTo(0, 175); x.closePath(); x.clip();
+    x.fillStyle = '#f6efd9'; x.fillRect(-20, -TOP, W, H);
+    x.globalAlpha = .22; x.fillStyle = col; x.fillRect(-20, -TOP, W, H); x.globalAlpha = 1;
+    x.strokeStyle = 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; for (let i = -TOP; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
+    // Zielzone: Streifen zum Becher
+    x.globalAlpha = .18; x.fillStyle = '#ffd45a'; x.fillRect(135, 330, 30, 70); x.globalAlpha = 1;
     x.restore();
     x.strokeStyle = INK; x.lineWidth = 3.6;
-    sk.beginPath(); sk.moveTo(0, -60); sk.lineTo(0, 175); sk.lineTo(135, 372); sk.lineTo(135, 392); sk.stroke();
-    sk.beginPath(); sk.moveTo(BW, -60); sk.lineTo(BW, 175); sk.lineTo(BW - 135, 372); sk.lineTo(BW - 135, 392); sk.stroke();
-    PEGS.forEach(p => { x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = '#d9c9a0'; x.fill(); sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke(); });
+    sk.beginPath(); sk.moveTo(0, -TOP); sk.lineTo(0, 175); sk.lineTo(135, 372); sk.lineTo(135, 392); sk.stroke();
+    sk.beginPath(); sk.moveTo(BW, -TOP); sk.lineTo(BW, 175); sk.lineTo(BW - 135, 372); sk.lineTo(BW - 135, 392); sk.stroke();
+    // Nieten entlang der Wände
+    x.fillStyle = col;
+    for (let y = -120; y < 170; y += 38) for (const px of [6, BW - 6]) { x.beginPath(); x.arc(px, y, 2.6, 0, 7); x.fill(); x.lineWidth = 1.4; x.stroke(); }
+    x.lineWidth = 3.6;
+    PEGS.forEach(p => {
+      x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = '#d9c9a0'; x.fill();
+      sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke();
+    });
+    // Auffangbecher unten: geschlossen, mit Boden
+    x.beginPath(); x.moveTo(CUP.x0, CUP.y0); x.lineTo(CUP.x0 + 8, CUP.y1); x.lineTo(CUP.x1 - 8, CUP.y1); x.lineTo(CUP.x1, CUP.y0); x.closePath();
+    x.fillStyle = '#fff9e0'; x.fill();
+    x.save(); x.clip(); x.globalAlpha = .3; x.fillStyle = col; x.fillRect(CUP.x0, CUP.y0, CUP.x1 - CUP.x0, 70); x.restore();
+    sk.lineWidth = 3.6; sk.beginPath(); sk.moveTo(CUP.x0 - 6, CUP.y0 - 2); sk.lineTo(CUP.x0, CUP.y0); sk.lineTo(CUP.x0 + 8, CUP.y1); sk.lineTo(CUP.x1 - 8, CUP.y1); sk.lineTo(CUP.x1, CUP.y0); sk.lineTo(CUP.x1 + 6, CUP.y0 - 2); sk.stroke();
     fr.push(cv);
   }
   return (BOARD[col] = { fr, W, H });
 }
-export function drawBox(g, W, s, cands, tm, tf, hi, col) {
+const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
+// Die Kiste oben: kippt, schüttet die Bälle aus, richtet sich auf und verschwindet nach oben
+function drawPourer(g, boxId, s, tm) {
+  const st = s.step, tilt = ease(st / 55) * 1.78 - ease((st - 150) / 40) * 1.78;
+  const lift = Math.max(0, st - 190) * 2.6, shake = st > 40 && st < 150 ? Math.sin(st * .9) * .025 : 0;
+  if (lift > 220) return;
+  g.save(); g.globalAlpha = 1 - Math.min(1, lift / 200);
+  g.translate(106, -72 - lift); g.rotate(tilt + shake + (st < 55 ? Math.sin(st * .6) * .03 * (1 - st / 55) : 0)); g.scale(1.35, 1.35); g.translate(-50, -70);
+  drawBoxArt(g, boxId || 'standard', tm, 100, { open: 1 });
+  g.restore();
+}
+export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   const k = W / BW;
-  g.save(); g.scale(k, k); g.translate(0, 40);
+  g.save(); g.scale(k, k); g.translate(0, 170);
   const B = boardSprite(col || '#d9a441');
-  g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -70, B.W, B.H);
-  // Öffnung markieren
-  for (let i = 0; i < 3; i++) star(g, BW / 2 + (i - 1) * 18, EXIT_Y + 18 + ((tf + i) % 2) * 2, 5, '#ffd45a', tm * 2 + i);
+  g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
+  drawPourer(g, boxId, s, tm);
   s.balls.forEach((b, i) => {
+    if (!b.on) return;
     const type = cands[i], rar = RARITY[DEFS[type].rarity], sp = bodySprite(type);
-    g.save(); g.translate(b.x, b.y); g.rotate(b.rot * .6);
+    let x = b.x, y = b.y;
+    if (b.done) {   // gelandet: rollt im Becher an seinen Platz (Gewinner in der Mitte)
+      const rank = s.order.indexOf(i), tx = 150 + [0, -26, 26][rank] || 150, fl = CUP.y1 - BR - 4 - (rank > 2 ? 0 : 0);
+      x = b.x + (tx - b.x) * ease((b.y - EXIT_Y) / 22); y = Math.min(b.y, fl);
+    }
+    g.save(); g.translate(x, y); g.rotate(b.rot * .6);
     const w = BR * 2 * 3.1, f = (tf + i) % 3;
     g.drawImage(sp.fr[f], -w / 2, -w / 2, w, w); g.restore();
-    ringJ(g, b.x, b.y, BR + 1.5, 2.2, rar.color, tf, i + 3);
-    if (hi === i) { star(g, b.x, b.y - BR - 9, 6, '#ffd45a', tm * 3); ringJ(g, b.x, b.y, BR + 5, 2.6, '#e0a800', tf, i); }
+    ringJ(g, x, y, BR + 1.5, 2.2, rar.color, tf, i + 3);
+    if (hi === i) { star(g, x, y - BR - 9, 6, '#ffd45a', tm * 3); ringJ(g, x, y, BR + 5, 2.6, '#e0a800', tf, i); }
   });
+  // vordere Becherkante, damit die Bälle im Becher liegen
+  g.save(); g.fillStyle = 'rgba(255,255,255,.18)'; g.beginPath(); g.moveTo(CUP.x0, CUP.y0 + 6); g.lineTo(CUP.x0 + 8, CUP.y1); g.lineTo(CUP.x1 - 8, CUP.y1); g.lineTo(CUP.x1, CUP.y0 + 6); g.closePath(); g.fill(); g.restore();
+  for (let i = 0; i < 3; i++) star(g, BW / 2 + (i - 1) * 18, 352 + ((tf + i) % 2) * 2 - Math.abs(Math.sin(tm * 3 + i)) * 3, 4.5, '#ffd45a', tm * 2 + i);
   g.restore();
 }

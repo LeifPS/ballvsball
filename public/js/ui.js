@@ -365,7 +365,7 @@ async function openBox(id) {
   const r = await api('/api/box', { box: b.id });
   if (r.err) { toast(errText(r.err)); return; }
   S.screen = 'boxplay'; sfx('open');
-  const W = Math.min(window.innerWidth - 28, 340), H = Math.round(W / BW * BOX_H);
+  const W = Math.min(window.innerWidth - 28, 300), H = Math.round(W / BW * BOX_H);
   show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Los geht\'s!</h2><canvas id="bc" class="view"></canvas><p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Der erste Ball durch die Öffnung unten gehört dir.<br>Tippen zum Überspringen.</p></div>');
   const cv = $('#bc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const s = createBox(r.seed, 10); let acc = 0, fin = 0, shown = false, lastN = 0, flash = 0, skip = false;
@@ -383,7 +383,7 @@ async function openBox(id) {
       if (s.order.length > lastN) { if (lastN === 0) { flash = 1; sfx('pop'); } lastN = s.order.length; }
       flash = Math.max(0, flash - dt * 2.5);
       if (s.order.length >= 3 || s.done) { if (!fin) fin = tm; }
-      drawBox(ctx, W, s, r.cands, tm, tf, s.order.length ? s.order[0] : -1, b.col);
+      drawBox(ctx, W, s, r.cands, tm, tf, s.order.length ? s.order[0] : -1, b.col, b.id);
       if (flash > 0) { ctx.fillStyle = 'rgba(255,250,200,' + flash * .5 + ')'; ctx.fillRect(0, 0, W, H); }
       if (fin && (tm - fin > 1.4 || skip) && !shown) { shown = true; boxResult(r, s, before, b); }
     }
