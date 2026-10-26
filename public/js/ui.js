@@ -558,7 +558,7 @@ function fightScreen(m) {
   sim.slotMax = {}; for (const b of sim.balls) sim.slotMax[b.slot] = (sim.slotMax[b.slot] || 0) + b.maxHp;
   const AS = arenaSize(), W = AS + 20, H = AS + 20, myTeam = M.players[M.you].team;
   show('<div class="col">' + matchHeader() + hudHTML(M) + '<div style="position:relative;width:' + W + 'px;margin:0 auto"><canvas id="fc" class="view"></canvas><div id="cdwrap"></div></div><div id="fres"></div>' +
-    '<div id="fbtn" class="row gap6"><div class="grow">' + btn(gi('skip', 26) + ' Überspringen', 'skip') + '</div></div></div>');
+    '<div id="fbtn" class="row gap6"></div></div>');
   const cv = $('#fc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const hp = {}; SCREEN.querySelectorAll('.hp').forEach(el => { hp[el.dataset.slot] = { bar: el.querySelector('i'), bn: el.querySelector('.bn') }; });
   for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.type].name;
