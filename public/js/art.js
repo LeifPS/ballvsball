@@ -80,7 +80,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   g.save(); g.rotate(tilt); g.scale(sx * bob * k, sy * bob * k);
   const sp = bodySprite(type);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
-  const fl = (b.flash > 0 ? b.flash * 6 : 0) + (tint || 0);
+  const fl = (b.flash > 0 ? b.flash * 6 : 0) + (b.dotT > 0 ? .35 : 0) + (tint || 0);
   if (fl > 0) {
     g.globalCompositeOperation = 'source-atop'; g.globalAlpha = Math.min(.8, fl);
     g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, R0 * 1.7, 0, 7); g.fill();
@@ -114,10 +114,6 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   } else if (type === 'drache' && st.breath > 0) {
     const ax = st.ax, ay = st.ay, p = objSprite('fireZone');
     for (let i = 0; i < 9; i++) { const dist = b.r + 8 + i * 15, w = .45 + i * .1; spr(g, p, ax * dist, ay * dist, f + i, w * (.9 + .15 * Math.sin(tm * 14 + i)), 0, .88); }
-  }
-  if (b.dotT > 0) {
-    g.save(); g.scale(k, k); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = Math.min(.5, b.dotT * 3) * (.6 + .4 * Math.sin(tm * 40));
-    g.fillStyle = '#ff3a2a'; g.beginPath(); g.arc(0, 0, R0 * 1.7, 0, 7); g.fill(); g.restore();
   }
   if (b.burn > 0) {
     const p = objSprite('fireZone');
@@ -277,6 +273,14 @@ export function drawFx(g, dt, tf) {
 // Lebensbalken über dem Ball
 export function drawHpBar(g, b, myTeam, colMine, colFoe) {
   const w = Math.max(22, b.r * 1.7), h = 4.4, x = b.x - w / 2, y = b.y - b.r - 10, fr = Math.max(0, Math.min(1, b.hp / b.maxHp));
-  g.save(); g.fillStyle = '#f6efd9'; g.strokeStyle = INK; g.lineWidth = 1.5; g.beginPath(); g.rect(x, y, w, h); g.fill();
-  g.fillStyle = b.team === myTeam ? colMine : colFoe; g.fillRect(x + .5, y + .5, (w - 1) * fr, h - 1); g.beginPath(); g.rect(x, y, w, h); g.stroke(); g.restore();
+  // Handgezeichnet: leicht schiefer Rahmen (pro Ball stabil), Füllung mit Buntstift-Schraffur
+  const j = n => Math.sin(b.id * 12.9 + n * 78.2) * .9;
+  const frame = () => { g.beginPath(); g.moveTo(x + j(1), y + j(2)); g.lineTo(x + w + j(3), y + j(4) * .6); g.lineTo(x + w + j(5), y + h + j(6)); g.lineTo(x + j(7), y + h + j(8) * .6); g.closePath(); };
+  g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; frame(); g.fillStyle = '#f6efd9'; g.fill();
+  if (fr > 0) {
+    g.save(); frame(); g.clip(); const fw = w * fr; g.fillStyle = b.team === myTeam ? colMine : colFoe; g.fillRect(x, y, fw, h);
+    g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1; g.beginPath(); for (let sx = x - h; sx < x + fw; sx += 3.2) { g.moveTo(sx, y + h); g.lineTo(sx + h, y); } g.stroke();
+    g.strokeStyle = INK; g.lineWidth = 1.3; g.beginPath(); g.moveTo(x + fw + j(9) * .5, y); g.lineTo(x + fw + j(10) * .5, y + h); g.stroke(); g.restore();
+  }
+  g.strokeStyle = INK; g.lineWidth = 1.6; frame(); g.stroke(); g.restore();
 }

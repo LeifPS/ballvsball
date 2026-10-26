@@ -39,9 +39,20 @@ function pickHand(inv) {
   const hand = shuffle([...by.values()]).slice(0, 3);
   return hand;
 }
-function botHand() {
+// Bots spielen Bälle der Seltenheiten, die auch die Menschen im Kampf haben; nur selten eine Stufe daneben.
+const RAR_ORDER = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
+function botTypeLike(rar) {
+  if (rnd() < .12) rar = RAR_ORDER[Math.max(0, Math.min(3, RAR_ORDER.indexOf(rar) + (rnd() < .5 ? -1 : 1)))];
+  const ids = BALL_IDS.filter(id => DEFS[id].box === 'standard' && DEFS[id].rarity === rar);
+  return ids.length ? ids[rint(ids.length)] : botType();
+}
+function botHand(refRars) {
   const types = [];
-  for (let i = 0; i < 40 && types.length < 3; i++) { const t = botType(); if (!types.includes(t)) types.push(t); }
+  for (let i = 0; i < 60 && types.length < 3; i++) {
+    const t = refRars && refRars.length ? botTypeLike(refRars[rint(refRars.length)]) : botType();
+    if (!types.includes(t)) types.push(t);
+  }
+  while (types.length < 3) { const t = botType(); if (!types.includes(t)) types.push(t); }
   return types.map((type, i) => ({ uid: -100 - i, type }));
 }
 
@@ -268,12 +279,11 @@ export class Game extends DurableObject {
     m.phase = 'pick';
     for (const p of m.players) {
       p.pick = null; p.dir = null; p.ready = false;
-      if (p.bot || p.left) {
-        p.hand = botHand();
-        p.pick = p.hand[rint(3)];
-        continue;
-      }
-      p.hand = pickHand(p.inv);
+      if (!p.bot && !p.left) p.hand = pickHand(p.inv);
+    }
+    const refRars = m.players.filter(p => !p.bot && !p.left).flatMap(p => p.hand.map(h => DEFS[h.type].rarity));
+    for (const p of m.players) {
+      if (p.bot || p.left) { p.hand = botHand(refRars); p.pick = p.hand[rint(3)]; }
     }
     m.deadline = Date.now() + PICK_SECS * 1000;
     for (const p of m.players) {
