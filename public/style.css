@@ -99,7 +99,12 @@ canvas.view{display:block;touch-action:none;margin:0 auto;max-width:100%}
 .rays{position:absolute;left:50%;top:50%;width:520px;height:520px;margin:-260px 0 0 -260px;background:repeating-conic-gradient(rgba(255,230,120,.5) 0 8deg,transparent 8deg 20deg);border-radius:50%;animation:spin 14s linear infinite;-webkit-mask-image:radial-gradient(circle,#000 20%,transparent 68%);mask-image:radial-gradient(circle,#000 20%,transparent 68%);pointer-events:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .boxcard{display:flex;gap:12px;align-items:center;text-align:left;width:100%;padding:12px 12px}
-.boxcard .art{flex:none;width:84px;height:84px}
+.boxcard{padding-top:16px}
+.boxcard .art{flex:none;width:100px;height:100px;display:flex;align-items:center;justify-content:center}
+.boxcard.poor .pricepill{opacity:.7}
+.pricepill{display:inline-block;padding:1px 10px;font-size:21px;background:var(--paper2);border:2px solid var(--ink);border-radius:var(--wob2);box-shadow:1px 2px 0 var(--ink)}
+.progress.thin{height:10px;border-width:2px;margin-top:3px}
+canvas.boxart{display:block}
 .boxcard.event{background:#ffd9a0}
 .mini{width:26px;height:26px}
 .tag{display:inline-block;font:400 15px var(--f-display);background:#ff7a1a;color:#fff;border:2px solid var(--ink);border-radius:8px;padding:0 7px;transform:rotate(-3deg)}
