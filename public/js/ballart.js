@@ -534,11 +534,14 @@ export const BALLS = {
   },
   lilli(c, s) {
     const r = s * .36;
-    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .55, -r * .6); c.bezierCurveTo(d * r * 1.5, -r * .9, d * r * 1.65, r * .5, d * r * 1.1, r * .75); c.bezierCurveTo(d * r * .9, r * .2, d * r * .85, -r * .2, d * r * .55, -r * .6); c.closePath(); FS(c, '#bf8a3a'); });
-    body(c, s, '#e8b95f');
-    el(c, 0, r * .42, r * .55, r * .4, '#f6dba0'); ci(c, 0, r * .22, r * .13, '#2a2a33');
-    [-1, 1].forEach(d => cEye(c, d * r * .38, -r * .12, r * .17, 1, s));
-    c.lineWidth = s * .03; c.beginPath(); c.moveTo(0, r * .35); c.lineTo(0, r * .5); c.moveTo(-r * .2, r * .5); c.quadraticCurveTo(0, r * .65, r * .2, r * .5); c.stroke(); el(c, 0, r * .66, r * .1, r * .12, '#ff8aa0');
+    // Lilli: hellbraun-goldenes Fell, weiße Schnauze, Schlappohren, dunkles Halsband
+    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .6, -r * .65); c.bezierCurveTo(d * r * 1.45, -r * .85, d * r * 1.55, r * .45, d * r * 1.05, r * .8); c.bezierCurveTo(d * r * .9, r * .25, d * r * .85, -r * .2, d * r * .6, -r * .65); c.closePath(); FS(c, '#cf934a'); });
+    body(c, s, '#e6aa5e');
+    c.beginPath(); c.moveTo(-r * .08, -r * .7); c.quadraticCurveTo(-r * .1, -r * .1, -r * .3, r * .4); c.lineTo(r * .3, r * .4); c.quadraticCurveTo(r * .1, -r * .1, r * .08, -r * .7); c.closePath(); c.fillStyle = 'rgba(255,245,230,.55)'; c.fill();
+    el(c, 0, r * .46, r * .55, r * .42, '#fff3e0'); ci(c, 0, r * .26, r * .13, '#2a2a33');
+    [-1, 1].forEach(d => cEye(c, d * r * .4, -r * .12, r * .17, 1, s));
+    c.lineWidth = s * .03; c.beginPath(); c.moveTo(0, r * .38); c.lineTo(0, r * .52); c.moveTo(-r * .2, r * .52); c.quadraticCurveTo(0, r * .66, r * .2, r * .52); c.stroke(); el(c, 0, r * .68, r * .1, r * .12, '#ff8aa0');
+    c.lineWidth = s * .05; c.strokeStyle = '#3a2a22'; c.beginPath(); c.arc(0, 0, r * 1.0, .62, PI - .62); c.stroke(); c.strokeStyle = INK; c.lineWidth = s * .03; ci(c, 0, r * 1.0, s * .03, '#cfd6e4');
   },
   lexi(c, s) {
     const r = s * .36;
