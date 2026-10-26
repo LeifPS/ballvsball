@@ -26,7 +26,7 @@ const lset = (k, v) => { try { if (store) store.setItem(k, v); else mem[k] = v; 
 const ERR = {
   net: 'Keine Verbindung zum Server.', auth: 'Anmeldung fehlgeschlagen.', need_name: 'Bitte wähle einen Namen.',
   name_invalid: 'Name: 3 bis 16 Zeichen, nur Buchstaben, Zahlen, Leerzeichen, - und _.', name_taken: 'Dieser Name ist schon vergeben.',
-  daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
+  daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
   price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
   not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 verschiedene freie Bälle behalten.',
   gone: 'Das gibt es nicht mehr.', own: 'Das ist dein eigener Ball.', no_player: 'Spieler nicht gefunden.', self: 'Das bist du selbst.',
@@ -187,7 +187,16 @@ function onMsg(m) {
 }
 
 /* ================= Startseite ================= */
+function tutorial() {
+  S.screen = 'tutorial'; setView(null); closeOverlay(); setScene('menu');
+  const n = new Set(S.me.balls.map(b => b.type)).size, b = BOX_BY_ID.standard;
+  show('<div class="col center" style="padding-top:2px"><div class="row" style="justify-content:flex-end">' + wallet() + '</div><h1 class="jit">Willkommen!</h1>' +
+    '<div class="hero bounce">' + gi('bx_standard', 150) + '</div>' +
+    '<div class="panel"><p>Du brauchst drei verschiedene Bälle zum Kämpfen. Öffne drei Standard-Boxen, jede enthält einen neuen Ball.</p><p class="mt"><b>' + n + ' von 3</b> Bällen geöffnet</p></div>' +
+    btn('Standard-Box öffnen (' + priceHTML(b) + ')', 'openbox', 'data-id="standard"', 'pri big') + '</div>');
+}
 function home() {
+  if (new Set(S.me.balls.map(b => b.type)).size < 3) return tutorial();
   S.screen = 'home'; setView(null); closeOverlay(); setScene('menu');
   const me = S.me, types = new Set(me.balls.map(b => b.type)).size, ev = eventLive();
   show('<div class="col" style="padding-top:2px"><div class="row sb" style="padding-right:50px"><div class="pill">' + esc(me.name) + '</div></div><div class="row" style="justify-content:flex-end;margin-top:-6px">' + wallet() + '</div>' +
@@ -349,7 +358,7 @@ function boxResult(r, s, before, b) {
     (isNew ? '<div class="center"><span class="tag" style="font-size:24px;padding:2px 14px">Neu in deiner Sammlung!</span></div>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast ihn schon (Duplikat). Verkaufe oder tausche ihn.</p>') +
     '<div class="panel" style="text-align:left"><div class="row sb wrap"><span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
     (near.length ? '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Knapp daneben: ' + near.map(t => '<b style="color:' + RARITY[DEFS[t].rarity].color + ';background:var(--paper);padding:0 6px;border-radius:6px">' + esc(ballName(t)) + '</b>').join(' und ') + ' lag auch vorn!</p>' : '') +
-    btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box') + '</div>');
+    (new Set(S.me.balls.map(x => x.type)).size < 3 ? btn('Weiter', 'home', '', 'pri big') : btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box')) + '</div>');
   sfx(rar === 'legendaer' ? 'legend' : big ? 'rare' : 'coin');
   if (big) confetti(rar === 'legendaer' ? 70 : 40);
 }

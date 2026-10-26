@@ -5,8 +5,7 @@ import { DEFS, BALL_IDS, RARITY, ballsInBox, MAX_STARS } from '../public/js/engi
 import { BOX_BY_ID, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
 import { simBox } from '../public/js/boxsim.js';
 
-const START_COINS = 200;
-const STARTER = ['stachel', 'turret', 'ramm', 'glas', 'feuer'];
+const START_COINS = 300;     // genau drei Standard-Boxen für das Tutorial
 const MIN_FREE = 3;          // mindestens so viele verschiedene freie Sorten müssen bleiben
 const MARKET_FEE = 0.05;
 const DAY = 86400000;
@@ -108,7 +107,6 @@ export class Store extends DurableObject {
       if (this.userByName(nm)) return { err: 'name_taken' };
       this.q('INSERT INTO users(token,name,coins,created) VALUES(?,?,?,?)', tk, nm, START_COINS, Date.now());
       u = this.userBy(tk);
-      for (const t of STARTER) this.giveBall(u.id, t);
     }
     return { ok: true, me: this.profile(u) };
   }
@@ -181,8 +179,16 @@ export class Store extends DurableObject {
     if (!boxActive(boxId, Date.now())) return { err: 'box_over' };
     const have = cfg.cur === 'tokens' ? u.tokens : u.coins;
     if (have < cfg.price) return { err: cfg.cur === 'tokens' ? 'no_tokens' : 'no_coins' };
-    const rIdx = pickWeighted(RAR_KEYS.map(k => RARITY[k].weight));
-    const reward = randType(RAR_KEYS[rIdx], boxId);
+    // Tutorial: wer noch keine drei Bälle hat, öffnet nur Standard-Boxen und bekommt jedes Mal einen neuen gewöhnlichen Ball
+    const owned = new Set(this.q('SELECT type FROM balls WHERE owner=?', u.id).map(x => x.type));
+    const tutorial = owned.size < MIN_FREE;
+    if (tutorial && boxId !== 'standard') return { err: 'tutorial_box' };
+    let rIdx = pickWeighted(RAR_KEYS.map(k => RARITY[k].weight)), reward;
+    if (tutorial) {
+      rIdx = 0;
+      const pool = ballsInBox('standard').filter(t => DEFS[t].rarity === 'gewoehnlich' && !owned.has(t));
+      reward = pool[Math.floor(rnd() * pool.length)];
+    } else reward = randType(RAR_KEYS[rIdx], boxId);
     // Mitspieler in der Schüssel: auch mal seltene, damit man "knapp daneben" erlebt
     const decoyRar = () => RAR_KEYS[pickWeighted([40, 30, 20, 10])];
     // Keine zwei gleichen Bälle in der Schüssel (soweit die Box genug verschiedene hat)

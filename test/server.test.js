@@ -7,39 +7,55 @@ async function api(path, token, body) {
 }
 const ok = (c, m) => { if (!c) { console.log('FEHLER:', m); process.exitCode = 1; } else console.log('ok  ', m); };
 
+// Tutorial: nach dem Anlegen drei Standard-Boxen öffnen (je ein neuer gewöhnlicher Ball)
+async function start(t, name) {
+  let x = await api('/api/login', t, { name });
+  for (let i = 0; i < 3; i++) x = await api('/api/box', t, {});
+  return x;
+}
 const t1 = tok(), t2 = tok();
 const n1 = 'Tst' + Math.floor(Math.random() * 1e6), n2 = 'Tsu' + Math.floor(Math.random() * 1e6);
 let r = await api('/api/login', t1, { name: n1 });
-ok(r.ok && r.me.balls.length === 5 && r.me.coins === 200, 'Konto anlegen: 5 Bälle, 200 Münzen');
+ok(r.ok && r.me.balls.length === 0 && r.me.coins === 300, 'Konto anlegen: 0 Bälle, 300 Münzen');
+r = await api('/api/box', t1, { box: 'weltraum' });
+ok(r.err === 'tutorial_box', 'Tutorial: nur Standard-Box erlaubt');
+const tut = new Set(), { DEFS } = await import('../public/js/engine.js');
+for (let i = 0; i < 3; i++) {
+  r = await api('/api/box', t1, {});
+  ok(r.ok && DEFS[r.ball.type].rarity === 'gewoehnlich' && !tut.has(r.ball.type), 'Tutorial-Box ' + (i + 1) + ': neuer gewöhnlicher Ball ' + (r.ball && r.ball.type));
+  tut.add(r.ball.type);
+  const { simBox } = await import('../public/js/boxsim.js');
+  ok(simBox(r.seed, 10).order[0] === r.win, 'Box-Seed liefert den Gewinner auf Platz 1');
+}
+ok(r.me.coins === 0 && r.me.balls.length === 3, 'Tutorial fertig: 3 Bälle, 0 Münzen');
 r = await api('/api/login', t2, { name: n1 });
 ok(r.err === 'name_taken', 'Name doppelt abgelehnt');
-r = await api('/api/login', t2, { name: n2 });
+r = await start(t2, n2);
 ok(r.ok, 'zweites Konto');
 r = await api('/api/daily', t1);
 ok(r.ok && r.gain === 50, 'Tagesbelohnung 50');
 r = await api('/api/daily', t1);
 ok(r.err === 'daily_taken', 'Tagesbelohnung nur einmal');
 r = await api('/api/box', t1, {});
-ok(r.ok && r.cands.length === 10 && r.me.coins === 150, 'Ballbox geöffnet, 100 Münzen abgezogen, Ball ' + (r.ball && r.ball.type));
-const { simBox } = await import('../public/js/boxsim.js');
-ok(simBox(r.seed, 10).order[0] === r.win, 'Box-Seed liefert den Gewinner auf Platz 1');
+ok(r.err === 'no_coins', 'Box: zu wenig Münzen');
+await api('/api/testcoins', t1, { key: 'leif-test' });
 r = await api('/api/box', t1, {});
-ok(r.ok && r.me.coins === 50, 'zweite Box');
-r = await api('/api/box', t1, {});
-ok(r.err === 'no_coins', 'dritte Box: zu wenig Münzen');
+ok(r.ok && r.me.balls.length === 4, 'vierter Ball für den Markttest');
 let me = (await api('/api/me', t1)).me;
 const b6 = me.balls[me.balls.length - 1];
-r = await api('/api/market/list', t1, { uid: b6.uid, price: 60 });
+const coins1 = me.coins;
+r = await api('/api/market/list', t1, { uid: b6.uid, price: 40 });
 ok(r.ok, 'Ball auf den Markt gestellt');
 r = await api('/api/market/browse', t2, {});
 ok(r.ok && r.items.some(i => i.uid === b6.uid), 'Zweiter Spieler sieht das Angebot');
+await api('/api/daily', t2);
 r = await api('/api/market/buy', t2, { uid: b6.uid });
-ok(r.ok && r.me.coins === 140, 'gekauft: 200-60 Münzen');
+ok(r.ok && r.me.coins === 10, 'gekauft: 50-40 Münzen');
 me = (await api('/api/me', t1)).me;
-ok(me.coins === 50 + 57, 'Verkäufer bekommt 57 (5 % Gebühr): ' + me.coins);
+ok(me.coins === coins1 + 38, 'Verkäufer bekommt 38 (5 % Gebühr): ' + me.coins);
 // Handel
 const p2 = (await api('/api/me', t2)).me;
-r = await api('/api/trade/create', t1, { to: n2, give: [me.balls[0].uid], want: [p2.balls[0].uid] });
+r = await api('/api/trade/create', t1, { to: n2, give: [me.balls[0].uid], want: [p2.balls.find(b => !me.balls.some(m => m.type === b.type)).uid] });
 ok(r.ok, 'Tauschangebot');
 r = await api('/api/trades', t2);
 ok(r.incoming.length === 1, 'Angebot kommt an');
@@ -57,24 +73,23 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
   const { ballsInBox } = await import('../public/js/engine.js');
   const { EVENT_END } = await import('../public/js/boxes.js');
   const t3 = tok();
-  let x = await api('/api/login', t3, { name: 'Tbx' + Math.floor(Math.random() * 1e6) });
+  let x = await start(t3, 'Tbx' + Math.floor(Math.random() * 1e6));
   x = await api('/api/box', t3, { box: 'gibtsnicht' });
   ok(x.err === 'box_unknown', 'unbekannte Box abgelehnt');
   x = await api('/api/box', t3, { box: 'halloween' });
   ok(x.err === 'no_tokens' || x.err === 'box_over', 'Halloween-Box ohne Marken: ' + x.err);
-  x = await api('/api/box', t3, { box: 'weltraum' });
-  ok(x.ok && x.me.coins === 25 && x.box === 'weltraum' && ballsInBox('weltraum').includes(x.ball.type), 'Weltraum-Box: 175 Münzen, Ball aus der Box: ' + (x.ball && x.ball.type));
-  x = await api('/api/box', t3, { box: 'weltraum' });
-  ok(x.err === 'no_coins', 'Weltraum-Box zu teuer');
   x = await api('/api/daily', t3);
   const live = Date.now() < EVENT_END;
   ok(x.ok && x.me.tokens === (live ? 5 : 0), 'Tagesbelohnung gibt Halloween-Marken (Event ' + (live ? 'aktiv' : 'vorbei') + '): ' + x.me.tokens);
   if (live) { x = await api('/api/box', t3, { box: 'halloween' }); ok(x.err === 'no_tokens', 'Halloween-Box mit 5 Marken noch zu teuer'); }
+  x = await api('/api/testcoins', t3, { key: 'leif-test' });
+  x = await api('/api/box', t3, { box: 'weltraum' });
+  ok(x.ok && x.me.coins === 999999 - 175 && x.box === 'weltraum' && ballsInBox('weltraum').includes(x.ball.type), 'Weltraum-Box: 175 Münzen, Ball aus der Box: ' + (x.ball && x.ball.type));
 }
 // Sterne
 {
   const t = tok();
-  let x = await api('/api/login', t, { name: 'Tst' + Math.floor(Math.random() * 1e6) });
+  let x = await start(t, 'Tst' + Math.floor(Math.random() * 1e6));
   x = await api('/api/testcoins', t, { key: 'leif-test' });
   let me = x.me, dup = null;
   for (let i = 0; i < 40 && !dup; i++) {
@@ -94,7 +109,7 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
 }
 // Boxen: keine doppelten Bälle in der Schüssel
 {
-  const t = tok(); let x = await api('/api/login', t, { name: 'Tdp' + Math.floor(Math.random() * 1e6) });
+  const t = tok(); let x = await start(t, 'Tdp' + Math.floor(Math.random() * 1e6));
   await api('/api/testcoins', t, { key: 'leif-test' });
   let dups = 0;
   for (let i = 0; i < 25; i++) { x = await api('/api/box', t, { box: ['standard', 'weltraum', 'kueche', 'sport', 'elemente'][i % 5] }); if (new Set(x.cands).size !== 10) dups++; if (x.cands[x.win] !== x.ball.type) dups++; }
