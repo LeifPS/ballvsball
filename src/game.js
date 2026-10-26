@@ -4,7 +4,7 @@ import { DurableObject } from 'cloudflare:workers';
 import { hash } from './hash.js';
 import { runFight, DEFS, BALL_IDS, DT } from '../public/js/engine.js';
 
-const LIVES = 3;
+const LIVES = 3, LIVES_FFA = 2;   // Mehrspieler (3 oder 4 Spieler, jeder gegen jeden): weniger Leben, damit es nicht ewig dauert
 const QUEUE_WAIT = 15000;
 const PICK_SECS = 15, DIR_SECS = 12;
 const BOT_NAMES = ['Kugel-Karl', 'Rollo', 'Bella Bounce', 'Dotti', 'Prall', 'Hopsi', 'Rumpel', 'Klecks', 'Purzel', 'Mocca', 'Fleck', 'Pünktchen'];
@@ -15,6 +15,8 @@ function rnd() {
   crypto.getRandomValues(a);
   return a[0] / 4294967296;
 }
+// Spielerzahl je Modus: 1 = 1 gegen 1, 3 und 4 = jeder gegen jeden, 2 = Team-Kampf (derzeit abgeschaltet)
+const playersOf = mode => mode === 1 ? 2 : mode;
 function rint(n) { return Math.floor(rnd() * n); }
 function shuffle(a) {
   a = a.slice();
@@ -64,8 +66,8 @@ export class Game extends DurableObject {
     this.env = env;
     this.conns = new Set();
     this.byUser = new Map();      // userId -> conn
-    this.queue = { 1: [], 2: [] };
-    this.qtimer = { 1: null, 2: null };
+    this.queue = { 1: [], 2: [], 3: [], 4: [] };
+    this.qtimer = { 1: null, 2: null, 3: null, 4: null };
     this.rooms = new Map();
     this.matches = new Map();
     this.userMatch = new Map();   // userId -> match
@@ -116,9 +118,9 @@ export class Game extends DurableObject {
     }
     if (!c.user) return;
     switch (m.t) {
-      case 'queue': return this.joinQueue(c, 1);   // Team-Kampf (2 gegen 2) ist vorerst abgeschaltet
+      case 'queue': return this.joinQueue(c, m.mode === 3 ? 3 : m.mode === 4 ? 4 : 1);   // Team-Kampf (2 gegen 2) ist vorerst abgeschaltet
       case 'unqueue': return this.leaveQueue(c);
-      case 'room_create': return this.roomCreate(c, m.mode === 2 ? 2 : 1);
+      case 'room_create': return this.roomCreate(c, m.mode === 3 ? 3 : m.mode === 4 ? 4 : 1);
       case 'room_join': return this.roomJoin(c, String(m.code || '').toUpperCase().trim());
       case 'room_slot': return this.roomSlot(c, m.slot);
       case 'room_leave': return this.roomLeave(c);
@@ -152,7 +154,7 @@ export class Game extends DurableObject {
     const q = this.queue[mode];
     q.push(c);
     this.send(c, { t: 'queued', mode, wait: QUEUE_WAIT / 1000, count: q.length });
-    const need = mode === 1 ? 2 : 4;
+    const need = playersOf(mode);
     if (q.length >= need) { this.fireQueue(mode); return; }
     if (!this.qtimer[mode]) this.qtimer[mode] = setTimeout(() => this.fireQueue(mode), QUEUE_WAIT);
     for (const o of q) this.send(o, { t: 'queued', mode, wait: QUEUE_WAIT / 1000, count: q.length });
@@ -169,7 +171,7 @@ export class Game extends DurableObject {
   }
   fireQueue(mode) {
     if (this.qtimer[mode]) { clearTimeout(this.qtimer[mode]); this.qtimer[mode] = null; }
-    const cap = mode === 1 ? 2 : 4;
+    const cap = playersOf(mode);
     const q = this.queue[mode];
     const take = q.splice(0, cap);
     for (const c of take) c.queued = 0;
@@ -178,7 +180,7 @@ export class Game extends DurableObject {
   }
 
   /* ---------- Freundesräume ---------- */
-  roomSlots(r) { return r.mode === 1 ? 2 : 4; }
+  roomSlots(r) { return playersOf(r.mode); }
   roomMsg(r) {
     const slots = [];
     for (let i = 0; i < this.roomSlots(r); i++) slots.push(null);
@@ -202,7 +204,7 @@ export class Game extends DurableObject {
     if (c.match || c.room || c.queued) return;
     const r = this.rooms.get(code);
     if (!r) { this.send(c, { t: 'error', code: 'room_unknown' }); return; }
-    const order = r.mode === 1 ? [0, 1] : [2, 1, 3, 0];
+    const order = r.mode === 1 ? [0, 1] : r.mode === 2 ? [2, 1, 3, 0] : [0, 1, 2, 3];
     const free = order.find(s => !r.members.some(m => m.slot === s));
     if (free === undefined) { this.send(c, { t: 'error', code: 'room_full' }); return; }
     r.members.push({ conn: c, slot: free });
@@ -237,11 +239,11 @@ export class Game extends DurableObject {
 
   /* ---------- Kampf ---------- */
   async startMatch(mode, humans, friendly) {
-    const n = mode === 1 ? 2 : 4;
+    const n = playersOf(mode), ffa = mode >= 3;
     const players = [];
     for (let s = 0; s < n; s++) {
       players.push({
-        slot: s, team: n === 2 ? s : s >> 1, userId: 0, name: '', bot: true, conn: null, token: null, inv: [],
+        slot: s, team: mode === 2 ? s >> 1 : s, out: false, userId: 0, name: '', bot: true, conn: null, token: null, inv: [],
         hand: [], pick: null, dir: null, ready: true, left: false, last: null
       });
     }
@@ -255,7 +257,7 @@ export class Game extends DurableObject {
     const names = shuffle(BOT_NAMES);
     for (const p of players) if (p.bot) p.name = names.pop();
     const m = {
-      id: this.nextMatch++, mode, n, friendly, players, lives: [LIVES, LIVES], round: 0, phase: 'load',
+      id: this.nextMatch++, mode, n, ffa, friendly, players, lives: ffa ? Array(n).fill(LIVES_FFA) : [LIVES, LIVES], outCount: 0, round: 0, phase: 'load',
       timer: null, deadline: 0, over: false, aborted: false
     };
     this.matches.set(m.id, m);
@@ -269,26 +271,28 @@ export class Game extends DurableObject {
     const pl = players.map(p => ({ slot: p.slot, name: p.name, team: p.team, bot: p.bot }));
     for (const p of players) {
       if (p.bot) continue;
-      this.send(p.conn, { t: 'match_start', id: m.id, mode, n, friendly, players: pl, you: p.slot, lives: m.lives });
+      this.send(p.conn, { t: 'match_start', id: m.id, mode, n, ffa: m.ffa, friendly, players: pl, you: p.slot, lives: m.lives });
     }
     this.startRound(m);
   }
 
-  humansActive(m) { return m.players.some(p => !p.bot && !p.left && p.conn); }
+  humansActive(m) { return m.players.some(p => !p.bot && !p.left && !p.out && p.conn); }
+  livePlayers(m) { return m.players.filter(p => !p.out); }
 
   startRound(m) {
     if (m.aborted) return;
     m.round++;
     m.phase = 'pick';
-    for (const p of m.players) {
+    const live = this.livePlayers(m);
+    for (const p of live) {
       p.pick = null; p.dir = null; p.ready = false;
       if (!p.bot && !p.left) p.hand = pickHand(p.inv);
     }
-    for (const p of m.players) {
+    for (const p of live) {
       if (p.bot || p.left) { p.hand = botHand(); p.pick = p.hand[rint(3)]; }
     }
     m.deadline = Date.now() + PICK_SECS * 1000;
-    for (const p of m.players) {
+    for (const p of live) {
       if (p.bot || !p.conn) continue;
       p.last = { t: 'pick_phase', round: m.round, hand: p.hand, secs: PICK_SECS, lives: m.lives };
       this.send(p.conn, p.last);
@@ -301,7 +305,7 @@ export class Game extends DurableObject {
   // Prüft, ob die aktuelle Phase vorzeitig enden kann
   progress(m) {
     if (m.aborted || m.over) return;
-    const act = m.players.filter(p => !p.bot && !p.left);
+    const act = m.players.filter(p => !p.bot && !p.left && !p.out);
     if (m.phase === 'pick') {
       // Getrennte Spieler: automatisch wählen lassen
       if (act.every(p => p.pick || !p.conn)) this.endPick(m);
@@ -314,7 +318,7 @@ export class Game extends DurableObject {
 
   onPick(c, uid) {
     const m = c.match, p = c.p;
-    if (!m || m.phase !== 'pick' || p.pick) return;
+    if (!m || m.phase !== 'pick' || p.pick || p.out) return;
     const h = p.hand.find(x => x.uid === Math.floor(Number(uid)));
     if (!h) return;
     p.pick = h;
@@ -324,11 +328,12 @@ export class Game extends DurableObject {
   endPick(m) {
     if (m.phase !== 'pick' || m.aborted) return;
     clearTimeout(m.timer);
-    for (const p of m.players) if (!p.pick) p.pick = p.hand[rint(p.hand.length)];
+    const live = this.livePlayers(m);
+    for (const p of live) if (!p.pick) p.pick = p.hand[rint(p.hand.length)];
     m.phase = 'dir';
     m.deadline = Date.now() + DIR_SECS * 1000;
-    const balls = m.players.map(p => ({ slot: p.slot, type: p.pick.type }));
-    for (const p of m.players) {
+    const balls = live.map(p => ({ slot: p.slot, type: p.pick.type }));
+    for (const p of live) {
       if (p.bot || p.left) { p.dir = rnd() * 360; continue; }
       p.last = { t: 'reveal', round: m.round, balls, secs: DIR_SECS };
       this.send(p.conn, p.last);
@@ -338,7 +343,7 @@ export class Game extends DurableObject {
   }
   onDir(c, deg) {
     const m = c.match, p = c.p;
-    if (!m || m.phase !== 'dir' || p.dir !== null) return;
+    if (!m || m.phase !== 'dir' || p.dir !== null || p.out) return;
     deg = Number(deg);
     if (!Number.isFinite(deg)) return;
     p.dir = ((deg % 360) + 360) % 360;
@@ -348,19 +353,36 @@ export class Game extends DurableObject {
   endDir(m) {
     if (m.phase !== 'dir' || m.aborted) return;
     clearTimeout(m.timer);
-    for (const p of m.players) if (p.dir === null) p.dir = rnd() * 360;
+    const live = this.livePlayers(m);
+    for (const p of live) if (p.dir === null) p.dir = rnd() * 360;
     // Winkel auf 0,1 Grad runden, damit JSON-Zahlen sicher gleich bleiben
     const cfg = {
-      seed: rint(2000000000) + 1,
-      balls: m.players.map(p => ({ type: p.pick.type, team: p.team, deg: Math.round(p.dir * 10) / 10, stars: p.pick.stars || 0 }))
+      seed: rint(2000000000) + 1, total: m.n,
+      balls: live.map(p => ({ slot: p.slot, type: p.pick.type, team: p.team, deg: Math.round(p.dir * 10) / 10, stars: p.pick.stars || 0 }))
     };
     const res = runFight(cfg);
-    const draw = res.winner < 0;   // Unentschieden: keine Leben abziehen
-    if (!draw) m.lives[1 - res.winner]--;
-    const over = !draw && m.lives[1 - res.winner] <= 0;
-    m.fight = { cfg, steps: res.steps, winner: res.winner, reason: res.reason, lives: m.lives.slice(), over, round: m.round };
+    if (m.ffa) {
+      // Jeder gegen jeden: Wer zuerst komplett besiegt wurde, verliert ein Leben (bei Gleichstand niemand).
+      // Läuft die Zeit ab, ohne dass jemand besiegt wurde, verliert das Team mit den wenigsten Lebenspunkten.
+      let first = -1;
+      if (res.elim.length) {
+        const tied = res.elim.filter(e => e.step === res.elim[0].step);
+        if (tied.length === 1) first = tied[0].team;
+      } else {
+        const fr = Object.entries(res.frac).map(([t, f]) => [Number(t), f]).sort((x, y) => x[1] - y[1]);
+        if (fr.length > 1 && fr[0][1] < fr[1][1] - 1e-9) first = fr[0][0];
+      }
+      if (first >= 0) m.lives[first]--;
+      const left = live.filter(p => m.lives[p.team] > 0).length;
+      m.fight = { cfg, steps: res.steps, winner: res.winner, first, elim: res.elim.map(e => e.team), reason: res.reason, lives: m.lives.slice(), over: left <= 1, round: m.round };
+    } else {
+      const draw = res.winner < 0;   // Unentschieden: keine Leben abziehen
+      if (!draw) m.lives[1 - res.winner]--;
+      const over = !draw && m.lives[1 - res.winner] <= 0;
+      m.fight = { cfg, steps: res.steps, winner: res.winner, reason: res.reason, lives: m.lives.slice(), over, round: m.round };
+    }
     m.phase = 'fight';
-    for (const p of m.players) {
+    for (const p of live) {
       p.ready = p.bot || p.left;
       if (p.bot || p.left) continue;
       p.last = Object.assign({ t: 'fight' }, m.fight);
@@ -390,9 +412,45 @@ export class Game extends DurableObject {
   endFight(m) {
     if (m.phase !== 'fight' || m.aborted) return;
     clearTimeout(m.timer);
+    if (m.ffa) { this.endFightFfa(m); return; }
     if (m.fight.over) { this.finishMatch(m, m.fight.winner); return; }
     m.phase = 'wait';
     m.timer = setTimeout(() => this.startRound(m), 600);
+  }
+  // Mehrspieler: wer kein Leben mehr hat, scheidet aus und bekommt sofort sein Ergebnis (Platz = Zahl der noch Aktiven vor dem Ausscheiden)
+  endFightFfa(m) {
+    const live = this.livePlayers(m);
+    for (const p of live.filter(q => m.lives[q.team] <= 0)) {
+      const place = this.livePlayers(m).length;
+      p.out = true;
+      this.eliminate(m, p, place);
+    }
+    const rest = this.livePlayers(m);
+    if (rest.length <= 1) {
+      m.over = true; m.phase = 'done';
+      this.matches.delete(m.id);
+      if (rest[0]) { rest[0].out = true; this.eliminate(m, rest[0], 1); }
+      return;
+    }
+    if (!this.humansActive(m)) { this.abort(m); return; }
+    m.phase = 'wait';
+    m.timer = setTimeout(() => this.startRound(m), 600);
+  }
+  async eliminate(m, p, place) {
+    if (p.bot) return;
+    this.userMatch.delete(p.userId);
+    const conn = p.conn;
+    p.conn = null;
+    if (conn) { conn.match = null; conn.p = null; }
+    let coins = 0, tokens = 0, me = null;
+    if (!m.friendly && !p.left) {
+      const bots = m.players.some(o => o.bot);
+      const table = bots ? [60, 30, 15, 8] : [90, 50, 25, 10];
+      coins = table[place - 1] || 5;
+      try { tokens = await this.store().reward(p.userId, coins, place === 1, place === 1 ? (bots ? 2 : 3) : 1) || 0; } catch (e) { console.log('reward', e); }
+    }
+    try { const x = await this.store().me(p.token); if (x.ok) me = x.me; } catch (e) { }
+    this.send(conn, { t: 'match_end', ffa: true, place, n: m.n, win: place === 1, winnerTeam: -1, coins, tokens, friendly: m.friendly, me });
   }
 
   async finishMatch(m, winnerTeam) {
@@ -445,7 +503,7 @@ export class Game extends DurableObject {
     p.conn = c; c.match = m; c.p = p;
     clearTimeout(m.grace); m.grace = 0;
     const pl = m.players.map(x => ({ slot: x.slot, name: x.name, team: x.team, bot: x.bot }));
-    this.send(c, { t: 'match_start', id: m.id, mode: m.mode, n: m.n, friendly: m.friendly, players: pl, you: p.slot, lives: m.lives, resume: true });
+    this.send(c, { t: 'match_start', id: m.id, mode: m.mode, n: m.n, ffa: m.ffa, friendly: m.friendly, players: pl, you: p.slot, lives: m.lives, resume: true });
     if (p.last) {
       const msg = Object.assign({}, p.last);
       if (msg.t === 'pick_phase' || msg.t === 'reveal') msg.secs = Math.max(1, Math.round((m.deadline - Date.now()) / 1000));

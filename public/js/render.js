@@ -9,6 +9,7 @@ import { R0 } from './ballart.js';
 import { drawBoxArt } from './boxart.js';
 
 export const TEAM_COL = ['#2b6fd0', '#d33a3a'];
+export const PLAYER_COL = ['#2b6fd0', '#d33a3a', '#2f9a4a', '#e0a21a'];
 
 /* ---------- Arena ---------- */
 const AR = new Map();
@@ -56,11 +57,11 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
   g.translate(ax, ay); const k = AS / BOX; g.scale(k, k);
   for (const e of sim.fx) addFx(e);
   sim.fx.length = 0;
-  const objs = sim.objs, myTeam = players && mySlot >= 0 && players[mySlot] ? players[mySlot].team : 0;
+  const ffa = players && players.length > 2 && players.every((p, i) => p.team === i), objs = sim.objs, myTeam = players && mySlot >= 0 && players[mySlot] ? players[mySlot].team : 0;
   for (let i = 0; i < objs.length; i++) if (GROUND[objs[i].k]) drawObj(g, objs[i], sim, tf, tm);
   for (const b of sim.balls) {
     if (b.dead) continue;
-    const col = b.team === myTeam ? TEAM_COL[0] : TEAM_COL[1];
+    const col = ffa ? PLAYER_COL[b.team] : b.team === myTeam ? TEAM_COL[0] : TEAM_COL[1];
     g.save(); g.globalAlpha = .9; ringJ(g, b.x, b.y + 1, b.r + 4, 2.6, col, tf, b.id); g.restore();
   }
   for (const b of sim.balls) if (!b.dead) drawBall(g, b, sim, tf, tm, opt.tint && opt.tint[b.id]);
@@ -74,7 +75,7 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
     g.lineWidth = 3.2; g.strokeStyle = INK; g.lineJoin = 'round'; g.strokeRect(ins, ins, BOX - 2 * ins, BOX - 2 * ins);
     g.restore();
   }
-  for (const b of sim.balls) if (!b.dead && !opt.noBars) drawHpBar(g, b, myTeam, '#4f90e8', '#e4574a');
+  for (const b of sim.balls) if (!b.dead && !opt.noBars) drawHpBar(g, b, myTeam, '#4f90e8', '#e4574a', ffa ? PLAYER_COL : null);
   drawFx(g, dt, tf);
   g.restore();
 }

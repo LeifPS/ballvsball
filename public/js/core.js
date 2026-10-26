@@ -47,11 +47,12 @@ export function makeSim(cfg, DEFS, OBJS) {
     balls: [], objs: [], byId: {}, fx: [], noFx: !!cfg.noFx,
     over: false, winner: -1, reason: '', nextId: 1, teamMax: {}, dealt: {}
   };
-  const n = cfg.balls.length;
-  const POS = n <= 2 ? [[.22, .5], [.78, .5]] : [[.25, .28], [.25, .72], [.75, .28], [.75, .72]];
+  const n = cfg.balls.length, total = cfg.total || n;   // total: Spielerzahl des Matches (auch wenn schon welche ausgeschieden sind)
+  const POS = total <= 2 ? [[.22, .5], [.78, .5]] : total === 3 ? [[.5, .2], [.2, .76], [.8, .76]] : [[.25, .28], [.25, .72], [.75, .28], [.75, .72]];
+  sim.elim = [];   // Reihenfolge, in der Teams komplett besiegt wurden: { team, step }
   cfg.balls.forEach((c, i) => {
-    const p = POS[i];
-    addBall(sim, c.type, c.team, i, p[0] * BOX, p[1] * BOX, c.deg || 0, { stars: Math.max(0, Math.min(MAX_STARS, c.stars | 0)) });
+    const slot = c.slot != null ? c.slot : i, p = POS[slot];
+    addBall(sim, c.type, c.team, slot, p[0] * BOX, p[1] * BOX, c.deg || 0, { stars: Math.max(0, Math.min(MAX_STARS, c.stars | 0)) });
   });
   for (const b of sim.balls) sim.teamMax[b.team] = (sim.teamMax[b.team] || 0) + b.maxHp;
   return sim;
@@ -256,6 +257,7 @@ export function stepSim(sim) {
   const alive = {};
   let teams = 0;
   for (const b of balls) if (!b.dead && !alive[b.team]) { alive[b.team] = 1; teams++; }
+  for (const tm of Object.keys(sim.teamMax)) if (!alive[tm] && !sim.elim.some(e => e.team === Number(tm))) sim.elim.push({ team: Number(tm), step: sim.step });
   if (teams <= 1) {
     sim.over = true;
     if (teams === 1) { sim.winner = Number(Object.keys(alive)[0]); sim.reason = 'ko'; }
@@ -276,5 +278,9 @@ export function stepSim(sim) {
 export function runToEnd(sim) {
   let guard = Math.ceil(MAX_T / DT) + 10;
   while (!sim.over && guard-- > 0) stepSim(sim);
-  return { winner: sim.winner, steps: sim.step, t: sim.t, reason: sim.reason };
+  // Anteil verbleibender Lebenspunkte je Team (für Mehrspieler-Kämpfe, die auf Zeit enden)
+  const fr = {};
+  for (const tm of Object.keys(sim.teamMax)) fr[tm] = 0;
+  for (const b of sim.balls) if (!b.dead) fr[b.team] += b.hp / (sim.teamMax[b.team] || 1);
+  return { winner: sim.winner, steps: sim.step, t: sim.t, reason: sim.reason, elim: sim.elim, frac: fr };
 }

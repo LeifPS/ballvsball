@@ -5,7 +5,7 @@ import { BOX_LIST, BOX_BY_ID, boxActive, UP_COST } from './boxes.js';
 import { DPR, INK, gi, mkSprite, spr } from './sk.js';
 import { boxArt } from './boxart.js';
 import { drawBallIn, clearFx, fxState, burst, star } from './art.js';
-import { drawArena, drawBox, BOX_H, TEAM_COL } from './render.js';
+import { drawArena, drawBox, BOX_H, TEAM_COL, PLAYER_COL } from './render.js';
 import { unlock, sfx, getMode, setMode, setScene } from './audio.js';
 
 const $ = s => document.querySelector(s);
@@ -230,7 +230,7 @@ function onMsg(m) {
     case 'unqueued': home(); break;
     case 'room': S.room = m; roomScreen(); break;
     case 'room_left': S.room = null; friends(); break;
-    case 'match_start': S.match = { players: m.players, you: m.you, n: m.n, mode: m.mode, lives: m.lives, friendly: m.friendly, round: 0 }; if (m.resume) toast('Wieder verbunden.'); else matchIntro(); break;
+    case 'match_start': S.match = { players: m.players, you: m.you, n: m.n, mode: m.mode, ffa: !!m.ffa, lives: m.lives, friendly: m.friendly, round: 0 }; if (m.resume) toast('Wieder verbunden.'); else matchIntro(); break;
     case 'pick_phase': pickScreen(m); break;
     case 'reveal': dirScreen(m); break;
     case 'fight': fightScreen(m); break;
@@ -257,7 +257,7 @@ function home() {
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
     '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
     (ev ? '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="halloween">' + gi('token', 46) + '<div class="grow"><h3>Halloween-Box ist da!</h3><span class="small">' + timeLeft(me.eventEnd - now()) + ' - 6 neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>' : '') +
-    btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'queue1', '', 'fight') + btn('Mit Freunden spielen', 'friends') +
+    btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'queue1', '', 'fight') + btn('Mit Freunden spielen', 'friends') + btn('Mehrspieler (3 oder 4)', 'multi') +
     '<div class="row gap6"><div class="grow">' + btn('Sammlung', 'collection') + '</div><div class="grow">' + btn('Ballboxen', 'box') + '</div></div>' +
     '<div class="row gap6"><div class="grow">' + btn('Markt', 'market') + '</div><div class="grow">' + btn('Tauschen', 'trades') + '</div></div>' +
     (me.dailyReady ? btn('Tagesbelohnung abholen' + (ev ? ' (+5 Marken)' : ''), 'daily', '', 'green') : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
@@ -489,12 +489,21 @@ async function trades() {
   show('<div class="col">' + backBar('Tauschen') + '<div class="tabs">' + tabs.map(t => '<button class="tab' + (tab === t[0] ? ' on' : '') + '" data-act="ttab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' + body + '</div>');
 }
 
+/* ================= Mehrspieler ================= */
+function multi() {
+  S.screen = 'multi'; setView(null);
+  show('<div class="col">' + backBar('Mehrspieler') +
+    '<div class="panel"><p class="center">Jeder gegen jeden: Alle kämpfen gleichzeitig in einer Arena. Jeder hat zwei Leben. Wer in einer Runde zuerst besiegt wird, verliert ein Leben. Wer keins mehr hat, scheidet aus. Der Letzte gewinnt. Fehlende Spieler füllen Bots auf.</p></div>' +
+    btn('Zu dritt kämpfen', 'queue3', '', 'pri') + btn('Zu viert kämpfen', 'queue4', '', 'pri') +
+    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Mit Freunden: Unter "Mit Freunden spielen" kannst du einen Raum für 3 oder 4 Spieler erstellen.</p></div>');
+}
+
 /* ================= Freunde ================= */
 function friends() {
   S.screen = 'friends'; setView(null);
   show('<div class="col">' + backBar('Mit Freunden') +
     '<div class="panel"><p class="center">Erstelle einen Raum und gib deinen Freunden den Code. Leere Plätze füllen Bots auf. Es gibt keine Belohnung, aber auch keine Verluste.</p></div>' +
-    btn('Raum erstellen: 1 gegen 1', 'room1', '', 'pri') + btn('Raum erstellen: 2 gegen 2', 'room2') +
+    btn('Raum erstellen: 1 gegen 1', 'room1', '', 'pri') + btn('Raum erstellen: 2 gegen 2', 'room2') + btn('Raum erstellen: zu dritt', 'room3') + btn('Raum erstellen: zu viert', 'room4') +
     '<h3 class="center mt" style="color:#fff;text-shadow:2px 2px 0 var(--ink)">Einem Raum beitreten</h3><div class="inp"><input id="rc" maxlength="4" placeholder="CODE" style="text-transform:uppercase;text-align:center;font:400 34px var(--f-display)"></div>' + btn('Beitreten', 'roomjoin') + '</div>');
 }
 function roomScreen() {
@@ -504,7 +513,7 @@ function roomScreen() {
     const nm = r.slots[i];
     return '<div class="listrow card"><span class="grow">' + (nm ? '<b>' + esc(nm) + '</b>' + (i === r.youSlot ? ' (du)' : '') : '<span class="mute">frei (Bot)</span>') + '</span>' + (!nm ? '<button class="btn sm" data-act="roomslot" data-s="' + i + '">Hierhin</button>' : '') + '</div>';
   };
-  const teams = n === 2 ? '<h3>Spieler 1</h3>' + slot(0) + '<h3>Spieler 2</h3>' + slot(1)
+  const teams = n > 2 && r.mode >= 3 ? [0, 1, 2, 3].slice(0, n).map(i => '<h3 style="color:' + PLAYER_COL[i] + ';text-shadow:1px 1px 0 var(--ink)">Spieler ' + (i + 1) + '</h3>' + slot(i)).join('') : n === 2 ? '<h3>Spieler 1</h3>' + slot(0) + '<h3>Spieler 2</h3>' + slot(1)
     : '<h3 style="color:#cfe4ff;text-shadow:1px 1px 0 var(--ink)">Team Blau</h3>' + slot(0) + slot(1) + '<h3 style="color:#ffd0c8;text-shadow:1px 1px 0 var(--ink)">Team Rot</h3>' + slot(2) + slot(3);
   show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Raum</h2><p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Code für deine Freunde:</p><div class="panel codebig jit">' + esc(r.code) + '</div>' + teams +
     (r.youHost ? btn('Kampf starten', 'roomstart', '', 'pri') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Warte, bis ' + esc(r.host) + ' startet.</p>') + btn('Raum verlassen', 'roomleave') + '</div>');
@@ -519,7 +528,7 @@ function queueScreen(m) {
     '<div class="qstage"><div class="qside"><div class="qring"></div><div class="qball bounce">' + ball(mine, 120, .62) + '</div><div class="qname">' + esc(S.me.name) + '</div></div>' +
     '<div class="qvs jit">VS</div>' +
     '<div class="qside"><div class="qring r2"></div><div class="qball" id="qfoe"></div><div class="qname">???</div></div></div>' +
-    '<div class="panel"><p>' + (m.mode === 2 ? 'Team-Kampf (2 gegen 2)' : 'Kampf (1 gegen 1)') + '</p><p id="qc" class="small mute"></p>' +
+    '<div class="panel"><p>' + (m.mode === 2 ? 'Team-Kampf (2 gegen 2)' : m.mode === 3 ? 'Mehrspieler: zu dritt' : m.mode === 4 ? 'Mehrspieler: zu viert' : 'Kampf (1 gegen 1)') + '</p><p id="qc" class="small mute"></p>' +
     '<div class="progress mt"><i id="qbar" style="width:0%"></i></div><p class="small mt" id="qmsg">Warte auf einen Mitspieler ... <b id="qt">0</b> s</p></div>' +
     '<p class="small center" id="qtip" style="color:#fff;text-shadow:1px 1px 0 var(--ink);min-height:40px">' + QTIPS[Math.floor(Math.random() * QTIPS.length)] + '</p>' +
     btn('Abbrechen', 'unqueue') + '</div>');
@@ -539,8 +548,13 @@ function queueScreen(m) {
 function queueUpdate(m) { const e = $('#qc'); if (e) e.textContent = m.count + ' Spieler in der Warteschlange'; }
 
 /* ================= Kampf ================= */
-function livesHTML(count) { let h = ''; for (let i = 0; i < 3; i++) h += gi(i < count ? 'heart' : 'heart0', 26); return '<span class="lives">' + h + '</span>'; }
+function livesHTML(count, max) { let h = ''; for (let i = 0; i < (max || 3); i++) h += gi(i < count ? 'heart' : 'heart0', 26); return '<span class="lives">' + h + '</span>'; }
 function matchHeader() {
+  const m0 = S.match;
+  if (m0.ffa) {
+    const cell = p => { const l = m0.lives[p.team], out = l <= 0; return '<div style="text-align:center;opacity:' + (out ? .45 : 1) + '"><div class="small" style="color:' + PLAYER_COL[p.team] + ';font-weight:700;text-shadow:1px 1px 0 var(--ink);max-width:' + Math.floor(250 / m0.n) + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.slot === m0.you ? 'Du' : esc(p.name)) + '</div>' + livesHTML(l, 2) + '</div>'; };
+    return '<div id="mh"><div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);padding-right:52px">' + (m0.friendly ? 'Freundschaftsspiel' : 'Runde ' + m0.round) + '</div><div class="row sb gap6" style="padding-right:4px">' + m0.players.map(cell).join('') + '</div></div>';
+  }
   const m = S.match, me = m.players[m.you], my = me.team, en = 1 - my;
   const nm = t => m.n === 2 ? esc(m.players.find(p => p.team === t).name) : (t === my ? 'Dein Team' : 'Gegner');
   return '<div class="row sb" id="mh" style="padding-right:52px"><div><div class="small" style="color:#cfe4ff;text-shadow:1px 1px 0 var(--ink)">' + (m.n === 2 ? 'Du' : 'Dein Team') + '</div>' + livesHTML(m.lives[my]) + '</div>' +
@@ -550,10 +564,10 @@ function matchHeader() {
 function matchIntro() {
   const m = S.match; S.screen = 'matchintro'; setView(null); setScene('fight'); sfx('go');
   const nm = p => (p.slot === m.you ? 'Du' : esc(p.name) + (p.bot ? ' (Bot)' : ''));
-  show('<div class="col center" style="margin-top:8vh"><h2 class="jit pop" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Gegner gefunden!</h2><div class="panel pop">' +
-    (m.n === 2 ? '<h3>' + nm(m.players[0]) + '</h3><div class="big" style="font-size:40px;margin:4px 0">gegen</div><h3 style="color:var(--red)">' + nm(m.players[1]) + '</h3>' :
+  show('<div class="col center" style="margin-top:8vh"><h2 class="jit pop" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + (m.ffa ? 'Spieler gefunden!' : 'Gegner gefunden!') + '</h2><div class="panel pop">' +
+    (m.ffa ? m.players.map(p => '<p><b style="color:' + PLAYER_COL[p.team] + '">' + nm(p) + '</b></p>').join('') : m.n === 2 ? '<h3>' + nm(m.players[0]) + '</h3><div class="big" style="font-size:40px;margin:4px 0">gegen</div><h3 style="color:var(--red)">' + nm(m.players[1]) + '</h3>' :
       '<p><b style="color:' + TEAM_COL[0] + '">Team Blau:</b> ' + [0, 1].map(i => nm(m.players[i])).join(' und ') + '</p><p><b style="color:' + TEAM_COL[1] + '">Team Rot:</b> ' + [2, 3].map(i => nm(m.players[i])).join(' und ') + '</p><p class="small mute">Eure Leben werden im Team geteilt.</p>') +
-    '<p class="mute mt">Drei Leben. Wer keins mehr hat, verliert.</p></div></div>');
+    '<p class="mute mt">' + (m.ffa ? 'Jeder gegen jeden. Zwei Leben. Wer zuerst besiegt wird, verliert ein Leben. Der Letzte gewinnt.' : 'Drei Leben. Wer keins mehr hat, verliert.') + '</p></div></div>');
 }
 let pickSel = null, countdownEnd = 0;
 function startCountdown(secs, id) {
@@ -583,8 +597,8 @@ function arenaSize() { return Math.min(window.innerWidth - 36, 460, Math.max(240
 function dirScreen(m) {
   const M = S.match; if (!M) return;
   S.screen = 'dir'; dirSent = false; dirTouched = false;
-  const balls = m.balls.map(b => ({ type: b.type, team: M.players[b.slot].team, deg: 0 }));
-  const sim = createSim({ seed: 1, balls, noFx: true });
+  const balls = m.balls.map(b => ({ slot: b.slot, type: b.type, team: M.players[b.slot].team, deg: 0 }));
+  const sim = createSim({ seed: 1, balls, total: M.n, noFx: true });
   const my = sim.balls.find(b => b.slot === M.you), en = sim.balls.find(b => b.team !== my.team);
   dirDeg = Math.round((Math.atan2(en.y - my.y, en.x - my.x) * 180 / Math.PI + 360) % 360);
   const AS = arenaSize(), W = AS + 20, H = AS + 20;
@@ -625,8 +639,8 @@ function sendDir() { if (dirSent) return; dirSent = true; wsSend({ t: 'dir', deg
 
 function hudHTML(M) {
   const order = M.players.slice().sort((a, b) => (a.team === M.players[M.you].team ? 0 : 1) - (b.team === M.players[M.you].team ? 0 : 1) || a.slot - b.slot);
-  return '<div class="hud" style="grid-template-columns:' + (M.n === 2 ? '1fr 1fr' : '1fr 1fr') + '">' + order.map(p =>
-    '<div class="hp ' + (p.team === M.players[M.you].team ? 'me' : 'foe') + '" data-slot="' + p.slot + '"><div class="nm">' + esc(p.slot === M.you ? 'Du' : p.name) + ' - <span class="bn"></span></div><div class="bar"><i></i></div></div>').join('') + '</div>';
+  return '<div class="hud" style="grid-template-columns:1fr 1fr">' + order.map(p =>
+    '<div class="hp ' + (p.team === M.players[M.you].team ? 'me' : 'foe') + '" data-slot="' + p.slot + '"' + (M.ffa ? ' style="' + (M.lives[p.team] <= 0 ? 'display:none;' : '') + 'border-color:' + PLAYER_COL[p.team] + '"' : '') + '><div class="nm">' + esc(p.slot === M.you ? 'Du' : p.name) + ' - <span class="bn"></span></div><div class="bar"><i></i></div></div>').join('') + '</div>';
 }
 function fightScreen(m) {
   const M = S.match; if (!M) return;
@@ -646,8 +660,15 @@ function fightScreen(m) {
     resShown = true;
     const win = m.winner === myTeam, draw = m.winner < 0;
     M.lives = m.lives; const mh = $('#mh'); if (mh) mh.outerHTML = matchHeader();
-    sfx(win ? 'win' : 'lose');
-    if (win) { confetti(46); }
+    if (!M.ffa) { sfx(win ? 'win' : 'lose'); if (win) confetti(46); }
+    if (M.ffa) {
+      const fp = m.first >= 0 ? M.players.find(p => p.team === m.first) : null, mine = m.first === myTeam, out = M.lives[myTeam] <= 0;
+      sfx(mine ? 'lose' : 'win'); if (!mine && m.first >= 0) confetti(30);
+      $('#fres').innerHTML = '<div class="panel center pop"><h2 class="jit" style="font-size:40px;color:' + (!fp ? '#8a6a1a' : mine ? '#c93030' : '#2f8a3a') + '">' + (!fp ? 'Unentschieden!' : mine ? 'Du verlierst ein Leben!' : esc(fp.name) + ' verliert ein Leben!') + '</h2><p class="small mute">' +
+        (mine && out ? 'Das war dein letztes Leben.' : !fp ? 'Niemand verliert ein Leben.' : m.over ? 'Das war der letzte Kampf.' : '') + '</p></div>';
+      $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext', '', 'pri') + '</div>';
+      window.scrollTo(0, document.body.scrollHeight); return;
+    }
     $('#fres').innerHTML = draw ? '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:#8a6a1a">Unentschieden!</h2><p class="small mute">Beide waren gleichzeitig besiegt. Niemand verliert ein Leben.</p></div>' :
       '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:' + (win ? '#2f8a3a' : '#c93030') + '">' + (win ? 'Runde gewonnen!' : 'Runde verloren!') + '</h2><p class="small mute">' +
       (m.over ? (win ? 'Das war der letzte Kampf.' : 'Das war dein letztes Leben.') : (win ? 'Der Gegner verliert ein Leben.' : 'Du verlierst ein Leben.')) + '</p></div>';
@@ -709,7 +730,19 @@ function fightScreen(m) {
   });
 }
 
+function matchEndFfa(m) {
+  S.match = null; S.screen = 'end'; setView(null); setScene('menu');
+  if (m.me) setMe(m.me);
+  const ord = ['1.', '2.', '3.', '4.'][m.place - 1];
+  show('<div class="col center res"><h1 class="jit pop" style="color:' + (m.win ? '#fff' : '#ffd0c8') + ';text-shadow:3px 4px 0 var(--ink)">' + (m.win ? 'Sieg!' : ord + ' Platz') + '</h1>' +
+    '<div class="hero ' + (m.win ? 'bounce' : '') + '">' + (m.win ? '<div class="rays"></div>' : '') + '<div style="position:relative">' + ball(topType(), 180, .62) + '</div></div>' +
+    (m.win ? '' : '<div class="panel"><p>Du bist als ' + ord + ' von ' + m.n + ' Spielern ausgeschieden.</p></div>') +
+    (m.friendly ? '<div class="panel"><p>Freundschaftsspiel - keine Belohnung.</p></div>' : '<div class="panel pop"><p>Belohnung</p><div class="big">' + coinHTML('+' + m.coins) + '</div>' + (m.tokens ? '<div class="big" style="font-size:38px;margin-top:4px">' + tokHTML('+' + m.tokens) + '</div>' : '') + '</div>') +
+    btn('Nochmal kämpfen', 'queue' + m.n, '', 'pri') + btn('Zur Startseite', 'home') + '</div>');
+  if (m.win) { confetti(60); sfx('win'); } else sfx('lose');
+}
 function matchEnd(m) {
+  if (m.ffa) return matchEndFfa(m);
   S.match = null; S.screen = 'end'; setView(null); setScene('menu');
   if (m.me) setMe(m.me);
   show('<div class="col center res"><h1 class="jit pop" style="color:' + (m.win ? '#fff' : '#ffd0c8') + ';text-shadow:3px 4px 0 var(--ink)">' + (m.win ? 'Sieg!' : 'Niederlage') + '</h1>' +
@@ -731,11 +764,16 @@ const ACT = {
     connectWS(); home();
   },
   queue1() { if (S.match) return; wsSend({ t: 'queue', mode: 1 }); },
+  queue3() { if (S.match) return; wsSend({ t: 'queue', mode: 3 }); },
+  queue4() { if (S.match) return; wsSend({ t: 'queue', mode: 4 }); },
+  multi() { multi(); },
   queue2() { if (S.match) return; wsSend({ t: 'queue', mode: 2 }); },
   unqueue() { wsSend({ t: 'unqueue' }); },
   friends() { friends(); },
   room1() { wsSend({ t: 'room_create', mode: 1 }); },
   room2() { wsSend({ t: 'room_create', mode: 2 }); },
+  room3() { wsSend({ t: 'room_create', mode: 3 }); },
+  room4() { wsSend({ t: 'room_create', mode: 4 }); },
   roomjoin() { const c = ($('#rc').value || '').trim(); if (c.length < 4) { toast('Gib den 4-stelligen Code ein.'); return; } wsSend({ t: 'room_join', code: c }); },
   roomslot(d) { wsSend({ t: 'room_slot', slot: +d.s }); },
   roomstart() { wsSend({ t: 'room_start' }); },

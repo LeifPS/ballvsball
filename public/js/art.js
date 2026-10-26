@@ -291,14 +291,14 @@ export function drawFx(g, dt, tf) {
   }
 }
 // Lebensbalken über dem Ball
-export function drawHpBar(g, b, myTeam, colMine, colFoe) {
+export function drawHpBar(g, b, myTeam, colMine, colFoe, teamCols) {
   const w = Math.max(22, b.r * 1.7), h = 4.4, x = b.x - w / 2, y = b.y - b.r - 10, fr = Math.max(0, Math.min(1, b.hp / b.maxHp));
   // Handgezeichnet: leicht schiefer Rahmen (pro Ball stabil), Füllung mit Buntstift-Schraffur
   const j = n => Math.sin(b.id * 12.9 + n * 78.2) * .9;
   const frame = () => { g.beginPath(); g.moveTo(x + j(1), y + j(2)); g.lineTo(x + w + j(3), y + j(4) * .6); g.lineTo(x + w + j(5), y + h + j(6)); g.lineTo(x + j(7), y + h + j(8) * .6); g.closePath(); };
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; frame(); g.fillStyle = '#f6efd9'; g.fill();
   if (fr > 0) {
-    g.save(); frame(); g.clip(); const fw = w * fr; g.fillStyle = b.team === myTeam ? colMine : colFoe; g.fillRect(x, y, fw, h);
+    g.save(); frame(); g.clip(); const fw = w * fr; g.fillStyle = teamCols ? teamCols[b.team] : b.team === myTeam ? colMine : colFoe; g.fillRect(x, y, fw, h);
     g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1; g.beginPath(); for (let sx = x - h; sx < x + fw; sx += 3.2) { g.moveTo(sx, y + h); g.lineTo(sx + h, y); } g.stroke();
     g.strokeStyle = INK; g.lineWidth = 1.3; g.beginPath(); g.moveTo(x + fw + j(9) * .5, y); g.lineTo(x + fw + j(10) * .5, y + h); g.stroke(); g.restore();
   }
