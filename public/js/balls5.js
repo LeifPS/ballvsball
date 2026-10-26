@@ -119,7 +119,7 @@ const N = {
     }
   },
   lexi: {
-    name: 'Lexi', rarity: 'gewoehnlich', hp: 95, speed: 165, r: 16, dmg: 'Mittel',
+    name: 'Lexi', rarity: 'selten', hp: 95, speed: 165, r: 16, dmg: 'Mittel',
     desc: 'Lexi (graue Katze): flink und schwer zu fassen. Weicht jedem vierten Treffer aus und kratzt ordentlich.',
     strong: 'Langsame Gegner', weak: 'Flächenschaden',
     contact: (b, sim) => 10 + sim.t * .12, contactCd: .45,
@@ -137,7 +137,7 @@ const N = {
     }
   },
   ursel: {
-    name: 'Ursel', rarity: 'selten', hp: 105, speed: 140, r: 17, dmg: 'Hoch',
+    name: 'Ursel', rarity: 'gewoehnlich', hp: 105, speed: 140, r: 17, dmg: 'Hoch',
     desc: 'Ursel (schwarz-braune Katze): schleicht und springt dann los. Der Sprung trifft doppelt.',
     strong: 'Träge Gegner', weak: 'Schildball',
     contact: (b, sim) => (b.st.dash > 0 ? 21 : 7) + sim.t * .1, contactCd: .5,
@@ -151,7 +151,7 @@ const N = {
 };
 
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
-const DM5 = { thore: .72, erik: .8, ida: 1.45, leif: .78, sandra: .6, alexander: .55, lilli: 1.3, lexi: 2.05, finni: 1.31, ursel: 1.63 };
+const DM5 = { thore: .72, erik: .8, ida: 1.45, leif: .78, sandra: .6, alexander: .55, lilli: 1.3, lexi: 2.24, finni: 1.31, ursel: 1.51 };
 const BOX_OF = { familie: ['thore', 'erik', 'ida', 'leif', 'sandra', 'alexander', 'lilli', 'lexi', 'finni', 'ursel'] };
 for (const box in BOX_OF) for (const id of BOX_OF[box]) {
   N[id].box = box;
