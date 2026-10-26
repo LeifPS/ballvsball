@@ -31,27 +31,27 @@ function botType() {
   return ids[0];
 }
 
+const RAR_ORDER = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
 // Hand: drei verschiedene Sorten. Jede Sorte zählt gleich, egal wie viele Exemplare man besitzt.
-// Pro Platz wird erst eine Seltenheit gewürfelt (nur unter den Stufen, die man noch zur Verfügung hat), dann eine Sorte darin.
-// So verdünnen zusätzliche Bälle einer Stufe die Chancen der anderen Stufen nicht.
-const HAND_W = { gewoehnlich: 40, selten: 30, episch: 20, legendaer: 10 };
+// Pro Platz wird eine Seltenheit mit festen Gewichten gewürfelt. Hat man davon keine freie Sorte mehr, gilt die nächst schlechtere,
+// und nur wenn es keine schlechtere gibt, die nächst bessere. So wird keine Chance durch zusätzliche Bälle schlechter.
+const HAND_W = [40, 30, 20, 10];   // gewoehnlich, selten, episch, legendaer
 function pickHand(inv) {
   const by = new Map();
   for (const b of inv) { const c = by.get(b.type); if (!c || (b.stars || 0) > (c.stars || 0)) by.set(b.type, b); }
-  const pools = {};
-  for (const b of by.values()) (pools[DEFS[b.type].rarity] = pools[DEFS[b.type].rarity] || []).push(b);
+  const pools = [[], [], [], []];
+  for (const b of by.values()) pools[RAR_ORDER.indexOf(DEFS[b.type].rarity)].push(b);
   const hand = [];
-  while (hand.length < 3) {
-    const rars = Object.keys(pools).filter(r => pools[r].length);
-    if (!rars.length) break;
-    let r = rnd() * rars.reduce((a, k) => a + HAND_W[k], 0), pick = rars[rars.length - 1];
-    for (const k of rars) { r -= HAND_W[k]; if (r < 0) { pick = k; break; } }
-    hand.push(pools[pick].splice(rint(pools[pick].length), 1)[0]);
+  while (hand.length < 3 && pools.some(p => p.length)) {
+    let k = 0, r = rnd() * 100;
+    while (k < 3 && (r -= HAND_W[k]) >= 0) k++;
+    while (k >= 0 && !pools[k].length) k--;
+    if (k < 0) { k = 0; while (!pools[k].length) k++; }
+    hand.push(pools[k].splice(rint(pools[k].length), 1)[0]);
   }
   return hand;
 }
 // Bots spielen Bälle der Seltenheiten, die auch die Menschen im Kampf haben; nur selten eine Stufe daneben.
-const RAR_ORDER = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
 function botTypeLike(rar) {
   if (rnd() < .12) rar = RAR_ORDER[Math.max(0, Math.min(3, RAR_ORDER.indexOf(rar) + (rnd() < .5 ? -1 : 1)))];
   const ids = BALL_IDS.filter(id => DEFS[id].box === 'standard' && DEFS[id].rarity === rar);
