@@ -94,9 +94,6 @@ function boardSprite(col) {
     x.strokeStyle = INK; x.lineWidth = 3.6;
     sk.beginPath(); sk.moveTo(0, -TOP); sk.lineTo(0, 175); sk.lineTo(135, 372); sk.lineTo(135, 392); sk.stroke();
     sk.beginPath(); sk.moveTo(BW, -TOP); sk.lineTo(BW, 175); sk.lineTo(BW - 135, 372); sk.lineTo(BW - 135, 392); sk.stroke();
-    // Nieten entlang der Wände
-    x.fillStyle = col;
-    for (let y = -120; y < 170; y += 38) for (const px of [6, BW - 6]) { x.beginPath(); x.arc(px, y, 2.6, 0, 7); x.fill(); x.lineWidth = 1.4; x.stroke(); }
     x.lineWidth = 3.6;
     PEGS.forEach(p => {
       x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = p[3] ? '#e0533a' : '#d9c9a0'; x.fill();
