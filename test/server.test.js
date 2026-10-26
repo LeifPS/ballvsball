@@ -108,6 +108,11 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
     ok(x.me.balls.filter(q => q.type === b.type).every(q => q.stars === 1), 'Sterne gelten für alle Exemplare der Sorte');
     x = await api('/api/upgrade', t, { uid: 999999999 });
     ok(x.err === 'not_yours', 'fremder Ball nicht verbesserbar');
+    for (let i = 0; i < 40; i++) await api('/api/box', t, { box: 'standard' });
+    const pre = (await api('/api/me', t)).me;
+    x = await api('/api/upgradeall', t);
+    ok(x.ok && x.steps > 0 && x.me.balls.length === pre.balls.length - x.used, 'Alles verbessern: ' + x.steps + ' Sterne, ' + x.used + ' Duplikate verbraucht');
+    ok(new Set(x.me.balls.map(b => b.type)).size === new Set(pre.balls.map(b => b.type)).size, 'Alles verbessern: von jeder Sorte bleibt eins');
   }
 }
 // Boxen: keine doppelten Bälle in der Schüssel

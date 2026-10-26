@@ -184,6 +184,29 @@ export class Store extends DurableObject {
     this.q('INSERT INTO tstars(owner,type,stars) VALUES(?,?,?) ON CONFLICT(owner,type) DO UPDATE SET stars=excluded.stars', u.id, b.type, stars + 1);
     return { ok: true, uid: b.uid, stars: stars + 1, cost, me: this.profile(this.userBy(tk)) };
   }
+  // Alles verbessern: jede Sorte so weit wie möglich; ein Exemplar bleibt immer übrig, nur freie Duplikate werden verbraucht
+  upgradeAll(tk) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const lv = this.levels(u.id);
+    let steps = 0, used = 0;
+    const types = [...new Set(this.q('SELECT type FROM balls WHERE owner=? AND lock=0', u.id).map(b => b.type))];
+    for (const type of types) {
+      let stars = lv[type] || 0;
+      const free = this.q('SELECT uid FROM balls WHERE owner=? AND type=? AND lock=0 ORDER BY uid', u.id, type).map(b => b.uid);
+      let avail = free.length - 1;   // das erste Exemplar bleibt
+      const start = stars;
+      while (stars < MAX_STARS) {
+        const cost = UP_COST[DEFS[type].rarity][stars];
+        if (avail < cost) break;
+        for (let i = 0; i < cost; i++) this.q('DELETE FROM balls WHERE uid=?', free.pop());
+        avail -= cost; used += cost; stars++; steps++;
+      }
+      if (stars > start) this.q('INSERT INTO tstars(owner,type,stars) VALUES(?,?,?) ON CONFLICT(owner,type) DO UPDATE SET stars=excluded.stars', u.id, type, stars);
+    }
+    if (!steps) return { err: 'need_dupes' };
+    return { ok: true, steps, used, me: this.profile(this.userBy(tk)) };
+  }
   inventory(userId) {
     const lv = this.levels(userId);
     return this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', userId).map(b => ({ ...b, stars: lv[b.type] || 0 }));

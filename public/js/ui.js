@@ -287,6 +287,18 @@ function colGrid() {
       ball(id, 84, .62, o ? '' : 'data-dark="1"') + '<div class="nm">' + (o ? d.name : '???') + '</div>' + (best ? '<div style="line-height:0">' + starsHTML(best, 13) + '</div>' : '') + '</button>';
   }).join('');
 }
+// Vorschau für "Alles verbessern": wie viele Stufen mit den freien Duplikaten möglich sind (gleiche Regel wie auf dem Server)
+function upAllPlan() {
+  let steps = 0, used = 0;
+  const c = typeCounts();
+  for (const type in c) {
+    const free = c[type].list.filter(b => !b.lock).length;
+    if (!free) continue;
+    let stars = Math.max(...c[type].list.map(b => b.stars)), avail = free - 1;
+    while (stars < MAX_STARS && avail >= UP_COST[DEFS[type].rarity][stars]) { const k = UP_COST[DEFS[type].rarity][stars]; avail -= k; used += k; stars++; steps++; }
+  }
+  return { steps, used };
+}
 function collection(keep) {
   S.screen = 'collection'; setView(null);
   const c = typeCounts(), have = Object.keys(c).length, f = S.col;
@@ -294,6 +306,7 @@ function collection(keep) {
   const boxes = [['all', 'Alle Boxen']].concat(BOX_LIST.map(b => [b.id, b.name.replace('-Box', '')]));
   show('<div class="col">' + backBar('Sammlung') +
     '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + BALL_IDS.length + ' Bällen</span><span>' + S.me.balls.length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
+    (upAllPlan().steps ? btn(gi('star', 24, '#ffd45a') + ' Alles maximal verbessern', 'upall', '', 'green') : '') +
     '<div class="row gap6"><div class="inp grow row" style="padding-left:8px">' + gi('search', 24) + '<input id="cq" placeholder="Ball suchen" value="' + esc(f.q) + '" autocomplete="off"></div></div>' +
     '<div class="tabs">' + tabs.map(t => '<button class="tab' + (f.rar === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="rar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
     '<div class="tabs">' + boxes.map(t => '<button class="tab' + (f.box === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="box" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
@@ -720,6 +733,16 @@ const ACT = {
     const r = await api('/api/market/list', { uid: +d.uid, price });
     if (r.err) { toast(errText(r.err)); return; }
     toast('Ball steht jetzt auf dem Markt.'); closeOverlay(); collection();
+  },
+  upall() {
+    const p = upAllPlan();
+    overlay('<div class="col"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Alles verbessern?</h2><div class="panel"><p>Es werden <b>' + p.steps + ' Sterne</b> vergeben und dafür <b>' + p.used + ' Duplikate</b> verbraucht. Von jeder Sorte bleibt mindestens ein Exemplar.</p></div>' + btn('Ja, verbessern', 'upallgo', '', 'green') + btn('Abbrechen', 'closeov') + '</div>');
+  },
+  async upallgo() {
+    const r = await api('/api/upgradeall', {});
+    if (r.err) { toast(errText(r.err)); return; }
+    closeOverlay(); sfx('rare'); confetti(30); toast(r.steps + ' Sterne vergeben, ' + r.used + ' Duplikate verbraucht.');
+    collection();
   },
   async mkcancel(d) {
     const r = await api('/api/market/cancel', { uid: +d.uid });
