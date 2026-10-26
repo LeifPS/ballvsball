@@ -109,8 +109,8 @@ export class Game extends DurableObject {
       if (old && old !== c) { this.send(old, { t: 'kicked' }); this.onClose(old, true); try { old.ws.close(); } catch (e) { } }
       c.user = u; c.token = tk;
       this.byUser.set(u.id, c);
-      this.send(c, { t: 'hello', ok: true, name: u.name });
       const match = this.userMatch.get(u.id);
+      this.send(c, { t: 'hello', ok: true, name: u.name, inMatch: !!match });
       if (match) this.reattach(match, c);
       return;
     }
@@ -139,8 +139,9 @@ export class Game extends DurableObject {
     if (c.match && c.p && c.p.conn === c) {
       c.p.conn = null;
       const m = c.match;
-      if (!this.humansActive(m)) this.abort(m);
-      else this.progress(m);
+      // Kurze Verbindungsabbrüche (Handy-Netz) sollen den Kampf nicht beenden: 45 s Zeit zum Wiederverbinden
+      if (!this.humansActive(m) && !m.grace) m.grace = setTimeout(() => { m.grace = 0; if (!m.over && !this.humansActive(m)) this.abort(m); }, 45000);
+      this.progress(m);
     }
   }
 
@@ -371,9 +372,20 @@ export class Game extends DurableObject {
   }
   onReady(c) {
     const m = c.match, p = c.p;
-    if (!m || m.phase !== 'fight') return;
+    // Kein Kampf mehr (z. B. nach einem Neustart des Servers): Client zurück zur Startseite schicken statt ewig warten zu lassen
+    if (!m || m.aborted || m.over) { this.send(c, { t: 'left' }); return; }
+    // Die Runde ist schon weiter (Nachricht ging verloren): letzten Stand noch einmal senden, damit der Client aufholt
+    if (m.phase !== 'fight') { this.resend(m, c); return; }
     p.ready = true;
     this.progress(m);
+  }
+  resend(m, c) {
+    const p = c.p;
+    if (!p || !p.last) return;
+    const msg = Object.assign({}, p.last);
+    if (msg.t === 'pick_phase' || msg.t === 'reveal') msg.secs = Math.max(1, Math.round((m.deadline - Date.now()) / 1000));
+    if (msg.t === 'pick_phase' && p.pick) msg.picked = p.pick.uid;
+    this.send(c, msg);
   }
   endFight(m) {
     if (m.phase !== 'fight' || m.aborted) return;
@@ -421,7 +433,7 @@ export class Game extends DurableObject {
   }
   abort(m) {
     m.aborted = true; m.over = true;
-    clearTimeout(m.timer);
+    clearTimeout(m.timer); clearTimeout(m.grace);
     this.matches.delete(m.id);
     for (const p of m.players) {
       if (!p.bot) { this.userMatch.delete(p.userId); if (p.conn) { p.conn.match = null; p.conn.p = null; } }
@@ -431,6 +443,7 @@ export class Game extends DurableObject {
     const p = m.players.find(x => x.userId === c.user.id);
     if (!p || p.left) return;
     p.conn = c; c.match = m; c.p = p;
+    clearTimeout(m.grace); m.grace = 0;
     const pl = m.players.map(x => ({ slot: x.slot, name: x.name, team: x.team, bot: x.bot }));
     this.send(c, { t: 'match_start', id: m.id, mode: m.mode, n: m.n, friendly: m.friendly, players: pl, you: p.slot, lives: m.lives, resume: true });
     if (p.last) {

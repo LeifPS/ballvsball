@@ -217,7 +217,13 @@ function wsSend(o) {
 }
 function onMsg(m) {
   switch (m.t) {
-    case 'hello': if (m.ok) S.wsOK = true; else toast('Server-Anmeldung fehlgeschlagen.'); break;
+    case 'hello':
+      if (m.ok) {
+        S.wsOK = true;
+        // Der Server kennt keinen Kampf mehr (Neustart, Abbruch): nicht ewig auf Kampfbildschirmen warten
+        if (S.match && !m.inMatch) { S.match = null; toast('Der Kampf wurde beendet.'); home(); }
+      } else toast('Server-Anmeldung fehlgeschlagen.');
+      break;
     case 'kicked': S.kicked = true; show('<div class="col center"><h1>Ball gegen Ball</h1><div class="panel"><p>Dein Konto wurde auf einem anderen Gerät oder Tab geöffnet.</p></div>' + btn('Hier weiterspielen', 'reload') + '</div>'); break;
     case 'error': toast(errText(m.code)); break;
     case 'queued': if (S.screen !== 'queue') queueScreen(m); else queueUpdate(m); break;
