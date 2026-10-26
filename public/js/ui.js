@@ -117,15 +117,52 @@ function timeLeft(ms) {
   const m = Math.max(0, Math.floor(ms / 60000)), d = Math.floor(m / 1440), h = Math.floor((m % 1440) / 60);
   return d >= 1 ? 'noch ' + d + (d === 1 ? ' Tag' : ' Tage') + (h ? ' und ' + h + ' Std.' : '') : h >= 1 ? 'noch ' + h + ' Std. ' + (m % 60) + ' Min.' : 'noch ' + m + ' Min.';
 }
+// Konfetti: Canvas mit Physik (Schwerkraft, Luftwiderstand, Flattern). Stücke sind wie gemalt: wackelige Streifen, Sterne, Kringel, Punkte mit Tuschekante.
+const CF = { cv: null, g: null, parts: [], run: false, last: 0 };
 function confetti(n) {
-  const cols = ['#f4c942', '#e0533a', '#4fa3e8', '#5cc45a', '#c06af0', '#ff8aa0'];
-  for (let i = 0; i < (n || 40); i++) {
-    const d = document.createElement('div'), x = Math.random() * 100, dur = 1.6 + Math.random() * 1.6, sz = 7 + Math.random() * 7;
-    d.style.cssText = 'position:fixed;top:-20px;left:' + x + 'vw;width:' + sz + 'px;height:' + sz * .6 + 'px;background:' + cols[i % cols.length] + ';border:1.5px solid ' + INK + ';z-index:40;pointer-events:none;transform:rotate(' + Math.random() * 360 + 'deg);animation:cf ' + dur + 's ease-in ' + Math.random() * .5 + 's forwards';
-    document.body.appendChild(d); setTimeout(() => d.remove(), 4000);
+  n = Math.round((n || 40) * 1.6);
+  if (!CF.cv) {
+    CF.cv = document.createElement('canvas'); CF.cv.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:40;pointer-events:none';
+    document.body.appendChild(CF.cv); CF.g = CF.cv.getContext('2d');
   }
+  const W = window.innerWidth, H = window.innerHeight, cols = ['#f4c942', '#e0533a', '#4fa3e8', '#5cc45a', '#c06af0', '#ff8aa0', '#ff9a3c'];
+  CF.cv.width = Math.round(W * DPR); CF.cv.height = Math.round(H * DPR);
+  const burst = Math.round(n * .6), rain = n - burst;
+  for (let i = 0; i < burst; i++) {   // Kanonen aus beiden unteren Ecken
+    const left = i % 2 === 0, a = (left ? -62 : -118) * Math.PI / 180 + (Math.random() - .5) * .7, v = 520 + Math.random() * 520;
+    CF.parts.push(mkConf(left ? -10 : W + 10, H + 10, Math.cos(a) * v, Math.sin(a) * v, cols, 0));
+  }
+  for (let i = 0; i < rain; i++) CF.parts.push(mkConf(Math.random() * W, -20 - Math.random() * H * .35, (Math.random() - .5) * 60, 40 + Math.random() * 80, cols, Math.random() * .6));
+  if (!CF.run) { CF.run = true; CF.last = performance.now(); requestAnimationFrame(confTick); }
 }
-(function () { const st = document.createElement('style'); st.textContent = '@keyframes cf{to{transform:translate(' + 40 + 'px,110vh) rotate(720deg)}}'; document.head.appendChild(st); })();
+function mkConf(x, y, vx, vy, cols, delay) {
+  const kind = ['strip', 'strip', 'star', 'squig', 'dot'][Math.floor(Math.random() * 5)], sz = 10 + Math.random() * 9;
+  return { x, y, vx, vy, delay, kind, sz, col: cols[Math.floor(Math.random() * cols.length)], rot: Math.random() * 6.28, vr: (Math.random() - .5) * 12, ph: Math.random() * 6.28, fl: 4 + Math.random() * 5, age: 0, life: 3.2 + Math.random() * 1.6, w: [1, 1, 1, 1, 1, 1, 1, 1].map(() => (Math.random() - .5) * .35) };
+}
+function confTick(now) {
+  const dt = Math.min(.05, (now - CF.last) / 1000); CF.last = now;
+  const g = CF.g, W = window.innerWidth, H = window.innerHeight;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, CF.cv.width, CF.cv.height); g.scale(DPR, DPR);
+  g.lineJoin = g.lineCap = 'round';
+  CF.parts = CF.parts.filter(p => {
+    if (p.delay > 0) { p.delay -= dt; return true; }
+    p.age += dt; if (p.age > p.life || p.y > H + 40) return false;
+    p.vy += 620 * dt; p.vx *= Math.pow(.18, dt); p.vy *= Math.pow(.55, dt); p.vy = Math.min(p.vy, 190 + p.sz * 4);   // Luftwiderstand, Fallgeschwindigkeit begrenzt
+    p.x += (p.vx + Math.sin(p.age * 3 + p.ph) * 26) * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
+    const flip = Math.cos(p.age * p.fl + p.ph), a = Math.min(1, (p.life - p.age) * 2.2);
+    g.save(); g.globalAlpha = a; g.translate(p.x, p.y); g.rotate(p.rot); g.scale(1, .25 + .75 * Math.abs(flip));
+    g.fillStyle = p.col; g.strokeStyle = INK; g.lineWidth = 1.8;
+    const s = p.sz, w = p.w;
+    g.beginPath();
+    if (p.kind === 'strip') { g.moveTo(-s * .6 + w[0] * s, -s * .32 + w[1] * s * .5); g.lineTo(s * .6 + w[2] * s, -s * .3 + w[3] * s * .5); g.lineTo(s * .6 + w[4] * s, s * .32 + w[5] * s * .5); g.lineTo(-s * .6 + w[6] * s, s * .3 + w[7] * s * .5); g.closePath(); g.fill(); g.stroke(); }
+    else if (p.kind === 'star') { for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, r = (i % 2 ? .38 : .85) * s * (1 + w[i % 8] * .6); g[i ? 'lineTo' : 'moveTo'](Math.cos(an) * r, Math.sin(an) * r); } g.closePath(); g.fill(); g.stroke(); }
+    else if (p.kind === 'dot') { g.ellipse(0, 0, s * .42 * (1 + w[0]), s * .42 * (1 + w[1]), 0, 0, 7); g.fill(); g.stroke(); }
+    else { g.lineWidth = 3.4; g.strokeStyle = INK; g.moveTo(-s * .8, 0); g.bezierCurveTo(-s * .4, -s * .7, s * .1, s * .7, s * .8, 0); g.stroke(); g.lineWidth = 1.8; g.strokeStyle = p.col; g.stroke(); }
+    g.restore();
+    return true;
+  });
+  if (CF.parts.length) requestAnimationFrame(confTick); else { CF.run = false; g.clearRect(0, 0, CF.cv.width, CF.cv.height); }
+}
 function sndIcon() {
   const m = getMode(); $('#snd').innerHTML = gi(m === 2 ? 'speaker' : m === 1 ? 'note0' : 'speaker0', 28);
 }
