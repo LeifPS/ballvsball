@@ -86,8 +86,9 @@ let toastT = 0;
 function toast(msg) { TOAST.textContent = msg; TOAST.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { TOAST.hidden = true; }, 2800); }
 async function api(path, body) {
   try {
-    const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': S.token }, body: JSON.stringify(body || {}) });
-    const j = await r.json();
+    const ac = new AbortController(), to = setTimeout(() => ac.abort(), 20000);   // hängende Anfrage gibt nach 20 s auf, damit der Knopf nicht ewig gesperrt bleibt
+    const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json', 'x-token': S.token }, body: JSON.stringify(body || {}), signal: ac.signal });
+    const j = await r.json(); clearTimeout(to);
     if (j.me) setMe(j.me);
     return j;
   } catch (e) { return { err: 'net' }; }
@@ -727,7 +728,7 @@ const ACT = {
   },
   box() { closeOverlay(); boxScreen(); },
   boxdetail(d) { closeOverlay(); boxDetail(d.id); },
-  openbox(d) { openBox(d.id); },
+  openbox(d) { return openBox(d.id); },
   market() { market(true); },
   mktab(d) { S.mk.tab = d.v; market(true); },
   mkrar(d) { S.mk.rarity = d.v; market(true); },
@@ -817,7 +818,17 @@ document.addEventListener('click', ev => {
   const t = ev.target.closest('[data-act]');
   if (!t || t.disabled) return;
   const fn = ACT[t.dataset.act];
-  if (fn) { sfx(t.dataset.act === 'home' || t.dataset.act === 'closeov' ? 'back' : 'click'); fn(t.dataset, t, ev); }
+  if (fn) {
+    // Solange eine Anfrage an den Server läuft (Kaufen, Öffnen, Verbessern ...), zählen weitere Klicks nicht: bei Lag wurde sonst doppelt bezahlt
+    if (S.busy) return;
+    sfx(t.dataset.act === 'home' || t.dataset.act === 'closeov' ? 'back' : 'click');
+    const r = fn(t.dataset, t, ev);
+    if (r && typeof r.then === 'function') {
+      S.busy = true; t.disabled = true;
+      const done = () => { S.busy = false; t.disabled = false; };
+      r.then(done, done);
+    }
+  }
 });
 $('#snd').addEventListener('click', () => { unlock(); const m = (getMode() + 2) % 3; setMode(m); sndIcon(); toast(m === 2 ? 'Ton und Musik an' : m === 1 ? 'Nur Effekte' : 'Stumm'); if (m) sfx('click'); });
 document.addEventListener('keydown', ev => {
