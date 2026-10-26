@@ -2,7 +2,7 @@
 import { DEFS, BALL_IDS, RARITY, DT, BOX, MAX_STARS, STAR_BONUS, createSim, stepSim, ballsInBox } from './engine.js';
 import { createBox, stepBox, BW } from './boxsim.js';
 import { BOX_LIST, BOX_BY_ID, boxActive, UP_COST } from './boxes.js';
-import { DPR, INK, gi, mkSprite } from './sk.js';
+import { DPR, INK, gi, mkSprite, spr } from './sk.js';
 import { drawBallIn, clearFx, fxState, burst, star } from './art.js';
 import { drawArena, drawBox, BOX_H, TEAM_COL } from './render.js';
 import { unlock, sfx, getMode, setMode, setScene } from './audio.js';
@@ -135,6 +135,19 @@ function confetti(n) {
   for (let i = 0; i < rain; i++) CF.parts.push(mkConf(Math.random() * W, -20 - Math.random() * H * .35, (Math.random() - .5) * 60, 40 + Math.random() * 80, cols, Math.random() * .6));
   if (!CF.run) { CF.run = true; CF.last = performance.now(); requestAnimationFrame(confTick); }
 }
+// Konfetti-Stücke im Tonlinge-Stil: wacklige Kontur, versetzte Füllung, Buntstift-Schraffur
+const CF_SP = {};
+function confSprite(kind, col) {
+  const key = kind + col;
+  return CF_SP[key] || (CF_SP[key] = mkSprite('cf' + key, 36, 22, (c, s) => {
+    c.lineWidth = 2.6; c.strokeStyle = INK; c.fillStyle = col;
+    const hatch = (x0, y0, x1, y1) => { c.save(); c.lineWidth = 1.3; c.strokeStyle = 'rgba(255,255,255,.65)'; for (let i = 0; i < 4; i++) { const t = i / 3; c.beginPath(); c.moveTo(x0 + (x1 - x0) * t - 3, y1); c.lineTo(x0 + (x1 - x0) * t + 3, y0); c.stroke(); } c.restore(); };
+    if (kind === 'strip') { c.beginPath(); c.moveTo(-14, -6); c.lineTo(14, -7); c.lineTo(13, 7); c.lineTo(-15, 6); c.closePath(); c.fill(); c.stroke(); hatch(-10, -4, 10, 4); }
+    else if (kind === 'star') { c.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 6 : 15; c[i ? 'lineTo' : 'moveTo'](Math.cos(a) * r, Math.sin(a) * r); } c.closePath(); c.fill(); c.stroke(); }
+    else if (kind === 'dot') { c.beginPath(); c.ellipse(0, 0, 9, 8, .3, 0, 7); c.fill(); c.stroke(); hatch(-5, -4, 5, 4); }
+    else { c.lineWidth = 6; c.strokeStyle = INK; c.beginPath(); c.moveTo(-15, 2); c.quadraticCurveTo(-8, -12, 0, 0); c.quadraticCurveTo(8, 12, 15, -2); c.stroke(); c.lineWidth = 3; c.strokeStyle = col; c.stroke(); }
+  }, 2));
+}
 function mkConf(x, y, vx, vy, cols, delay) {
   const kind = ['strip', 'strip', 'star', 'squig', 'dot'][Math.floor(Math.random() * 5)], sz = 10 + Math.random() * 9;
   return { x, y, vx, vy, delay, kind, sz, col: cols[Math.floor(Math.random() * cols.length)], rot: Math.random() * 6.28, vr: (Math.random() - .5) * 12, ph: Math.random() * 6.28, fl: 4 + Math.random() * 5, age: 0, life: 3.2 + Math.random() * 1.6, w: [1, 1, 1, 1, 1, 1, 1, 1].map(() => (Math.random() - .5) * .35) };
@@ -151,13 +164,8 @@ function confTick(now) {
     p.x += (p.vx + Math.sin(p.age * 3 + p.ph) * 26) * dt; p.y += p.vy * dt; p.rot += p.vr * dt;
     const flip = Math.cos(p.age * p.fl + p.ph), a = Math.min(1, (p.life - p.age) * 2.2);
     g.save(); g.globalAlpha = a; g.translate(p.x, p.y); g.rotate(p.rot); g.scale(1, .25 + .75 * Math.abs(flip));
-    g.fillStyle = p.col; g.strokeStyle = INK; g.lineWidth = 1.8;
-    const s = p.sz, w = p.w;
-    g.beginPath();
-    if (p.kind === 'strip') { g.moveTo(-s * .6 + w[0] * s, -s * .32 + w[1] * s * .5); g.lineTo(s * .6 + w[2] * s, -s * .3 + w[3] * s * .5); g.lineTo(s * .6 + w[4] * s, s * .32 + w[5] * s * .5); g.lineTo(-s * .6 + w[6] * s, s * .3 + w[7] * s * .5); g.closePath(); g.fill(); g.stroke(); }
-    else if (p.kind === 'star') { for (let i = 0; i < 10; i++) { const an = -Math.PI / 2 + i * Math.PI / 5, r = (i % 2 ? .38 : .85) * s * (1 + w[i % 8] * .6); g[i ? 'lineTo' : 'moveTo'](Math.cos(an) * r, Math.sin(an) * r); } g.closePath(); g.fill(); g.stroke(); }
-    else if (p.kind === 'dot') { g.ellipse(0, 0, s * .42 * (1 + w[0]), s * .42 * (1 + w[1]), 0, 0, 7); g.fill(); g.stroke(); }
-    else { g.lineWidth = 3.4; g.strokeStyle = INK; g.moveTo(-s * .8, 0); g.bezierCurveTo(-s * .4, -s * .7, s * .1, s * .7, s * .8, 0); g.stroke(); g.lineWidth = 1.8; g.strokeStyle = p.col; g.stroke(); }
+    const k = p.sz / 16;
+    g.drawImage(confSprite(p.kind, p.col).fr[Math.floor(p.age * 7 + p.ph * 3) % 3], -18 * k, -18 * k, 36 * k, 36 * k);   // Zeichen-Frames wechseln wie bei den Bällen
     g.restore();
     return true;
   });
