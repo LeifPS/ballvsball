@@ -1,7 +1,7 @@
-// Klang: Effekte sind KI-erzeugte Samples (public/audio), die Hintergrundmusik kommt aus dem WebAudio-Synthesizer.
-let ctx = null, master = null, fxBus = null, musBus = null, noiseBuf = null;   // noiseBuf: Rauschen für die Hi-Hat der Musik
+// Klang: Effekte und Musik sind KI-erzeugte Aufnahmen (public/audio, ElevenLabs), abgespielt über WebAudio.
+let ctx = null, master = null, fxBus = null, musBus = null;
 let mode = 2;                  // 0 = aus, 1 = nur Effekte, 2 = Effekte und Musik
-let scene = 'menu', timer = 0, nextT = 0, step = 0;
+let scene = 'menu';
 try { const v = window.localStorage.getItem('bvb_snd'); if (v !== null) mode = Math.max(0, Math.min(2, +v)); } catch (e) { }
 
 export const getMode = () => mode;
@@ -21,19 +21,11 @@ export function unlock() {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
       ctx = new AC(); master = ctx.createGain(); master.gain.value = .55; master.connect(ctx.destination);
       fxBus = ctx.createGain(); fxBus.connect(master); musBus = ctx.createGain(); musBus.gain.value = .5; musBus.connect(master);
-      noiseBuf = ctx.createBuffer(1, ctx.sampleRate * .6, ctx.sampleRate);
-      const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     } catch (e) { ctx = null; return; }
   }
   if (ctx.state === 'suspended') ctx.resume();
   loadSamples();
   apply();
-}
-function tone(f, dur, type, vol, slide, at, bus) {
-  const t = at || ctx.currentTime, o = ctx.createOscillator(), g = ctx.createGain();
-  o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, slide), t + dur);
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vol, t + .006); g.gain.exponentialRampToValueAtTime(.0005, t + dur);
-  o.connect(g); g.connect(bus || fxBus); o.start(t); o.stop(t + dur + .02);
 }
 /* ---------- Effekte: KI-erzeugte Samples (ElevenLabs Sound Effects, siehe public/audio) ---------- */
 const SFX_NAMES = ['click', 'back', 'hit', 'tick', 'hit2', 'boom', 'zap', 'die', 'block', 'heal', 'stun', 'dash', 'whoosh', 'nova', 'pop', 'coin', 'go', 'open', 'win', 'lose', 'rare', 'legend'];
@@ -60,32 +52,35 @@ export function sfx(name, v) {
   src.connect(g); g.connect(fxBus); src.start(now);
 }
 
-/* ---------- Musik ---------- */
-const SCALE = [0, 2, 4, 7, 9];              // Dur-Pentatonik
-const hz = (n) => 261.63 * Math.pow(2, n / 12);
-const BASS = [0, 0, -5, -5, -3, -3, -7, -7];   // Grundtöne je Takt (Halbtöne)
-function bar(t, b, sc) {
-  const sp = 60 / (sc === 'fight' ? 132 : 96) / 2;   // Achtel
-  const root = BASS[b % 8];
-  for (let i = 0; i < 8; i++) {
-    const tt = t + i * sp;
-    if (i % 2 === 0) tone(hz(root - 12), sp * 1.6, 'triangle', sc === 'fight' ? .2 : .14, null, tt, musBus);
-    const deg = SCALE[(i * 3 + b * 2) % 5] + (i % 4 === 3 ? 12 : 0);
-    if (sc === 'fight' || i % 2 === 1) tone(hz(root + deg), sp * 1.4, 'sine', sc === 'fight' ? .13 : .1, null, tt, musBus);
-    if (sc === 'fight') {
-      if (i % 4 === 0) tone(110, .1, 'sine', .3, 45, tt, musBus);
-      if (i % 4 === 2) { const s = ctx.createBufferSource(), f = ctx.createBiquadFilter(), g = ctx.createGain(); s.buffer = noiseBuf; f.type = 'highpass'; f.frequency.value = 5000; g.gain.setValueAtTime(.09, tt); g.gain.exponentialRampToValueAtTime(.0005, tt + .06); s.connect(f); f.connect(g); g.connect(musBus); s.start(tt); s.stop(tt + .08); }
-    }
+/* ---------- Musik: KI-erzeugte Schleifen (ElevenLabs Music), je Szene eine, mit Überblendung ---------- */
+const TRACKS = { menu: '/audio/music_menu.mp3', fight: '/audio/music_fight.mp3' };
+const musicBufs = {};
+let cur = null, musicLoading = false;
+function loadMusic() {
+  if (musicLoading || !ctx) return;
+  musicLoading = true;
+  for (const k in TRACKS) {
+    fetch(TRACKS[k]).then(r => r.arrayBuffer()).then(ab => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej))).then(buf => { musicBufs[k] = buf; playScene(); }).catch(() => { });
   }
-  return sp * 8;
 }
-function tickMusic() {
+function fadeOut(c) {
+  if (!c) return;
+  const t = ctx.currentTime;
+  c.gain.gain.cancelScheduledValues(t); c.gain.gain.setValueAtTime(c.gain.gain.value, t); c.gain.gain.linearRampToValueAtTime(0, t + .9);
+  try { c.src.stop(t + 1); } catch (e) { }
+}
+function playScene() {
   if (!ctx || mode < 2) return;
-  while (nextT < ctx.currentTime + .6) {
-    if (nextT < ctx.currentTime - .1) nextT = ctx.currentTime + .05;
-    nextT += bar(nextT, step++, scene);
-  }
+  const want = scene === 'fight' ? 'fight' : 'menu';
+  if (cur && cur.scene === want) return;
+  const buf = musicBufs[want];
+  if (!buf) return;   // kommt nach dem Laden nochmal hierher
+  fadeOut(cur);
+  const src = ctx.createBufferSource(), g = ctx.createGain(), t = ctx.currentTime;
+  src.buffer = buf; src.loop = true; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + 1.2);
+  src.connect(g); g.connect(musBus); src.start(t);
+  cur = { src, gain: g, scene: want };
 }
-function startMusic() { if (timer || !ctx) return; nextT = ctx.currentTime + .1; step = 0; timer = setInterval(tickMusic, 200); }
-function stopMusic() { clearInterval(timer); timer = 0; }
-export function setScene(s) { scene = s; }
+function startMusic() { loadMusic(); playScene(); }
+function stopMusic() { fadeOut(cur); cur = null; }
+export function setScene(s) { scene = s; playScene(); }

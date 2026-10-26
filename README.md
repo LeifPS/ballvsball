@@ -8,7 +8,7 @@ Handgezeichnetes Mobile-Browserspiel: Bälle sammeln, Ballboxen öffnen, online 
   - `js/boxsim.js` - Ballbox-Minispiel (deterministisch, der Server wählt den Seed)
   - `js/boxes.js` - Ballboxen (Preise, Halloween-Zeitfenster bis 31.10.)
   - `js/sk.js`, `ballart.js`, `art.js`, `render.js` - Handzeichen-Stil (wie Tonlinge), Bälle, Effekte, Arena
-  - `js/audio.js` - Sound: Effekte sind KI-erzeugte Samples aus `public/audio/` (ElevenLabs Sound Effects, zugeschnitten und normalisiert), die Hintergrundmusik kommt aus dem WebAudio-Synthesizer
+  - `js/audio.js` - Sound: Effekte und Hintergrundmusik (Menü und Kampf, als Schleifen mit Überblendung) sind KI-erzeugte Aufnahmen aus `public/audio/` (ElevenLabs Sound Effects und Music, zugeschnitten und normalisiert)
   - `js/ui.js` - Oberfläche
   - `js/tuning.js` - automatisch berechnete Schadens-Faktoren (`npm run balance`)
 - `src/worker.js` - Einstieg (`/api/*`)
