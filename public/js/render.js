@@ -80,14 +80,14 @@ function boardSprite(col) {
     x.lineJoin = x.lineCap = 'round';
     const sk = sketchCtx(x, strSeed(col) + f * 1.9, 120); x.strokeStyle = INK; x.lineWidth = 3.6; sk.lineWidth = 3.6;
     // Hintergrund in Boxfarbe, begrenzt durch Wände
-    x.save(); x.beginPath(); x.moveTo(0, -60); x.lineTo(BW, -60); x.lineTo(BW, 175); x.lineTo(BW - 126, 372); x.lineTo(BW - 126, 392); x.lineTo(126, 392); x.lineTo(126, 372); x.lineTo(0, 175); x.closePath(); x.clip();
+    x.save(); x.beginPath(); x.moveTo(0, -60); x.lineTo(BW, -60); x.lineTo(BW, 175); x.lineTo(BW - 135, 372); x.lineTo(BW - 135, 392); x.lineTo(135, 392); x.lineTo(135, 372); x.lineTo(0, 175); x.closePath(); x.clip();
     x.fillStyle = '#f6efd9'; x.fillRect(-20, -70, W, H);
     x.globalAlpha = .22; x.fillStyle = col; x.fillRect(-20, -70, W, H); x.globalAlpha = 1;
     x.strokeStyle = 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; for (let i = -70; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
     x.restore();
     x.strokeStyle = INK; x.lineWidth = 3.6;
-    sk.beginPath(); sk.moveTo(0, -60); sk.lineTo(0, 175); sk.lineTo(126, 372); sk.lineTo(126, 392); sk.stroke();
-    sk.beginPath(); sk.moveTo(BW, -60); sk.lineTo(BW, 175); sk.lineTo(BW - 126, 372); sk.lineTo(BW - 126, 392); sk.stroke();
+    sk.beginPath(); sk.moveTo(0, -60); sk.lineTo(0, 175); sk.lineTo(135, 372); sk.lineTo(135, 392); sk.stroke();
+    sk.beginPath(); sk.moveTo(BW, -60); sk.lineTo(BW, 175); sk.lineTo(BW - 135, 372); sk.lineTo(BW - 135, 392); sk.stroke();
     PEGS.forEach(p => { x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = '#d9c9a0'; x.fill(); sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke(); });
     fr.push(cv);
   }

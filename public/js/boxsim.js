@@ -8,7 +8,7 @@ const GRAV = 170, MAXV = 230, MAX_STEPS = 120 * 18;
 // Wände als Strecken [x1,y1,x2,y2]
 export const SEGS = [
   [0, -400, 0, 175], [BW, -400, BW, 175],
-  [0, 175, 126, 372], [BW, 175, BW - 126, 372]
+  [0, 175, 135, 372], [BW, 175, BW - 135, 372]
 ];
 export const PEGS = [
   // Nagelbrett oben (Abstand zur Wand immer größer als ein Ball)
