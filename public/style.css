@@ -104,7 +104,7 @@ canvas.view{display:block;touch-action:none;margin:0 auto;max-width:100%}
 .boxcard.poor .pricepill{opacity:.7}
 .pricepill{display:inline-block;padding:1px 10px;font-size:21px;background:var(--paper2);border:2px solid var(--ink);border-radius:var(--wob2);box-shadow:1px 2px 0 var(--ink)}
 .progress.thin{height:10px;border-width:2px;margin-top:3px}
-canvas.boxart{display:block}
+canvas.boxart{display:block;flex:none;flex-shrink:0;max-width:none}
 .boxcard.event{background:#ffd9a0}
 .mini{width:26px;height:26px}
 .tag{display:inline-block;font:400 15px var(--f-display);background:#ff7a1a;color:#fff;border:2px solid var(--ink);border-radius:8px;padding:0 7px;transform:rotate(-3deg)}
@@ -118,7 +118,9 @@ canvas.boxart{display:block}
 .stars .gi{margin:0 -1px}
 
 .boxgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px 4px;margin-top:6px}
-.boxtile{display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 2px 10px;text-align:center;position:relative;transition:transform .08s}
+.boxtile{display:block;padding:4px 2px 10px;text-align:center;position:relative;overflow:visible;transition:transform .08s}
+.boxin{display:flex;flex-direction:column;align-items:center}   /* Flex nicht direkt am button: ältere Safari-Versionen schneiden sonst den Inhalt ab */
+.boxart{flex:none}
 .boxtile:active{transform:scale(.95)}
 .boxtile .nm{font:400 25px/1.1 var(--f-display);color:#fff;text-shadow:2px 2px 0 var(--ink)}
 .boxtile .tag{position:absolute;top:6px;right:8px;transform:rotate(6deg)}

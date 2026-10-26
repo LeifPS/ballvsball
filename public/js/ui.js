@@ -360,7 +360,7 @@ function boxScreen() {
   S.screen = 'box'; setView(null);
   const list = BOX_LIST.filter(b => boxActive(b.id, now()));
   show('<div class="col">' + backBar('Ballboxen') +
-    '<div class="boxgrid">' + list.map(b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>').join('') + '</div></div>');
+    '<div class="boxgrid">' + list.map(b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div></div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>').join('') + '</div></div>');
 }
 function boxDetail(id) {
   const b = BOX_BY_ID[id];
