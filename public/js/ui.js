@@ -227,7 +227,7 @@ function onMsg(m) {
 function tutorial() {
   S.screen = 'tutorial'; setView(null); closeOverlay(); setScene('menu');
   const n = new Set(S.me.balls.map(b => b.type)).size, b = BOX_BY_ID.standard;
-  show('<div class="col center" style="padding-top:2px"><div class="row" style="justify-content:flex-end">' + wallet() + '</div><h1 class="jit">Willkommen!</h1>' +
+  show('<div class="col center" style="padding-top:2px"><div class="row" style="justify-content:flex-end;padding-right:50px">' + wallet() + '</div><h1 class="jit">Willkommen!</h1>' +
     '<div class="hero bounce">' + gi('bx_standard', 150) + '</div>' +
     '<div class="panel"><p>Du brauchst drei verschiedene Bälle zum Kämpfen. Öffne drei Standard-Boxen, jede enthält einen neuen Ball.</p><p class="mt"><b>' + n + ' von 3</b> Bällen geöffnet</p></div>' +
     btn('Standard-Box öffnen (' + priceHTML(b) + ')', 'openbox', 'data-id="standard"', 'pri big') + '</div>');
