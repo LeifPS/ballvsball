@@ -44,8 +44,8 @@ export const OBJS = {
     update(o, sim) {
       const ow = own(sim, o);
       for (const e of foes(sim, o.team)) {
-        const dx = e.x - o.tx, dy = e.y - o.ty, rr = e.r + 5;
-        if (dx * dx + dy * dy < rr * rr && ready(o, e, sim, .7)) hurt(sim, e, 5 + sim.t * .06, ow, 'trap');
+        // Treffer entlang des ganzen Stachels (von der Wand bis zur Spitze, 24 lang), passend zur doppelten Größe
+        if (segDist(e.x, e.y, o.x, o.y, o.x + o.nx * 24, o.y + o.ny * 24) < e.r + 4 && ready(o, e, sim, .7)) hurt(sim, e, 5 + sim.t * .06, ow, 'trap');
       }
     }
   },
@@ -235,7 +235,7 @@ export const DEFS = {
       for (const o of sim.objs) {
         if (o.k === 'spike' && o.owner === b.id) {
           const dx = o.x - x, dy = o.y - y;
-          if (dx * dx + dy * dy < 100) return;
+          if (dx * dx + dy * dy < 196) return;
         }
       }
       const nx = side === 'l' ? 1 : side === 'r' ? -1 : 0, ny = side === 't' ? 1 : side === 'b' ? -1 : 0;
