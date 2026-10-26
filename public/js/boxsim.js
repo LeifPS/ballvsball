@@ -12,17 +12,20 @@ export const SEGS = [
   [0, 175, 135, 372], [BW, 175, BW - 135, 372]
 ];
 // [x, y, Radius, Art]: 0 = normaler Nagel, 1 = Bumper (federt Bälle kräftig weg)
+// Ablagen an den schrägen Wänden: wer an der Wand herunterrutscht, wird nach innen geleitet und fällt am Innenende ab (kein enger Spalt, nichts klemmt)
+export const SHELVES = [
+  [59.6, 262, 108, 278], [240.4, 262, 192, 278],
+  [103, 325, 122, 336], [197, 325, 178, 336]
+];
 export const PEGS = [
   // Nagelbrett oben (Abstand zur Wand immer größer als ein Ball)
   [60, 40, 6], [120, 40, 6], [180, 40, 6], [240, 40, 6],
   [38, 85, 6], [90, 85, 6], [150, 85, 6, 1], [210, 85, 6], [262, 85, 6],
   [60, 130, 6], [120, 130, 6], [180, 130, 6], [240, 130, 6],
-  [90, 170, 6], [150, 168, 8, 1], [210, 170, 6],
-  // in der Schüssel: Stopper dicht an den schrägen Wänden (Lücke zur Wand kleiner als ein Ball), damit niemand an der Wand entlang zum Ausgang rutscht
-  [68, 239, 8, 1], [232, 239, 8, 1], [116, 309, 8, 1], [184, 309, 8, 1]
+  [90, 170, 6], [210, 170, 6]
 ];
 // Windrad in der Schüssel: dreht sich mit fester Geschwindigkeit, schleudert Bälle zur Seite
-export const SPINNERS = [{ x: 150, y: 240, len: 34, w: 4.5, om: 2.4 }];
+export const SPINNERS = [{ x: 150, y: 212, len: 34, w: 4.5, om: 2.4 }];
 
 
 export function createBox(seed, n) {
@@ -88,6 +91,7 @@ export function stepBox(s) {
     b.vr *= .985; if (b.vr > 4) b.vr = 4; else if (b.vr < -4) b.vr = -4;   // Drehung klingt ab, bleibt ruhig
     b.rot += b.vr * BDT;
     for (const sg of SEGS) hitSeg(b, sg, .35);
+    for (const sg of SHELVES) hitSeg(b, sg, .3);
     for (const p of PEGS) hitPoint(b, p[0], p[1], p[2], p[3] ? .95 : .45);
     for (const sp of SPINNERS) {
       const a = s.t * sp.om, ca = Math.cos(a), sa = Math.sin(a);

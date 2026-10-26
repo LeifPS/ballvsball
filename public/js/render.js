@@ -1,6 +1,6 @@
 // Arena und Ballbox-Minispiel zeichnen.
 import { BOX } from './engine.js';
-import { SEGS, PEGS, SPINNERS, BW, BH, BR, EXIT_Y } from './boxsim.js';
+import { SEGS, PEGS, SHELVES, SPINNERS, BW, BH, BR, EXIT_Y } from './boxsim.js';
 import { DEFS, RARITY } from './engine.js';
 import { INK, DPR, mkSprite, sketchCtx, strSeed } from './sk.js';
 import { bodySprite, drawBall, drawObj, drawFx, addFx, drawHpBar, ringJ, star, fxState, GROUND } from './art.js';
@@ -94,7 +94,13 @@ function boardSprite(col) {
     x.strokeStyle = INK; x.lineWidth = 3.6;
     sk.beginPath(); sk.moveTo(0, -TOP); sk.lineTo(0, 175); sk.lineTo(135, 372); sk.lineTo(135, 392); sk.stroke();
     sk.beginPath(); sk.moveTo(BW, -TOP); sk.lineTo(BW, 175); sk.lineTo(BW - 135, 372); sk.lineTo(BW - 135, 392); sk.stroke();
-    x.lineWidth = 3.6;
+    // Ablagen: dicke Leisten mit Tuschekante
+    for (const sh of SHELVES) {
+      x.lineCap = 'round'; x.strokeStyle = INK; x.lineWidth = 9; x.beginPath(); x.moveTo(sh[0], sh[1]); x.lineTo(sh[2], sh[3]); x.stroke();
+      x.strokeStyle = col; x.lineWidth = 4.6; x.beginPath(); x.moveTo(sh[0], sh[1]); x.lineTo(sh[2], sh[3]); x.stroke();
+      sk.lineWidth = 1.8; sk.strokeStyle = INK; sk.beginPath(); sk.moveTo(sh[0], sh[1] - 4.2); sk.lineTo(sh[2], sh[3] - 4.2); sk.stroke();
+    }
+    x.strokeStyle = INK; x.lineWidth = 3.6;
     PEGS.forEach(p => {
       x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = p[3] ? '#e0533a' : '#d9c9a0'; x.fill();
       sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke();
