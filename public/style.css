@@ -58,7 +58,8 @@ canvas.ball{display:block;margin:0 auto}
 .listrow{display:flex;align-items:center;gap:10px;padding:12px 10px 8px}
 .pickrow{display:flex;gap:12px;align-items:center;text-align:left;width:100%;padding:14px 12px 10px}
 .pickrow.sel{background:#fde9a0;box-shadow:0 0 0 3px var(--warm),2px 3px 0 var(--ink)}
-.pickrow .txt{display:flex;flex-direction:column;gap:1px}
+.pickrow canvas.ball{margin:0;flex:none}
+.pickrow .txt{display:flex;flex-direction:column;gap:1px;flex:1;min-width:0}
 .rar{font-size:16px}
 .err{color:var(--danger);font-size:17px;min-height:22px}
 .timer{text-align:center;font:400 24px var(--f-display)}
