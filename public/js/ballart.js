@@ -68,7 +68,7 @@ function hatch(c, r, col, clip) {  // Streifen im Körper
 /* ---------- Die Bälle ---------- */
 export const BALLS = {
   /* ===== Standard ===== */
-  stachel(c, s) { const r = s * .36; for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; spike(c, Math.cos(a) * r * .95, Math.sin(a) * r * .95, a + 1.5708, s * .34, s * .1, '#d6dae2'); } body(c, s, '#e4e1da'); face(c, s, { angry: 1, mouth: 'flat', blush: 0 }); },
+  stachel(c, s) { const r = s * .36; for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; spike(c, Math.cos(a) * r * .95, Math.sin(a) * r * .95, a + 1.5708, s * .17, s * .07, '#d6dae2'); } body(c, s, '#e4e1da'); face(c, s, { angry: 1, mouth: 'flat', blush: 0 }); },
   turret(c, s) { const r = s * .36; c.save(); c.rotate(-.5); c.beginPath(); c.rect(r * .6, -s * .06, s * .3, s * .12); FS(c, '#9aa1ad'); c.restore(); body(c, s, '#c4cad4'); face(c, s, {}); },
   ramm(c, s) { const r = s * .36;[-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .4, -r * .8); c.quadraticCurveTo(d * r * .9, -r * 1.3, d * r * 1.05, -r * .75); c.lineTo(d * r * .8, -r * .5); c.closePath(); FS(c, '#f3ead2'); }); body(c, s, '#c98b5a', { rx: 1.08, ry: 1.02 }); face(c, s, { angry: 1, mouth: 'frown', er: .17 }); },
   glas(c, s) { c.globalAlpha = .85; body(c, s, '#cbeefa', { rx: .78, ry: .78 }); c.globalAlpha = 1; c.lineWidth = s * .03; c.beginPath(); c.moveTo(s * .03, -s * .22); c.lineTo(s * .09, -s * .08); c.lineTo(s * .02, s * .02); c.stroke(); face(c, s, { mouth: 'o', sp: .38, er: .22 }); },
@@ -406,7 +406,7 @@ export const BALLS = {
 /* ---------- Teile und Geschosse (zeigen nach rechts) ---------- */
 // [Entwurfsradius, Zeichenfunktion, Ausdehnung der Fläche (Vielfaches des Radius)]
 export const OB = {
-  spike: [10, (c, s) => { spike(c, 0, 8, 0, 20, 7, '#d6dae2'); }, 3],
+  spike: [20, (c, s) => { spike(c, 0, 16, 0, 40, 14, '#d6dae2'); }, 3],
   bullet: [4, c => ci(c, 0, 0, 4, '#5b6270'), 6],
   laser: [4, c => { c.lineWidth = 3.2; ln(c, -8, 0, 8, 0, 4, '#ff5a6a'); ln(c, -8, 0, 8, 0, 1.6, '#ffe0e4'); }, 6],
   pfeil: [4, c => { ln(c, -12, 0, 10, 0, 3, '#7a4a21'); pl(c, [[10, -4], [17, 0], [10, 4]], '#d6dae2'); pl(c, [[-12, 0], [-16, -5], [-9, 0], [-16, 5]], '#d33a3a'); }, 6],
