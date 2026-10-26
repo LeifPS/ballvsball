@@ -340,15 +340,7 @@ function boxScreen() {
   S.screen = 'box'; setView(null);
   const list = BOX_LIST.filter(b => boxActive(b.id, now()));
   show('<div class="col">' + backBar('Ballboxen') +
-    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle eine Box. Zehn Bälle fallen in die Schüssel, der erste durch die Öffnung gehört dir.</p>' +
-    list.map(b => {
-      const st = boxStats(b.id), ev = !!b.until, have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price, full = st.own >= st.n;
-      return '<button class="panel boxcard rbar' + (ev ? ' event' : '') + (ok ? '' : ' poor') + '" style="--rc:' + b.col + '" data-act="boxdetail" data-id="' + b.id + '"><div class="art">' + boxArt(b.id, 100) + '</div><div class="grow"><h3>' + esc(b.name) + (ev ? ' <span class="tag">Begrenzt</span>' : '') + '</h3>' +
-        '<div class="small mute">' + esc(b.desc) + '</div>' +
-        '<div class="small mt row sb"><span>' + (full ? 'Komplett!' : st.own + ' von ' + st.n + ' gesammelt') + '</span></div><div class="progress thin"><i style="width:' + Math.round(st.own / st.n * 100) + '%;background:' + b.col + '"></i></div>' +
-        '<div class="row sb mt"><span class="pricepill">' + priceHTML(b) + '</span>' + (ok ? '<span class="small" style="color:var(--good)">Bereit zum Öffnen</span>' : '<span class="small mute">Dir fehlen ' + (b.price - have) + (b.cur === 'tokens' ? ' Marken' : ' Münzen') + '</span>') + '</div>' +
-        (ev ? '<div class="small" style="color:var(--danger)">' + timeLeft(b.until - now()) + '</div>' : '') + '</div></button>';
-    }).join('') + '</div>');
+    '<div class="boxgrid">' + list.map(b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>').join('') + '</div></div>');
 }
 function boxDetail(id) {
   const b = BOX_BY_ID[id];
@@ -358,6 +350,7 @@ function boxDetail(id) {
   const byR = SORT.map(r => [r, st.ids.filter(t => DEFS[t].rarity === r).length]).filter(x => x[1]);
   show('<div class="col">' + backBar(b.name, 'box') +
     '<div class="hero bounce" style="margin-top:6px">' + boxArt(b.id, 170) + '</div>' +
+    '<div class="panel"><h3>' + esc(b.name) + '</h3><p class="mt">' + esc(b.desc) + '</p><div class="row sb wrap mt"><span>Kosten: ' + priceHTML(b) + '</span><span>' + st.own + ' von ' + st.n + ' gesammelt</span></div><div class="progress thin"><i style="width:' + Math.round(st.own / st.n * 100) + '%;background:' + b.col + '"></i></div></div>' +
     (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am 1. November. ' + timeLeft(b.until - now()) + '.<div class="small mt">Halloween-Marken bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Marken verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
     '<div class="panel"><h3>Das kann drin sein</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
     st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name.replace('ball', '')) : '???') + '</div></button>').join('') +

@@ -115,7 +115,7 @@ export function drawBoxArt(g, id, t, size) {
   const th = THEMES[id] || THEMES.standard, T = t + hashId(id) * .37;
   const frame = Math.floor(T * 7) % 3;
   g.save(); g.scale(size / 100, size / 100);
-  g.translate(50, 95); g.scale(1.18, 1.18); g.translate(-50, -95);   // Kiste etwas größer, unten verankert
+  g.translate(50, 96); g.scale(1.04, 1.04); g.translate(-50, -96);
   g.lineJoin = g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3;
   const c = sketchCtx(g, strSeed('bx' + id) + frame * 1.713, 22); c.lineWidth = 3;
   // Rhythmus: kurzes Wackeln, dann springt der Deckel auf
@@ -127,8 +127,8 @@ export function drawBoxArt(g, id, t, size) {
   g.translate(50, 88); g.rotate(wob * .04); g.scale(1 / sq, sq); g.translate(-50, -88 + bob * .5);
   // Glanz aus der Kiste
   if (open > 0) {
-    const gr = g.createLinearGradient(0, 50, 0, 6); gr.addColorStop(0, th.glow); gr.addColorStop(1, 'rgba(255,255,255,0)');
-    g.globalAlpha = open * .9; g.fillStyle = gr; g.beginPath(); g.moveTo(24, 52); g.lineTo(76, 52); g.lineTo(96, 4); g.lineTo(4, 4); g.closePath(); g.fill(); g.globalAlpha = 1;
+    const gr = g.createLinearGradient(0, 50, 0, 12); gr.addColorStop(0, th.glow); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.globalAlpha = open * .9; g.fillStyle = gr; g.beginPath(); g.moveTo(24, 52); g.lineTo(76, 52); g.lineTo(92, 12); g.lineTo(8, 12); g.closePath(); g.fill(); g.globalAlpha = 1;
   }
   if (id === 'sport' && open > .05) {   // Ball hüpft heraus
     const by = 46 - open * 22 - Math.abs(Math.sin(T * 7)) * 6;
@@ -138,7 +138,7 @@ export function drawBoxArt(g, id, t, size) {
   c.beginPath(); c.rect(20, 50, 60, 38); FS(c, th.body);
   (BODY[id] || BODY.standard)(c, T);
   // Deckel
-  g.save(); g.translate(15, 52 - open * 5); g.rotate(-open * .5);
+  g.save(); g.translate(15, 52 - open * 5); g.rotate(-open * .42);
   c.beginPath(); c.rect(0, -16, 70, 16); FS(c, th.lid);
   (LID[id] || LID.standard)(c, T);
   g.restore();
