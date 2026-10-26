@@ -127,8 +127,8 @@ function drawPourer(g, boxId, s, tm) {
   g.restore();
 }
 export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
-  const k = W / BW;
-  g.save(); g.scale(k, k); g.translate(0, 170);
+  const k = W / (BW + 16);   // 8 Einheiten Rand links und rechts, damit die Wandlinien nicht am Bildrand abgeschnitten werden
+  g.save(); g.scale(k, k); g.translate(8, 170);
   const B = boardSprite(col || '#d9a441');
   g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
   // Windräder (drehen sich mit der Simulationszeit), handgezeichnet wie alles andere: wackelige Kontur, versetzte Füllung, Schraffur

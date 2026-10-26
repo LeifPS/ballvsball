@@ -128,12 +128,12 @@ function confetti(n) {
   }
   const W = window.innerWidth, H = window.innerHeight, cols = ['#f4c942', '#e0533a', '#4fa3e8', '#5cc45a', '#c06af0', '#ff8aa0', '#ff9a3c'];
   CF.cv.width = Math.round(W * DPR); CF.cv.height = Math.round(H * DPR);
-  const burst = Math.round(n * .6), rain = n - burst;
-  for (let i = 0; i < burst; i++) {   // Kanonen aus beiden unteren Ecken
-    const left = i % 2 === 0, a = (left ? -62 : -118) * Math.PI / 180 + (Math.random() - .5) * .7, v = 520 + Math.random() * 520;
-    CF.parts.push(mkConf(left ? -10 : W + 10, H + 10, Math.cos(a) * v, Math.sin(a) * v, cols, 0));
+  // Kanonen aus beiden unteren Ecken, stark genug, dass die Stücke bis ganz nach oben fliegen
+  const vTop = Math.sqrt(2 * 620 * H);
+  for (let i = 0; i < n; i++) {
+    const left = i % 2 === 0, a = (left ? -66 : -114) * Math.PI / 180 + (Math.random() - .5) * .55, v = vTop * (1.45 + Math.random() * .5);
+    CF.parts.push(mkConf(left ? -8 : W + 8, H + 8, Math.cos(a) * v, Math.sin(a) * v, cols, Math.random() * .25));
   }
-  for (let i = 0; i < rain; i++) CF.parts.push(mkConf(Math.random() * W, -20 - Math.random() * H * .35, (Math.random() - .5) * 60, 40 + Math.random() * 80, cols, Math.random() * .6));
   if (!CF.run) { CF.run = true; CF.last = performance.now(); requestAnimationFrame(confTick); }
 }
 // Konfetti-Stücke im Tonlinge-Stil: wacklige Kontur, versetzte Füllung, Buntstift-Schraffur
@@ -365,7 +365,7 @@ async function openBox(id) {
   const r = await api('/api/box', { box: b.id });
   if (r.err) { toast(errText(r.err)); return; }
   S.screen = 'boxplay'; sfx('open');
-  const W = Math.min(window.innerWidth - 28, 300), H = Math.round(W / BW * BOX_H);
+  const W = Math.min(window.innerWidth - 28, 300), H = Math.round(W / (BW + 16) * BOX_H);
   show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Los geht\'s!</h2><canvas id="bc" class="view"></canvas><p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Der erste Ball durch die Öffnung unten gehört dir.<br>Tippen zum Überspringen.</p></div>');
   const cv = $('#bc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const s = createBox(r.seed, 10); let acc = 0, fin = 0, shown = false, lastN = 0, flash = 0, skip = false;
