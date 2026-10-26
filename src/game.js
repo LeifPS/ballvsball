@@ -68,6 +68,7 @@ export class Game extends DurableObject {
     this.byUser = new Map();      // userId -> conn
     this.queue = { 1: [], 2: [], 3: [], 4: [] };
     this.qtimer = { 1: null, 2: null, 3: null, 4: null };
+    this.qfirst = { 1: 0, 2: 0, 3: 0, 4: 0 };
     this.rooms = new Map();
     this.matches = new Map();
     this.userMatch = new Map();   // userId -> match
@@ -153,11 +154,14 @@ export class Game extends DurableObject {
     c.queued = mode;
     const q = this.queue[mode];
     q.push(c);
-    this.send(c, { t: 'queued', mode, wait: QUEUE_WAIT / 1000, count: q.length });
     const need = playersOf(mode);
     if (q.length >= need) { this.fireQueue(mode); return; }
-    if (!this.qtimer[mode]) this.qtimer[mode] = setTimeout(() => this.fireQueue(mode), QUEUE_WAIT);
-    for (const o of q) this.send(o, { t: 'queued', mode, wait: QUEUE_WAIT / 1000, count: q.length });
+    // Mit jedem neuen Spieler beginnt die Wartezeit von vorn (höchstens 2 x QUEUE_WAIT ab dem ersten), damit Nachzügler nicht nur ein paar Sekunden bekommen
+    if (!this.qfirst[mode]) this.qfirst[mode] = Date.now();
+    const delay = Math.max(1000, Math.min(QUEUE_WAIT, 2 * QUEUE_WAIT - (Date.now() - this.qfirst[mode])));
+    if (this.qtimer[mode]) clearTimeout(this.qtimer[mode]);
+    this.qtimer[mode] = setTimeout(() => this.fireQueue(mode), delay);
+    for (const o of q) this.send(o, { t: 'queued', mode, wait: delay / 1000, count: q.length, need });
   }
   leaveQueue(c, quiet) {
     if (!c.queued) return;
@@ -166,17 +170,18 @@ export class Game extends DurableObject {
     const q = this.queue[mode];
     const i = q.indexOf(c);
     if (i >= 0) q.splice(i, 1);
-    if (!q.length && this.qtimer[mode]) { clearTimeout(this.qtimer[mode]); this.qtimer[mode] = null; }
+    if (!q.length) { if (this.qtimer[mode]) { clearTimeout(this.qtimer[mode]); this.qtimer[mode] = null; } this.qfirst[mode] = 0; }
     if (!quiet) this.send(c, { t: 'unqueued' });
   }
   fireQueue(mode) {
     if (this.qtimer[mode]) { clearTimeout(this.qtimer[mode]); this.qtimer[mode] = null; }
+    this.qfirst[mode] = 0;
     const cap = playersOf(mode);
     const q = this.queue[mode];
     const take = q.splice(0, cap);
     for (const c of take) c.queued = 0;
     if (take.length) this.startMatch(mode, take.map((c, i) => ({ conn: c, slot: mode === 1 ? i : i })), false);
-    if (q.length) this.qtimer[mode] = setTimeout(() => this.fireQueue(mode), QUEUE_WAIT);
+    if (q.length) { this.qfirst[mode] = Date.now(); this.qtimer[mode] = setTimeout(() => this.fireQueue(mode), QUEUE_WAIT); }
   }
 
   /* ---------- Freundesräume ---------- */

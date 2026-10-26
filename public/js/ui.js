@@ -523,7 +523,9 @@ function roomScreen() {
 const QTIPS = ['Tipp: Jeder Stern gibt +8 % Leben und Schaden.', 'Tipp: Starke Bälle haben oft eine klare Schwäche. Lies die Beschreibung.', 'Tipp: Wähle die Richtung so, dass du den Gegner schnell triffst.', 'Tipp: Doppelte Bälle kannst du verbessern oder auf dem Markt verkaufen.', 'Tipp: Nach 45 Sekunden rücken die Wände zusammen.', 'Tipp: Täglich gibt es eine Belohnung zum Abholen.'];
 function queueScreen(m) {
   S.screen = 'queue'; setView(null);
-  const t0 = Date.now(), wait = (m.wait || 15) * 1000, mine = topType();
+  let t0 = Date.now(), wait = (m.wait || 15) * 1000;
+  const mine = topType();
+  S.qreset = mm => { t0 = Date.now(); wait = (mm.wait || 15) * 1000; };
   show('<div class="col center qwrap"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Suche Gegner<span id="qdots"></span></h2>' +
     '<div class="qstage"><div class="qside"><div class="qring"></div><div class="qball bounce">' + ball(mine, 120, .62) + '</div><div class="qname">' + esc(S.me.name) + '</div></div>' +
     '<div class="qvs jit">VS</div>' +
@@ -545,7 +547,7 @@ function queueScreen(m) {
   let ti = 0; every(() => { const e = $('#qtip'); if (e) e.textContent = QTIPS[(ti = (ti + 1) % QTIPS.length)]; }, 4500);
   queueUpdate(m);
 }
-function queueUpdate(m) { const e = $('#qc'); if (e) e.textContent = m.count + ' Spieler in der Warteschlange'; }
+function queueUpdate(m) { const e = $('#qc'); if (e) e.textContent = m.count + (m.need ? ' von ' + m.need : '') + ' Spieler in der Warteschlange'; if (S.qreset) S.qreset(m); }
 
 /* ================= Kampf ================= */
 function livesHTML(count, max) { let h = ''; for (let i = 0; i < (max || 3); i++) h += gi(i < count ? 'heart' : 'heart0', 26); return '<span class="lives">' + h + '</span>'; }
