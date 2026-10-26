@@ -7,6 +7,7 @@ export const BOX_LIST = [
   { id: 'elemente', name: 'Wetter-Box', price: 200, cur: 'coins', col: '#4aa6c9', desc: 'Regen, Blitz, Lava und Wirbelsturm.' },
   { id: 'ozean', name: 'Ozean-Box', price: 175, cur: 'coins', col: '#2f9fcf', desc: 'Krabben, Quallen und der mächtige Krake.' },
   { id: 'suess', name: 'Süßigkeiten-Box', price: 150, cur: 'coins', col: '#e85fa5', desc: 'Lollis, Donuts und der Zuckerkönig.' },
+  { id: 'familie', name: 'Familien-Box', price: 300, cur: 'coins', col: '#e8725a', desc: 'Die ganze Familie: Menschen und Tiere.' },
   { id: 'halloween', name: 'Halloween-Box', price: 10, cur: 'tokens', col: '#e8761d', desc: 'Nur bis Ende Oktober! Kostet Halloween-Marken.', until: Date.UTC(2026, 9, 31, 23, 0, 0) }
 ];
 export const BOX_BY_ID = Object.fromEntries(BOX_LIST.map(b => [b.id, b]));
