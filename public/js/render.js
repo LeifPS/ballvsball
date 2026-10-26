@@ -128,16 +128,20 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   g.save(); g.scale(k, k); g.translate(0, 170);
   const B = boardSprite(col || '#d9a441');
   g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
-  // Windräder (drehen sich mit der Simulationszeit)
+  // Windräder (drehen sich mit der Simulationszeit), handgezeichnet wie alles andere: wackelige Kontur, versetzte Füllung, Schraffur
   for (const sp of SPINNERS) {
     const a = s.t * sp.om;
     g.save(); g.translate(sp.x, sp.y); g.lineCap = 'round'; g.lineJoin = 'round';
     for (let i = 0; i < 2; i++) {
       g.save(); g.rotate(a + i * Math.PI);
-      g.beginPath(); g.moveTo(0, -sp.w); g.lineTo(sp.len, -sp.w); g.lineTo(sp.len, sp.w); g.lineTo(0, sp.w); g.closePath();
-      g.fillStyle = i ? '#4fa3e8' : '#ffd45a'; g.fill(); g.lineWidth = 2.6; g.strokeStyle = INK; g.stroke(); g.restore();
+      const sk = sketchCtx(g, strSeed('wind') + ((tf + i) % 3) * 1.9, 40); g.lineWidth = 3; sk.lineWidth = 3; g.strokeStyle = INK;
+      sk.beginPath(); sk.moveTo(0, -sp.w - 1); sk.lineTo(sp.len, -sp.w - 1); sk.lineTo(sp.len + 3, 0); sk.lineTo(sp.len, sp.w + 1); sk.lineTo(0, sp.w + 1); sk.closePath();
+      g.fillStyle = i ? '#4fa3e8' : '#ffd45a'; sk.fill(); sk.stroke();
+      g.save(); g.lineWidth = 1.4; g.strokeStyle = 'rgba(255,255,255,.7)'; sk.beginPath(); for (let x = 8; x < sp.len - 2; x += 7) { sk.moveTo(x, sp.w - 1); sk.lineTo(x + 4, -sp.w + 1); } sk.stroke(); g.restore();
+      g.restore();
     }
-    g.beginPath(); g.arc(0, 0, 7, 0, 7); g.fillStyle = '#e0533a'; g.fill(); g.lineWidth = 2.6; g.strokeStyle = INK; g.stroke();
+    const sk = sketchCtx(g, strSeed('windhub') + (tf % 3) * 1.9, 20); g.lineWidth = 3; sk.lineWidth = 3; g.strokeStyle = INK;
+    sk.beginPath(); sk.arc(0, 0, 7.5, 0, 7); g.fillStyle = '#e0533a'; sk.fill(); sk.stroke();
     g.restore();
   }
   drawPourer(g, boxId, s, tm);

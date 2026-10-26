@@ -4,7 +4,7 @@ import { mulberry } from './core.js';
 
 export const BW = 300, BH = 440, BR = 12, EXIT_Y = 405, BDT = 1 / 120;
 export const POUR_START = 60;   // ab diesem Schritt kommen die Bälle aus der gekippten Box
-const GRAV = 170, MAXV = 230, MAX_STEPS = 120 * 18;
+const GRAV = 230, MAXV = 300, MAX_STEPS = 120 * 18;
 
 // Wände als Strecken [x1,y1,x2,y2]
 export const SEGS = [
@@ -18,9 +18,8 @@ export const PEGS = [
   [38, 85, 6], [90, 85, 6], [150, 85, 6, 1], [210, 85, 6], [262, 85, 6],
   [60, 130, 6], [120, 130, 6], [180, 130, 6], [240, 130, 6],
   [90, 170, 6], [150, 168, 8, 1], [210, 170, 6],
-  // in der Schüssel
-  [80, 222, 8, 1], [220, 222, 8, 1],
-  [118, 292, 6], [182, 292, 6]
+  // in der Schüssel: Stopper dicht an den schrägen Wänden (Lücke zur Wand kleiner als ein Ball), damit niemand an der Wand entlang zum Ausgang rutscht
+  [68, 239, 8, 1], [232, 239, 8, 1], [116, 309, 8, 1], [184, 309, 8, 1]
 ];
 // Windrad in der Schüssel: dreht sich mit fester Geschwindigkeit, schleudert Bälle zur Seite
 export const SPINNERS = [{ x: 150, y: 240, len: 34, w: 4.5, om: 2.4 }];
