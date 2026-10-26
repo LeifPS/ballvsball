@@ -125,7 +125,7 @@ export class Game extends DurableObject {
     }
     if (!c.user) return;
     switch (m.t) {
-      case 'queue': return this.joinQueue(c, m.mode === 2 ? 2 : 1);
+      case 'queue': return this.joinQueue(c, 1);   // Team-Kampf (2 gegen 2) ist vorerst abgeschaltet
       case 'unqueue': return this.leaveQueue(c);
       case 'room_create': return this.roomCreate(c, m.mode === 2 ? 2 : 1);
       case 'room_join': return this.roomJoin(c, String(m.code || '').toUpperCase().trim());
