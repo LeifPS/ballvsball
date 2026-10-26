@@ -54,6 +54,17 @@ export function star(g, x, y, r, col, rot) {
 }
 
 
+const WHITE = new WeakMap();
+function whiteOf(cv) {
+  let w = WHITE.get(cv);
+  if (!w) {
+    w = document.createElement('canvas'); w.width = cv.width; w.height = cv.height;
+    const c = w.getContext('2d'); c.drawImage(cv, 0, 0); c.globalCompositeOperation = 'source-in'; c.fillStyle = '#fff'; c.fillRect(0, 0, w.width, w.height);
+    WHITE.set(cv, w);
+  }
+  return w;
+}
+
 /* ---------- Ball ---------- */
 // Koordinaten in Arena-Einheiten; tf = Boil-Frame, tm = Sekunden
 export function drawBall(g, b, sim, tf, tm, tint) {
@@ -80,11 +91,12 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   g.save(); g.rotate(tilt); g.scale(sx * bob * k, sy * bob * k);
   const sp = bodySprite(type);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
-  const fl = (b.flash > 0 ? b.flash * 6 : 0) + (b.dotT > 0 ? .35 : 0) + (tint || 0);
+  // Weißes Aufblinken: nur die Silhouette des Balls (kein Kreis), bei Treffern kurz, bei Dauerschaden langsam pulsierend
+  const pulse = b.dotT > 0 ? .55 * Math.pow(Math.max(0, Math.sin(tm * 13 + b.id)), 2) : 0;
+  const fl = Math.max(b.flash > 0 ? b.flash * 6 : 0, pulse) + (tint || 0);
   if (fl > 0) {
-    g.globalCompositeOperation = 'source-atop'; g.globalAlpha = Math.min(.8, fl);
-    g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, R0 * 1.7, 0, 7); g.fill();
-    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = Math.min(.8, fl);
+    g.drawImage(whiteOf(sp.fr[((f % 3) + 3) % 3]), -sp.side / 2, -sp.side / 2, sp.side, sp.side);
   }
   g.restore();
   g.globalAlpha = ghost ? .45 : 1;
