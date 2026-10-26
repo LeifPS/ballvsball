@@ -566,6 +566,74 @@ export const BALLS = {
     el(c, 0, r * .55, r * .22, r * .17, '#ffffff');
     [-1, 1].forEach(d => cEye(c, d * r * .36, -r * .1, r * .17, 1, s)); pl(c, [[-r * .08, r * .22], [r * .08, r * .22], [0, r * .34]], '#e8a0a8');
     c.lineWidth = s * .02; [-1, 1].forEach(d => [0, 1].forEach(k => ln(c, d * r * .25, r * .35 + k * r * .1, d * r * .95, r * .22 + k * r * .3, null, '#d8c8b8')));
+  },
+  /* ===== Dino ===== */
+  raptor(c, s) {
+    const r = s * .36;
+    for (let i = 0; i < 4; i++) pl(c, [[-r * .4 + i * r * .27, -r * .85], [-r * .28 + i * r * .27, -r * 1.35], [-r * .12 + i * r * .27, -r * .85]], '#f0a24a');
+    body(c, s, '#74c35a', { rx: 1.0 });
+    el(c, r * .15, r * .38, r * .6, r * .32, '#d6f0a8');
+    [-1, 1].forEach(d => cEye(c, d * r * .36, -r * .15, r * .17, .9, s));
+    c.lineWidth = s * .04; [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * (r * .36 + r * .24), -r * .5); c.lineTo(d * (r * .36 - r * .2), -r * .3); c.stroke(); });
+    c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .45, r * .38); c.lineTo(r * .6, r * .38); c.stroke(); [-.2, .1, .4].forEach(k => pl(c, [[k * r, r * .38], [k * r + r * .09, r * .56], [k * r + r * .18, r * .38]], '#fff'));
+  },
+  fossil(c, s) {
+    const r = s * .36;
+    body(c, s, '#e8dcc0');
+    c.strokeStyle = 'rgba(120,100,70,.55)'; c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .2, -r * .98); c.lineTo(-r * .05, -r * .62); c.lineTo(-r * .3, -r * .4); c.moveTo(r * .75, r * .35); c.lineTo(r * .5, r * .55); c.lineTo(r * .65, r * .8); c.stroke(); c.strokeStyle = INK;
+    ln(c, r * .4, -r * .9, r * .85, -r * .5, s * .05, '#fff7e4'); ci(c, r * .38, -r * .93, s * .035, '#fff7e4'); ci(c, r * .88, -r * .47, s * .035, '#fff7e4');
+    face(c, s, { mouth: 'flat', dy: -.02 });
+  },
+  trike(c, s) {
+    const r = s * .36;
+    c.beginPath(); c.moveTo(-r * 1.3, r * .2); c.bezierCurveTo(-r * 1.5, -r * 1.7, r * 1.5, -r * 1.7, r * 1.3, r * .2); c.closePath(); FS(c, '#f0a24a');
+    [-1, -.5, 0, .5, 1].forEach(k => { c.beginPath(); c.arc(k * r * 1.05, -r * (1.1 - Math.abs(k) * .5), s * .02, 0, 7); c.fillStyle = '#c7681f'; c.fill(); });
+    body(c, s, '#86bf6a');
+    [-1, 1].forEach(d => pl(c, [[d * r * .45, -r * .55], [d * r * .8, -r * 1.35], [d * r * .78, -r * .45]], '#fff7e4')); pl(c, [[-r * .1, r * .05], [0, -r * .5], [r * .1, r * .05]], '#fff7e4');
+    face(c, s, { mouth: 'flat', dy: .1, angry: 1 });
+  },
+  ptero(c, s) {
+    const r = s * .36;
+    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .7, -r * .1); c.quadraticCurveTo(d * r * 1.6, -r * 1.5, d * r * 2.2, -r * .5); c.quadraticCurveTo(d * r * 1.9, -r * .35, d * r * 1.8, -r * .05); c.quadraticCurveTo(d * r * 1.55, -r * .25, d * r * 1.35, r * .1); c.quadraticCurveTo(d * r * 1.1, -r * .1, d * r * .9, r * .2); c.closePath(); FS(c, '#e0a46a'); });
+    pl(c, [[-r * .35, -r * .85], [-r * 1.0, -r * 1.55], [-r * .05, -r * .95]], '#d7513a');
+    body(c, s, '#c98a5a');
+    pl(c, [[-r * .3, r * .15], [r * 1.2, r * .35], [-r * .3, r * .55]], '#f0cf8a');
+    [-1, 1].forEach(d => cEye(c, d * r * .3, -r * .22, r * .16, .9, s));
+  },
+  stego(c, s) {
+    const r = s * .36;
+    [[-.75, -.7, .0], [-.38, -1.0, -.1], [0, -1.1, 0], [.38, -1.0, .1], [.75, -.7, .0]].forEach(p => pl(c, [[p[0] * r - r * .24, p[1] * r + r * .35], [p[0] * r, p[1] * r - r * .3], [p[0] * r + r * .24, p[1] * r + r * .35]], '#f0a24a'));
+    body(c, s, '#8cc271', { rx: 1.05 });
+    el(c, 0, r * .45, r * .62, r * .3, '#d6f0a8');
+    [-1, 1].forEach(d => cEye(c, d * r * .38, -r * .12, r * .17, 1, s)); c.lineWidth = s * .03; c.beginPath(); c.arc(0, r * .3, r * .2, .2, PI - .2); c.stroke();
+    [-1, 1].forEach(d => pl(c, [[d * r * .75, r * .75], [d * r * 1.1, r * 1.15], [d * r * .95, r * .6]], '#fff7e4'));
+  },
+  anky(c, s) {
+    const r = s * .36;
+    ci(c, r * 1.15, r * .55, r * .45, '#8a7a5a'); [0, 1, 2, 3, 4].forEach(i => { const a = i * 1.25; spike(c, r * 1.15 + Math.cos(a) * r * .4, r * .55 + Math.sin(a) * r * .4, a + 1.57, s * .09, s * .04, '#e8dcc0'); });
+    body(c, s, '#9a8a6a', { rx: 1.05 });
+    c.strokeStyle = 'rgba(60,50,35,.6)'; c.lineWidth = s * .03; for (let i = -2; i <= 2; i++) { c.beginPath(); c.moveTo(i * r * .4, -r * .98); c.lineTo(i * r * .4 + r * .12, -r * .5); c.stroke(); } c.beginPath(); c.moveTo(-r * .9, -r * .55); c.lineTo(r * .9, -r * .55); c.stroke(); c.strokeStyle = INK;
+    [-1, 1].forEach(d => pl(c, [[d * r * .85, -r * .4], [d * r * 1.15, -r * .6], [d * r * 1.0, -r * .2]], '#e8dcc0'));
+    face(c, s, { mouth: 'flat', angry: 1, dy: .1 });
+  },
+  brachio(c, s) {
+    const r = s * .36;
+    el(c, -r * .35, -r * .95, r * .4, r * 1.0, '#7bbf8a', .25); ci(c, -r * .55, -r * 1.85, r * .38, '#7bbf8a');
+    [0].forEach(() => { cEye(c, -r * .62, -r * 1.9, r * .12, 1, s); c.lineWidth = s * .025; c.beginPath(); c.arc(-r * .58, -r * 1.72, r * .12, .3, PI - .3); c.stroke(); });
+    body(c, s, '#7bbf8a', { rx: 1.1 });
+    c.strokeStyle = 'rgba(40,90,60,.45)'; c.lineWidth = s * .03; [[.4, .2], [.7, -.3], [.1, .6]].forEach(p => { c.beginPath(); c.arc(p[0] * r, p[1] * r, r * .16, 0, 7); c.stroke(); }); c.strokeStyle = INK;
+    [-1, 1].forEach(d => cEye(c, d * r * .25 + r * .25, r * .0, r * .17, 1, s)); c.lineWidth = s * .03; c.beginPath(); c.arc(r * .25, r * .35, r * .2, .2, PI - .2); c.stroke();
+  },
+  trex(c, s) {
+    const r = s * .36;
+    for (let i = 0; i < 5; i++) pl(c, [[-r * .65 + i * r * .33, -r * .85], [-r * .5 + i * r * .33, -r * 1.35], [-r * .35 + i * r * .33, -r * .85]], '#e0793a');
+    body(c, s, '#5fae4a', { rx: 1.08, ry: 1.0 });
+    el(c, 0, r * .5, r * .75, r * .32, '#cfe8a0');
+    [-1, 1].forEach(d => { ln(c, d * r * .85, r * .45, d * r * 1.05, r * .75, s * .06, '#5fae4a'); });
+    [-1, 1].forEach(d => cEye(c, d * r * .38, -r * .22, r * .17, .9, s));
+    c.lineWidth = s * .045; [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * (r * .38 + r * .26), -r * .58); c.lineTo(d * (r * .38 - r * .22), -r * .36); c.stroke(); });
+    c.lineWidth = s * .035; c.beginPath(); c.moveTo(-r * .62, r * .32); for (let i = 0; i <= 6; i++) c.lineTo(-r * .62 + i * r * .207, r * .32 + (i % 2 ? r * .02 : r * .2)); c.stroke();
+    [-2, -1, 0, 1, 2].forEach(k => pl(c, [[k * r * .24 - r * .07, r * .34], [k * r * .24, r * .5], [k * r * .24 + r * .07, r * .34]], '#fff'));
   }
 };
 

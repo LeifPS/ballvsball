@@ -5,7 +5,7 @@ import { shot, wave, tick } from './balls2.js';
 
 function nobj(sim, b, k) { let n = 0; for (const o of sim.objs) if (o.k === k && o.owner === b.id && !o.dead) n++; return n; }
 // Sprint: kurz schneller in Richtung Gegner; danach wieder normale Geschwindigkeit
-function sprint(b, sim, id, secs, speed) {
+export function sprint(b, sim, id, secs, speed) {
   const e = nearestEnemy(sim, b);
   if (!e) return false;
   b.st.dash = secs; b.speed = speed;
@@ -14,7 +14,7 @@ function sprint(b, sim, id, secs, speed) {
   fx(sim, 'dash', b.x, b.y, 0);
   return true;
 }
-function sprintEnd(b, id) {
+export function sprintEnd(b, id) {
   if (b.st.dash > 0) { b.st.dash -= DT; if (b.st.dash <= 0) { const d = Math.hypot(b.vx, b.vy) || 1; b.speed = DEFS[id].speed; b.vx = b.vx / d * b.speed; b.vy = b.vy / d * b.speed; } return true; }
   return false;
 }

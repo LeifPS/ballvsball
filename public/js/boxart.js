@@ -11,6 +11,7 @@ const THEMES = {
   ozean: { body: '#2f9fcf', lid: '#6fd0ee', glow: '#c8f4ff' },
   suess: { body: '#e85fa5', lid: '#ffd0e6', glow: '#fff2a0' },
   familie: { body: '#e8725a', lid: '#ffd9a8', glow: '#ffe6a8' },
+  dino: { body: '#6aa84f', lid: '#c9b88a', glow: '#e8ffb0' },
   halloween: { body: '#f58a1f', lid: '#d96e0c', glow: '#ffe14a' }
 };
 const hashId = id => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
@@ -72,6 +73,11 @@ const BODY = {
     c.beginPath(); c.arc(50, 69, 10, 0, 7); FS(c, '#fff');
     c.lineWidth = 2.4; c.strokeStyle = '#e85fa5'; c.beginPath(); for (let i = 0; i < 24; i++) { const a = i * .5 + t * 1.5, q = 1.2 + i * .33; c[i ? 'lineTo' : 'moveTo'](50 + Math.cos(a) * q, 69 + Math.sin(a) * q); } c.stroke(); c.strokeStyle = INK;
   },
+  dino(c, t) {
+    c.lineWidth = 3; c.beginPath(); c.ellipse(50, 70, 13, 17, 0, 0, 7); FS(c, '#f4ead0');
+    c.lineWidth = 2; c.strokeStyle = '#8a7a52'; c.beginPath(); c.moveTo(42, 62); c.lineTo(47, 68); c.lineTo(43, 74); c.lineTo(50, 80); c.moveTo(56, 60); c.lineTo(54, 66); c.stroke(); c.strokeStyle = INK;
+    c.fillStyle = 'rgba(40,80,35,.5)'; [[26, 78], [74, 78], [28, 58], [72, 58]].forEach((p, i) => { c.save(); c.translate(p[0], p[1] + Math.sin(t * 3 + i) * 1); c.beginPath(); c.ellipse(0, 1, 3.2, 3.8, 0, 0, 7); c.fill(); [-3, 0, 3].forEach(x => { c.beginPath(); c.arc(x, -4, 1.3, 0, 7); c.fill(); }); c.restore(); });
+  },
   familie(c, t) {
     const pulse = 1 + Math.sin(t * 4) * .06;
     c.lineWidth = 3; c.beginPath(); c.moveTo(50, 84); c.bezierCurveTo(26, 68, 31 * pulse, 52, 42, 55); c.bezierCurveTo(46, 56, 50, 60, 50, 63); c.bezierCurveTo(50, 60, 54, 56, 58, 55); c.bezierCurveTo(69 - (pulse - 1) * 20, 52, 74, 68, 50, 84); c.closePath(); FS(c, '#fff0d8');
@@ -130,6 +136,10 @@ const LID = {
   suess(c, t) {
     c.lineWidth = 3; c.beginPath(); c.moveTo(0, 0); for (let i = 0; i < 7; i++) c.quadraticCurveTo(i * 10 + 5, 9 + (i % 2) * 4, (i + 1) * 10, 0); c.closePath(); FS(c, '#ff8ac0');
     c.beginPath(); c.arc(35, -19, 6, 0, 7); FS(c, '#e0453a'); c.lineWidth = 2; c.beginPath(); c.moveTo(35, -25); c.quadraticCurveTo(38, -31, 43, -31); c.stroke();
+  },
+  dino(c, t) {
+    c.lineWidth = 3;
+    [[8, -16, 14], [24, -16, 18], [40, -16, 22], [56, -16, 17]].forEach(p => { c.beginPath(); c.moveTo(p[0], p[1]); c.lineTo(p[0] + 7, p[1] - p[2]); c.lineTo(p[0] + 14, p[1]); c.closePath(); FS(c, '#f0a24a'); });
   },
   familie(c, t) {
     c.lineWidth = 3; c.beginPath(); c.moveTo(14, -16); c.lineTo(35, -34); c.lineTo(56, -16); c.closePath(); FS(c, '#c8503a');
