@@ -51,6 +51,7 @@ export function sfx(name, v) {
     case 'click': tone(520, .07, 'triangle', .22 * v, 380); break;
     case 'back': tone(380, .08, 'triangle', .2 * v, 260); break;
     case 'hit': tone(190, .09, 'square', .16 * v, 90); noise(.06, .22 * v, 1800, 1); break;
+    case 'tick': tone(320, .05, 'triangle', .1 * v, 220); break;
     case 'hit2': tone(130, .16, 'square', .22 * v, 55); noise(.12, .32 * v, 900, .8, 300); tone(420, .05, 'triangle', .1 * v); break;
     case 'boom': noise(.45, .5 * v, 500, .7, 90); tone(90, .4, 'sine', .4 * v, 35); break;
     case 'zap': noise(.25, .35 * v, 3000, 2, 600); tone(900, .18, 'sawtooth', .12 * v, 120); break;

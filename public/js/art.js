@@ -115,6 +115,10 @@ export function drawBall(g, b, sim, tf, tm, tint) {
     const ax = st.ax, ay = st.ay, p = objSprite('fireZone');
     for (let i = 0; i < 9; i++) { const dist = b.r + 8 + i * 15, w = .45 + i * .1; spr(g, p, ax * dist, ay * dist, f + i, w * (.9 + .15 * Math.sin(tm * 14 + i)), 0, .88); }
   }
+  if (b.dotT > 0) {
+    g.save(); g.scale(k, k); g.globalCompositeOperation = 'source-atop'; g.globalAlpha = Math.min(.5, b.dotT * 3) * (.6 + .4 * Math.sin(tm * 40));
+    g.fillStyle = '#ff3a2a'; g.beginPath(); g.arc(0, 0, R0 * 1.7, 0, 7); g.fill(); g.restore();
+  }
   if (b.burn > 0) {
     const p = objSprite('fireZone');
     for (let i = 0; i < 3; i++) spr(g, p, (i - 1) * b.r * .5, -b.r * .7 - Math.abs(Math.sin(tm * 8 + i)) * 4, f + i, .5, 0, .85);
@@ -215,6 +219,10 @@ export function addFx(e) {
     fxState.shake = Math.min(7, Math.max(fxState.shake, .6 + a * .1));
     if (a >= 20) fxState.hitstop = Math.max(fxState.hitstop, .05 + Math.min(.04, (a - 20) * .002));
     snd(a >= 18 ? 'hit2' : 'hit', Math.min(1, .4 + big));
+  } else if (k === 'tick') {
+    sparks(x, y, 2, '#ff6a5a', 40, .3, 2.2);
+    if (e.a >= .5) pt({ k: 'num', x: x + (rnd() - .5) * 14, y: y - 12, age: 0, life: .6, txt: String(Math.max(1, Math.round(e.a))), sz: 8, col: '#ff6a5a' });
+    snd('tick', .5);
   } else if (k === 'boom' || k === 'zap' || k === 'brickboom' || k === 'kuerbisboom' || k === 'splash') {
     const col = k === 'zap' ? '#ffe14a' : k === 'brickboom' ? '#e0453a' : k === 'kuerbisboom' ? '#f58a1f' : k === 'splash' ? '#8fdc6e' : '#ff8a2a';
     pt({ k: 'ring', x, y, age: 0, life: .5, r: e.a, col });

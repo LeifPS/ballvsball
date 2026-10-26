@@ -130,6 +130,10 @@ export function hurt(sim, t, amt, src, kind) {
   if (kind !== 'dot') t.flash = .12;
   if (src) sim.dealt[src.team] = (sim.dealt[src.team] || 0) + amt;
   if (kind !== 'dot') fx(sim, 'hit', t.x, t.y, amt);
+  else {   // Dauerschaden (Feuerspur, Regen, Brennen ...): Ball blinkt rot und zeigt alle paar Zehntelsekunden die Summe
+    t.dotT = .2; t.dotAcc = (t.dotAcc || 0) + amt;
+    if (sim.t >= (t.dotNext || 0)) { fx(sim, 'tick', t.x, t.y, t.dotAcc); t.dotAcc = 0; t.dotNext = sim.t + .5; }
+  }
   if (d.onHurt) d.onHurt(t, amt, src, kind, sim);
   return amt;
 }
@@ -195,6 +199,7 @@ export function stepSim(sim) {
     if (b.dead) continue;
     b.age += DT;
     if (b.flash > 0) b.flash -= DT;
+    if (b.dotT > 0) b.dotT -= DT;
     if (b.burn > 0) { b.burn -= DT; hurt(sim, b, b.burnDps * DT, sim.byId[b.burnSrc] || null, 'dot'); }
     if (b.stun > 0) { b.stun -= DT; if (b.stun <= 0) { b.stun = 0; b.stunImm = 1.5; } }
     else if (b.stunImm > 0) b.stunImm -= DT;
