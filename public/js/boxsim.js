@@ -11,14 +11,20 @@ export const SEGS = [
   [0, -400, 0, 175], [BW, -400, BW, 175],
   [0, 175, 135, 372], [BW, 175, BW - 135, 372]
 ];
+// [x, y, Radius, Art]: 0 = normaler Nagel, 1 = Bumper (federt Bälle kräftig weg)
 export const PEGS = [
   // Nagelbrett oben (Abstand zur Wand immer größer als ein Ball)
   [60, 40, 6], [120, 40, 6], [180, 40, 6], [240, 40, 6],
-  [90, 85, 6], [150, 85, 6], [210, 85, 6],
+  [38, 85, 6], [90, 85, 6], [150, 85, 6, 1], [210, 85, 6], [262, 85, 6],
   [60, 130, 6], [120, 130, 6], [180, 130, 6], [240, 130, 6],
+  [90, 170, 6], [150, 168, 8, 1], [210, 170, 6],
   // in der Schüssel
-  [150, 205, 7], [100, 258, 6], [200, 258, 6], [150, 305, 6]
+  [80, 222, 8, 1], [220, 222, 8, 1],
+  [118, 292, 6], [182, 292, 6]
 ];
+// Windrad in der Schüssel: dreht sich mit fester Geschwindigkeit, schleudert Bälle zur Seite
+export const SPINNERS = [{ x: 150, y: 240, len: 34, w: 4.5, om: 2.4 }];
+
 
 export function createBox(seed, n) {
   const rng = mulberry(seed >>> 0);
@@ -53,6 +59,18 @@ function hitSeg(b, s, e) {
   hitPoint(b, ax + dx * t, ay + dy * t, 0, e);
 }
 
+function hitSegW(b, sg, e, sp) {
+  const ax = sg[0], ay = sg[1], dx = sg[2] - ax, dy = sg[3] - ay, l2 = dx * dx + dy * dy;
+  let t = ((b.x - ax) * dx + (b.y - ay) * dy) / l2;
+  t = t < 0 ? 0 : t > 1 ? 1 : t;
+  const px = ax + dx * t, py = ay + dy * t, ddx = b.x - px, ddy = b.y - py, rr = BR + sp.w;
+  if (ddx * ddx + ddy * ddy >= rr * rr) return;
+  const d = Math.sqrt(ddx * ddx + ddy * ddy) || .0001, nx = ddx / d, ny = ddy / d;
+  b.x = px + nx * rr; b.y = py + ny * rr;
+  // Geschwindigkeit des Balkens an der Berührstelle (Drehung um die Nabe)
+  const wx = -(py - sp.y) * sp.om, wy = (px - sp.x) * sp.om, vn = (b.vx - wx) * nx + (b.vy - wy) * ny;
+  if (vn < 0) { b.vx -= (1 + e) * vn * nx; b.vy -= (1 + e) * vn * ny; }
+}
 export function stepBox(s) {
   if (s.done) return;
   s.step++; s.t = s.step * BDT;
@@ -71,7 +89,16 @@ export function stepBox(s) {
     b.vr *= .985; if (b.vr > 4) b.vr = 4; else if (b.vr < -4) b.vr = -4;   // Drehung klingt ab, bleibt ruhig
     b.rot += b.vr * BDT;
     for (const sg of SEGS) hitSeg(b, sg, .35);
-    for (const p of PEGS) hitPoint(b, p[0], p[1], p[2], .45);
+    for (const p of PEGS) hitPoint(b, p[0], p[1], p[2], p[3] ? .95 : .45);
+    for (const sp of SPINNERS) {
+      const a = s.t * sp.om, ca = Math.cos(a), sa = Math.sin(a);
+      for (let k = 0; k < 2; k++) {
+        const dx = ca * sp.len * (k ? 1 : -1) * 1, dy = sa * sp.len * (k ? 1 : -1);
+        // Balken als Strecke (Mitte bis Ende) mit Eigengeschwindigkeit: Ball wird mitgerissen
+        const seg = [sp.x, sp.y, sp.x + dx, sp.y + dy], vx0 = b.vx, vy0 = b.vy;
+        hitSegW(b, seg, .5, sp);
+      }
+    }
   }
   for (let i = 0; i < B.length; i++) {
     const a = B[i];

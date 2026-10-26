@@ -1,6 +1,6 @@
 // Arena und Ballbox-Minispiel zeichnen.
 import { BOX } from './engine.js';
-import { SEGS, PEGS, BW, BH, BR, EXIT_Y } from './boxsim.js';
+import { SEGS, PEGS, SPINNERS, BW, BH, BR, EXIT_Y } from './boxsim.js';
 import { DEFS, RARITY } from './engine.js';
 import { INK, DPR, mkSprite, sketchCtx, strSeed } from './sk.js';
 import { bodySprite, drawBall, drawObj, drawFx, addFx, drawHpBar, ringJ, star, fxState, GROUND } from './art.js';
@@ -99,8 +99,9 @@ function boardSprite(col) {
     for (let y = -120; y < 170; y += 38) for (const px of [6, BW - 6]) { x.beginPath(); x.arc(px, y, 2.6, 0, 7); x.fill(); x.lineWidth = 1.4; x.stroke(); }
     x.lineWidth = 3.6;
     PEGS.forEach(p => {
-      x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = '#d9c9a0'; x.fill();
+      x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = p[3] ? '#e0533a' : '#d9c9a0'; x.fill();
       sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke();
+      if (p[3]) { sk.beginPath(); sk.arc(p[0], p[1], p[2] + 4.5, 0, 7); sk.lineWidth = 1.6; sk.strokeStyle = 'rgba(224,83,58,.7)'; sk.stroke(); sk.strokeStyle = INK; x.fillStyle = '#fff'; x.beginPath(); x.arc(p[0], p[1], p[2] * .38, 0, 7); x.fill(); }
     });
     // Auffangbecher unten: geschlossen, mit Boden
     x.beginPath(); x.moveTo(CUP.x0, CUP.y0); x.lineTo(CUP.x0 + 8, CUP.y1); x.lineTo(CUP.x1 - 8, CUP.y1); x.lineTo(CUP.x1, CUP.y0); x.closePath();
@@ -127,6 +128,18 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   g.save(); g.scale(k, k); g.translate(0, 170);
   const B = boardSprite(col || '#d9a441');
   g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
+  // Windräder (drehen sich mit der Simulationszeit)
+  for (const sp of SPINNERS) {
+    const a = s.t * sp.om;
+    g.save(); g.translate(sp.x, sp.y); g.lineCap = 'round'; g.lineJoin = 'round';
+    for (let i = 0; i < 2; i++) {
+      g.save(); g.rotate(a + i * Math.PI);
+      g.beginPath(); g.moveTo(0, -sp.w); g.lineTo(sp.len, -sp.w); g.lineTo(sp.len, sp.w); g.lineTo(0, sp.w); g.closePath();
+      g.fillStyle = i ? '#4fa3e8' : '#ffd45a'; g.fill(); g.lineWidth = 2.6; g.strokeStyle = INK; g.stroke(); g.restore();
+    }
+    g.beginPath(); g.arc(0, 0, 7, 0, 7); g.fillStyle = '#e0533a'; g.fill(); g.lineWidth = 2.6; g.strokeStyle = INK; g.stroke();
+    g.restore();
+  }
   drawPourer(g, boxId, s, tm);
   s.balls.forEach((b, i) => {
     if (!b.on) return;
