@@ -118,6 +118,19 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
   for (let i = 0; i < 25; i++) { x = await api('/api/box', t, { box: ['standard', 'weltraum', 'kueche', 'sport', 'elemente'][i % 5] }); if (x.box === 'standard' && new Set(x.cands).size !== 10) dups++; if (x.cands.some(c => !ballsInBox(x.box).includes(c))) dups++; if (x.cands[x.win] !== x.ball.type) dups++; }
   ok(dups === 0, 'Ballbox: 10 verschiedene Bälle, Gewinner stimmt (Fehler: ' + dups + ')');
 }
+// Konto löschen
+{
+  const t = tok(), nm = 'Tdl' + Math.floor(Math.random() * 1e6);
+  await start(t, nm);
+  let x = await api('/api/delete', t, { name: 'falsch' });
+  ok(x.err === 'confirm_name', 'Konto löschen: falscher Name abgelehnt');
+  x = await api('/api/delete', t, { name: nm });
+  ok(x.ok, 'Konto gelöscht');
+  x = await api('/api/me', t);
+  ok(x.err === 'auth', 'gelöschtes Konto existiert nicht mehr');
+  x = await api('/api/login', tok(), { name: nm });
+  ok(x.ok, 'Name wieder frei');
+}
 // Botkampf
 function connect(token) {
   return new Promise(res => {

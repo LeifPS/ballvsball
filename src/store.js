@@ -140,6 +140,17 @@ export class Store extends DurableObject {
     this.q('UPDATE users SET name=? WHERE id=?', nm, u.id);
     return { ok: true, me: this.profile(this.userBy(tk)) };
   }
+  // Konto endgültig löschen: Name zur Bestätigung eintippen. Offene Tausche werden geschlossen, Bälle und Marktangebote verschwinden.
+  deleteAccount(tk, name) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    if (String(name || '').trim() !== u.name) return { err: 'confirm_name' };
+    for (const t of this.q("SELECT * FROM trades WHERE status='pending' AND (from_id=? OR to_id=?)", u.id, u.id)) this.closeTrade(t, 'cancelled');
+    this.q('DELETE FROM balls WHERE owner=?', u.id);
+    this.q('DELETE FROM tstars WHERE owner=?', u.id);
+    this.q('DELETE FROM users WHERE id=?', u.id);
+    return { ok: true };
+  }
   daily(tk) {
     const u = this.userBy(tk);
     if (!u) return { err: 'auth' };
