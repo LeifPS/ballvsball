@@ -191,14 +191,15 @@ export class Store extends DurableObject {
     } else reward = randType(RAR_KEYS[rIdx], boxId);
     // Mitspieler in der Schüssel: auch mal seltene, damit man "knapp daneben" erlebt
     const decoyRar = () => RAR_KEYS[pickWeighted([40, 30, 20, 10])];
-    // Keine zwei gleichen Bälle in der Schüssel (soweit die Box genug verschiedene hat)
+    // Keine zwei gleichen Bälle in der Schüssel (soweit die Box genug verschiedene hat), nie Bälle aus anderen Boxen
     const used = new Set([reward]), cands = [];
     for (let i = 0; i < 10; i++) {
       let t;
       for (let tr = 0; tr < 60; tr++) { t = randType(decoyRar(), boxId); if (!used.has(t)) break; }
-      if (used.has(t)) {   // kleine Box: mit Bällen aus anderen Boxen auffüllen
-        const rest = BALL_IDS.filter(x => !used.has(x));
-        t = rest[Math.floor(rnd() * rest.length)];
+      if (used.has(t)) {   // kleine Theme-Box: lieber Bälle der Box doppelt nehmen als fremde Bälle aus anderen Boxen
+        const own = ballsInBox(boxId), rest = own.filter(x => !used.has(x)), alt = own.filter(x => x !== reward);
+        const from = rest.length ? rest : alt.length ? alt : own;
+        t = from[Math.floor(rnd() * from.length)];
       }
       cands.push(t); used.add(t);
     }
