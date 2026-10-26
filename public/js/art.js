@@ -1,6 +1,6 @@
 // Zeichnen der Bälle, Geschosse und Effekte (Tonlinge-Stil, vorgerenderte Sprites mit 3 Boil-Frames).
 import { DEFS } from './engine.js';
-import { INK, DPR, mkSprite, spr } from './sk.js';
+import { INK, DPR, mkSprite, spr, sketchCtx } from './sk.js';
 import { BALLS, OB, PARTS, S0, R0 } from './ballart.js';
 
 const SC = DPR > 1.5 ? 1.35 : 1;
@@ -82,7 +82,15 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   /* hinten */
   if (type === 'saege') { const p = partSprite('sawdisc'); spr(g, p, 0, 0, f, (b.r + 8) / p.rad * 1.1, tm * 3); }
   else if (type === 'echo' && st.ghosts) { for (let i = 0; i < st.ghosts.length; i++) { const gh = st.ghosts[i]; spr(g, bodySprite('echo'), gh[0] - x, gh[1] - y, f + i, k * (SIDE / SIDE), 0, .3 - i * .05); } }
-  else if (type === 'spinne' && st.th) { for (let i = 0; i < st.th.length; i++) { g.strokeStyle = 'rgba(70,62,54,.75)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(st.th[i].x - x + Math.sin(tm * 9 + i) * .5, st.th[i].y - y); g.lineTo(0, 0); g.stroke(); } }
+  else if (type === 'spinne' && st.th) {   // Fäden: handgezeichnet (wackelige Doppellinie, leichter Durchhang, Knoten an der Wand)
+    g.lineCap = g.lineJoin = 'round';
+    for (let i = 0; i < st.th.length; i++) {
+      const ax = st.th[i].x - x, ay = st.th[i].y - y, mx = ax / 2, my = ay / 2, L = Math.hypot(ax, ay) || 1, sag = Math.min(8, L * .06) * Math.sin(tm * 2 + i), cx = mx - ay / L * sag, cy = my + ax / L * sag;
+      const sk = sketchCtx(g, i * 1.37 + (tf % 3) * 1.713, 26); g.lineWidth = 2.5; sk.lineWidth = 2.5; g.strokeStyle = 'rgba(48,42,38,.9)';
+      sk.beginPath(); sk.moveTo(ax, ay); sk.quadraticCurveTo(cx, cy, 0, 0); sk.stroke();
+      g.fillStyle = '#f3efe4'; g.lineWidth = 1.4; sk.beginPath(); sk.arc(ax, ay, 3.4, 0, 7); sk.fill(); sk.stroke();
+    }
+  }
   else if (type === 'magnet' && !b.preview) { const ph = (tm * 70) % 190; ringJ(g, 0, 0, ph, 1.1, 'rgba(211,58,58,' + (.35 * (1 - ph / 190)).toFixed(2) + ')', tf, b.id); }
   else if (type === 'supernova' && st.ch > 0) { const rr = b.r * (1.5 + st.ch * 2), gr = g.createRadialGradient(0, 0, 0, 0, 0, rr); gr.addColorStop(0, 'rgba(255,240,150,' + (.15 + st.ch * .5) + ')'); gr.addColorStop(1, 'rgba(255,240,150,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rr, 0, 7); g.fill(); }
   else if (type === 'schwarzloch') { ringJ(g, 0, 0, 38 + Math.sin(tm * 3) * 4, 1.2, 'rgba(139,79,201,.4)', tf, b.id); }
