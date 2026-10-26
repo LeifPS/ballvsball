@@ -505,12 +505,29 @@ function roomScreen() {
 }
 
 /* ================= Warteschlange ================= */
+const QTIPS = ['Tipp: Jeder Stern gibt +8 % Leben und Schaden.', 'Tipp: Starke Bälle haben oft eine klare Schwäche. Lies die Beschreibung.', 'Tipp: Wähle die Richtung so, dass du den Gegner schnell triffst.', 'Tipp: Doppelte Bälle kannst du verbessern oder auf dem Markt verkaufen.', 'Tipp: Nach 45 Sekunden rücken die Wände zusammen.', 'Tipp: Täglich gibt es eine Belohnung zum Abholen.'];
 function queueScreen(m) {
   S.screen = 'queue'; setView(null);
-  const t0 = Date.now();
-  show('<div class="col center" style="margin-top:4vh"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Suche Gegner ...</h2><div class="hero bounce">' + ball(topType(), 180, .62) + '</div>' +
-    '<div class="panel"><p>' + (m.mode === 2 ? 'Team-Kampf (2 gegen 2)' : 'Kampf (1 gegen 1)') + '</p><p id="qc" class="small"></p><div class="big" id="qt">0</div><p class="small mute">Wenn nach 15 Sekunden niemand gefunden wurde, spielt ein Bot mit.</p></div>' + btn('Abbrechen', 'unqueue') + '</div>');
-  every(() => { const e = $('#qt'); if (e) e.textContent = Math.floor((Date.now() - t0) / 1000); }, 300);
+  const t0 = Date.now(), wait = (m.wait || 15) * 1000, mine = topType();
+  show('<div class="col center qwrap"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Suche Gegner<span id="qdots"></span></h2>' +
+    '<div class="qstage"><div class="qside"><div class="qring"></div><div class="qball bounce">' + ball(mine, 120, .62) + '</div><div class="qname">' + esc(S.me.name) + '</div></div>' +
+    '<div class="qvs jit">VS</div>' +
+    '<div class="qside"><div class="qring r2"></div><div class="qball" id="qfoe"></div><div class="qname">???</div></div></div>' +
+    '<div class="panel"><p>' + (m.mode === 2 ? 'Team-Kampf (2 gegen 2)' : 'Kampf (1 gegen 1)') + '</p><p id="qc" class="small mute"></p>' +
+    '<div class="progress mt"><i id="qbar" style="width:0%"></i></div><p class="small mt" id="qmsg">Warte auf einen Mitspieler ... <b id="qt">0</b> s</p></div>' +
+    '<p class="small center" id="qtip" style="color:#fff;text-shadow:1px 1px 0 var(--ink);min-height:40px">' + QTIPS[Math.floor(Math.random() * QTIPS.length)] + '</p>' +
+    btn('Abbrechen', 'unqueue') + '</div>');
+  const foe = () => { const f = $('#qfoe'); if (!f) return; f.innerHTML = ball(BALL_IDS[Math.floor(Math.random() * BALL_IDS.length)], 120, .62, 'data-dark="1"'); decorate(f); };
+  foe();
+  every(() => {
+    const el = (Date.now() - t0) / 1000, t = $('#qt'), bar = $('#qbar'), msg = $('#qmsg'), d = $('#qdots');
+    if (t) t.textContent = Math.floor(el);
+    if (bar) bar.style.width = Math.min(100, el * 1000 / wait * 100) + '%';
+    if (d) d.textContent = '.'.repeat(Math.floor(el * 2) % 4);
+    if (msg && el * 1000 >= wait) msg.textContent = 'Kein Spieler gefunden: Ein Bot springt ein ...';
+  }, 250);
+  every(foe, 900);
+  let ti = 0; every(() => { const e = $('#qtip'); if (e) e.textContent = QTIPS[(ti = (ti + 1) % QTIPS.length)]; }, 4500);
   queueUpdate(m);
 }
 function queueUpdate(m) { const e = $('#qc'); if (e) e.textContent = m.count + ' Spieler in der Warteschlange'; }
