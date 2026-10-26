@@ -23,6 +23,7 @@ const tut = new Set(), { DEFS } = await import('../public/js/engine.js');
 for (let i = 0; i < 3; i++) {
   r = await api('/api/box', t1, {});
   ok(r.ok && DEFS[r.ball.type].rarity === 'gewoehnlich' && !tut.has(r.ball.type), 'Tutorial-Box ' + (i + 1) + ': neuer gewöhnlicher Ball ' + (r.ball && r.ball.type));
+  ok(r.ball.type === ['stachel', 'feuer', 'bumerang'][i], 'Tutorial-Ball ' + (i + 1) + ' ist ' + ['stachel', 'feuer', 'bumerang'][i]);
   tut.add(r.ball.type);
   const { simBox } = await import('../public/js/boxsim.js');
   ok(simBox(r.seed, 10).order[0] === r.win, 'Box-Seed liefert den Gewinner auf Platz 1');
