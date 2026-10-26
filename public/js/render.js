@@ -94,11 +94,15 @@ function boardSprite(col) {
     x.strokeStyle = INK; x.lineWidth = 3.6;
     sk.beginPath(); sk.moveTo(0, -TOP); sk.lineTo(0, 175); sk.lineTo(135, 372); sk.lineTo(135, 392); sk.stroke();
     sk.beginPath(); sk.moveTo(BW, -TOP); sk.lineTo(BW, 175); sk.lineTo(BW - 135, 372); sk.lineTo(BW - 135, 392); sk.stroke();
-    // Ablagen: dicke Leisten mit Tuschekante
+    // Ablagen: Holzbretter, handgezeichnet (wacklige Kontur, versetzte Füllung, Maserung)
     for (const sh of SHELVES) {
-      x.lineCap = 'round'; x.strokeStyle = INK; x.lineWidth = 9; x.beginPath(); x.moveTo(sh[0], sh[1]); x.lineTo(sh[2], sh[3]); x.stroke();
-      x.strokeStyle = col; x.lineWidth = 4.6; x.beginPath(); x.moveTo(sh[0], sh[1]); x.lineTo(sh[2], sh[3]); x.stroke();
-      sk.lineWidth = 1.8; sk.strokeStyle = INK; sk.beginPath(); sk.moveTo(sh[0], sh[1] - 4.2); sk.lineTo(sh[2], sh[3] - 4.2); sk.stroke();
+      const dx = sh[2] - sh[0], dy = sh[3] - sh[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy * 5, ny = ux * 5;
+      x.lineJoin = 'round'; x.lineWidth = 3; x.strokeStyle = INK;
+      sk.lineWidth = 3; sk.beginPath(); sk.moveTo(sh[0] + nx, sh[1] + ny); sk.lineTo(sh[2] + nx, sh[3] + ny); sk.lineTo(sh[2] - nx, sh[3] - ny); sk.lineTo(sh[0] - nx, sh[1] - ny); sk.closePath();
+      x.fillStyle = '#d9a441'; sk.fill(); sk.stroke();
+      x.strokeStyle = '#a87a2a'; sk.lineWidth = 1.6; sk.strokeStyle = '#a87a2a';
+      sk.beginPath(); sk.moveTo(sh[0] + ux * 6, sh[1] + uy * 6 + 1.5); sk.lineTo(sh[2] - ux * 6, sh[3] - uy * 6 + 1.5); sk.moveTo(sh[0] + ux * 10 + nx * .3, sh[1] + uy * 10 - 2); sk.lineTo(sh[0] + ux * L * .55, sh[1] + uy * L * .55 - 2); sk.stroke();
+      sk.strokeStyle = INK; x.strokeStyle = INK;
     }
     x.strokeStyle = INK; x.lineWidth = 3.6;
     PEGS.forEach(p => {
