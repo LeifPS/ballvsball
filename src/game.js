@@ -6,6 +6,7 @@ import { runFight, DEFS, BALL_IDS, DT } from '../public/js/engine.js';
 
 const LIVES = 3, LIVES_FFA = 2;   // Mehrspieler (3 oder 4 Spieler, jeder gegen jeden): weniger Leben, damit es nicht ewig dauert
 const QUEUE_WAIT = 15000;
+const GONE_MS = 12000;   // so lange wartet ein Kampf auf einen getrennten Spieler, bevor er für ihn automatisch weiterläuft
 const PICK_SECS = 15, DIR_SECS = 12;
 const BOT_NAMES = ['Kugel-Karl', 'Rollo', 'Bella Bounce', 'Dotti', 'Prall', 'Hopsi', 'Rumpel', 'Klecks', 'Purzel', 'Mocca', 'Fleck', 'Pünktchen'];
 const CODE_CH = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
@@ -140,8 +141,9 @@ export class Game extends DurableObject {
     this.leaveQueue(c, true);
     this.roomLeave(c, true);
     if (c.match && c.p && c.p.conn === c) {
-      c.p.conn = null;
+      c.p.conn = null; c.p.dc = Date.now();
       const m = c.match;
+      setTimeout(() => this.progress(m), GONE_MS + 500);
       // Kurze Verbindungsabbrüche (Handy-Netz) sollen den Kampf nicht beenden: 45 s Zeit zum Wiederverbinden
       if (!this.humansActive(m) && !m.grace) m.grace = setTimeout(() => { m.grace = 0; if (!m.over && !this.humansActive(m)) this.abort(m); }, 45000);
       this.progress(m);
@@ -310,14 +312,17 @@ export class Game extends DurableObject {
   // Prüft, ob die aktuelle Phase vorzeitig enden kann
   progress(m) {
     if (m.aborted || m.over) return;
+    // Kurz getrennte Spieler (Handy-Netz, App im Hintergrund) bekommen Zeit zum Wiederverbinden: Die Phase endet erst früher, wenn sie länger als GONE_MS weg sind.
+    // Sonst würde der Server den ganzen Kampf mit Zufallswahl durchlaufen lassen, und beim Wiederverbinden wäre er "beendet".
+    if (!this.humansActive(m)) return;   // niemand verbunden: Kampf wartet (Zeitgeber laufen weiter, nach 45 s Abbruch)
+    const gone = p => !p.conn && Date.now() - (p.dc || 0) > GONE_MS;
     const act = m.players.filter(p => !p.bot && !p.left && !p.out);
     if (m.phase === 'pick') {
-      // Getrennte Spieler: automatisch wählen lassen
-      if (act.every(p => p.pick || !p.conn)) this.endPick(m);
+      if (act.every(p => p.pick || gone(p))) this.endPick(m);
     } else if (m.phase === 'dir') {
-      if (act.every(p => p.dir !== null || !p.conn)) this.endDir(m);
+      if (act.every(p => p.dir !== null || gone(p))) this.endDir(m);
     } else if (m.phase === 'fight') {
-      if (act.every(p => p.ready || !p.conn)) this.endFight(m);
+      if (act.every(p => p.ready || gone(p))) this.endFight(m);
     }
   }
 
@@ -505,7 +510,7 @@ export class Game extends DurableObject {
   reattach(m, c) {
     const p = m.players.find(x => x.userId === c.user.id);
     if (!p || p.left) return;
-    p.conn = c; c.match = m; c.p = p;
+    p.conn = c; c.match = m; c.p = p; p.dc = 0;
     clearTimeout(m.grace); m.grace = 0;
     const pl = m.players.map(x => ({ slot: x.slot, name: x.name, team: x.team, bot: x.bot }));
     this.send(c, { t: 'match_start', id: m.id, mode: m.mode, n: m.n, ffa: m.ffa, friendly: m.friendly, players: pl, you: p.slot, lives: m.lives, resume: true });
