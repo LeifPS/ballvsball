@@ -72,15 +72,13 @@ const KLEIN_DEF = {
   cups: [{ x0: 206, y0: 268, x1: 258, y1: 296 }, { x0: 236, y0: 322, x1: 290, y1: 350 }]
 };
 // Gefühlsbox (nach der Zeichnung von Erik und Thore): Stifte oben, zwei Gitterablagen, Propeller, Flummi, zwei Kanonen und Wind an den Seiten
-const FEEL_PEGS = [[62, 52], [100, 84], [128, 40], [172, 46], [150, 88], [212, 28], [250, 30], [214, 68], [258, 78], [62, 8], [150, 8], [96, 160], [150, 168], [206, 160], [60, 190], [240, 188]].map(p => [p[0], p[1], 5.5, 0]);
+// Gefühlsbox: Dropper aus dem Editor (von Erik und Thore gebaut): Gitterablagen oben, Propeller, Flummi und starker Wind an den Seiten unten
 const FEEL_DEF = {
-  id: 'gefuehl', shape: { sh: 175, half: 15 }, pegs: FEEL_PEGS,
-  grids: [[22, 104, 118, 134], [278, 104, 182, 134]],
-  blocks: [[138, 276, 162, 292]],
-  spinners: [{ x: 112, y: 232, len: 44, w: 4.5, om: 2.2 }],
-  flum: [[214, 214, 14]],
-  cannons: [{ x0: 78, y0: 290, x1: 114, y1: 336, tx: 165, ty: 140, pw: 290 }, { x0: 186, y0: 290, x1: 222, y1: 336, tx: 135, ty: 140, pw: 290 }],
-  wind: [{ x0: 104, y0: 338, x1: 134, y1: 384, ax: -330, ay: -40 }, { x0: 166, y0: 338, x1: 196, y1: 384, ax: 330, ay: -40 }]
+  id: 'gefuehl', shape: { sh: 175, half: 15 },
+  spinners: [{ x: 122, y: 200, len: 44, w: 4.5, om: 0.3 }],
+  flum: [[208, 200, 14]],
+  wind: [{ x0: 48, y0: 240, x1: 136, y1: 402, ax: -5000, ay: -40 }, { x0: 164, y0: 236, x1: 254, y1: 402, ax: 5000, ay: -40 }, { x0: 256, y0: 162, x1: 300, y1: 236, ax: -500, ay: 0 }, { x0: -2, y0: 160, x1: 46, y1: 242, ax: 500, ay: 0 }],
+  grids: [[0, 40, 100, 60], [200, 60, 302, 38]]
 };
 const STD_DEF = { id: 'standard', shape: { sh: 175, half: 15 }, pegs: PEGS, shelves: SHELVES, spinners: SPINNERS };
 export const DEFS_DROPPER = { standard: STD_DEF, klein: KLEIN_DEF, gefuehl: FEEL_DEF };

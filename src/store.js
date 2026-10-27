@@ -302,7 +302,7 @@ export class Store extends DurableObject {
     for (let k = 0; k < 900 && seed < 0; k++) {
       const s = (base + k * 7919) % 2147483647;
       const r = simBox(s, 10, layoutOf(boxId));
-      if (r.reached < 1 || r.order[0] !== winIdx) continue;
+      if (r.reached < 1 || r.order[0] !== winIdx || r.times[0] > 13) continue;   // der Gewinner soll nicht ewig brauchen
       if (baitIdx >= 0 && k < 600 && r.order[1] !== baitIdx && r.order[2] !== baitIdx) continue;
       seed = s;
     }
