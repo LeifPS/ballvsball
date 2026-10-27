@@ -1,16 +1,21 @@
 // Zeichnen der Bälle, Geschosse und Effekte (Tonlinge-Stil, vorgerenderte Sprites mit 3 Boil-Frames).
 import { DEFS } from './engine.js';
 import { INK, DPR, mkSprite, spr, sketchCtx } from './sk.js';
-import { BALLS, OB, PARTS, S0, R0 } from './ballart.js';
+import { BALLS, OB, PARTS, S0, R0, setNoHeld } from './ballart.js';
+import { nearestEnemy } from './core.js';
 
 const SC = DPR > 1.5 ? 1.35 : 1;
 const SIDE = 200;
 const BODY = {}, OBJS_SP = {}, PART_SP = {};
 const KS = { riese: .87, glas: 1.28, toast: .98, kreisel: .94, ufo: .8 };   // Sprite-Körper passt zum Radius
 
-export function bodySprite(type) {
+export function bodySprite(type, fight) {
+  if (fight && HELD[type]) return BODYF[type] || (BODYF[type] = mkSprite('b_' + type, SIDE, S0, (c, s) => { setNoHeld(true); try { BALLS[type](c, s); } finally { setNoHeld(false); } }, SC));
   return BODY[type] || (BODY[type] = mkSprite('b_' + type, SIDE, S0, BALLS[type], SC));
 }
+// Gehaltene Waffen: drehen sich im Kampf zum nächsten Gegner und zucken beim Schuss zurück
+const BODYF = {};
+const HELD = { turret: { part: 'barrel', d: .15, flash: true }, pfeil: { part: 'bow', d: .35, nock: 'bownock' }, messer: { part: 'knife', d: .45 }, astronaut: { part: 'blaster', d: .5, flash: true } };
 function objSprite(key) {
   let sp = OBJS_SP[key];
   if (!sp) {
@@ -97,7 +102,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   else if (type === 'tornado') { const p = partSprite('swirl'); spr(g, p, 0, 0, f, (b.r + 14) / p.rad, tm * 4, .55); }
   /* Körper */
   g.save(); g.rotate(tilt); g.scale(sx * bob * k, sy * bob * k);
-  const sp = bodySprite(type);
+  const sp = bodySprite(type, !b.preview);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
   // Weißes Aufblinken: nur die Silhouette des Balls (kein Kreis), bei Treffern kurz, bei Dauerschaden langsam pulsierend
   const pulse = b.dotT > 0 ? .55 * Math.pow(Math.max(0, Math.sin(tm * 13 + b.id)), 2) : 0;
@@ -134,6 +139,19 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   } else if (type === 'drache' && st.breath > 0) {
     const ax = st.ax, ay = st.ay, p = objSprite('fireZone');
     for (let i = 0; i < 9; i++) { const dist = b.r + 8 + i * 15, w = .45 + i * .1; spr(g, p, ax * dist, ay * dist, f + i, w * (.9 + .15 * Math.sin(tm * 14 + i)), 0, .88); }
+  }
+  const H = HELD[type];
+  if (H && !b.preview) {
+    const e = nearestEnemy(sim, b), ta = e ? Math.atan2(e.y - b.y, e.x - b.x) : (v.aim == null ? 0 : v.aim);
+    if (v.aim == null) v.aim = ta;
+    let da = ta - v.aim; da = Math.atan2(Math.sin(da), Math.cos(da)); v.aim += da * .3;
+    const since = sim.t - (b.fireT == null ? -9 : b.fireT), kick = Math.max(0, 1 - since / .16), sc = b.r / 20;
+    g.save(); g.rotate(v.aim); if (Math.cos(v.aim) < 0) g.scale(1, -1);
+    g.translate(-kick * 4 * sc, 0);
+    spr(g, partSprite(H.part), 0, 0, f, sc, 0);
+    if (H.nock && since > .4) spr(g, partSprite(H.nock), -2 * sc, 0, f, sc, 0);
+    if (H.flash && kick > .55) { star(g, 36 * sc, 0, 6 * sc * kick, '#ffe14a'); }
+    g.restore();
   }
   if (b.burn > 0) {
     const p = objSprite('fireZone');

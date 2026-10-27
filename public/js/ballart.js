@@ -4,6 +4,9 @@ import { INK, FS, cEye, cBlush, hexA } from './sk.js';
 export const S0 = 76;                // Bezugsgröße der Sprites
 export const R0 = S0 * .36;          // Körperradius im Sprite
 const PI = Math.PI;
+// Im Kampf werden Waffen getrennt gezeichnet (drehen sich zum Gegner): dann fehlen sie im Körper-Sprite
+let NOHELD = false;
+export const setNoHeld = v => { NOHELD = v; };
 
 /* ---------- Bausteine ---------- */
 function el(c, x, y, rx, ry, col, rot) { c.beginPath(); c.ellipse(x, y, rx, ry, rot || 0, 0, 7); FS(c, col); }
@@ -69,7 +72,7 @@ function hatch(c, r, col, clip) {  // Streifen im Körper
 export const BALLS = {
   /* ===== Standard ===== */
   stachel(c, s) { const r = s * .36; for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; spike(c, Math.cos(a) * r * .95, Math.sin(a) * r * .95, a + 1.5708, s * .17, s * .07, '#d6dae2'); } body(c, s, '#e4e1da'); face(c, s, { angry: 1, mouth: 'flat', blush: 0 }); },
-  turret(c, s) { const r = s * .36; c.save(); c.rotate(-.5); c.beginPath(); c.rect(r * .6, -s * .06, s * .3, s * .12); FS(c, '#9aa1ad'); c.restore(); body(c, s, '#c4cad4'); face(c, s, {}); },
+  turret(c, s) { const r = s * .36; if (!NOHELD) { c.save(); c.rotate(-.5); c.beginPath(); c.rect(r * .6, -s * .06, s * .3, s * .12); FS(c, '#9aa1ad'); c.restore(); } body(c, s, '#c4cad4'); face(c, s, {}); },
   ramm(c, s) { const r = s * .36;[-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .4, -r * .8); c.quadraticCurveTo(d * r * .9, -r * 1.3, d * r * 1.05, -r * .75); c.lineTo(d * r * .8, -r * .5); c.closePath(); FS(c, '#f3ead2'); }); body(c, s, '#c98b5a', { rx: 1.08, ry: 1.02 }); face(c, s, { angry: 1, mouth: 'frown', er: .17 }); },
   glas(c, s) { c.globalAlpha = .85; body(c, s, '#cbeefa', { rx: .78, ry: .78 }); c.globalAlpha = 1; c.lineWidth = s * .03; c.beginPath(); c.moveTo(s * .03, -s * .22); c.lineTo(s * .09, -s * .08); c.lineTo(s * .02, s * .02); c.stroke(); face(c, s, { mouth: 'o', sp: .38, er: .22 }); },
   feuer(c, s) { const r = s * .36; c.beginPath(); c.moveTo(-r * .5, -r * .6); c.quadraticCurveTo(-r * .3, -r * 1.3, 0, -r * 1.5); c.quadraticCurveTo(r * .1, -r * 1.0, r * .5, -r * .6); c.closePath(); FS(c, '#ffb62e'); body(c, s, '#f26a3a'); face(c, s, { mouth: 'grin' }); },
@@ -169,8 +172,10 @@ export const BALLS = {
   pfeil(c, s) {
     const r = s * .36; body(c, s, '#e0bf8a');
     c.save(); c.rotate(-.5); pl(c, [[-r * .6, -r * 1.0], [r * .5, -r * 1.0], [r * .5, -r * 1.35], [-r * .6, -r * 1.35]], '#d33a3a'); c.restore();
-    thick(c, s * .045, '#7a4a21', () => { c.beginPath(); c.moveTo(r * 1.15, -r * .8); c.quadraticCurveTo(r * 1.9, 0, r * 1.15, r * .8); });
-    ln(c, r * 1.15, -r * .8, r * 1.15, r * .8, s * .015);
+    if (!NOHELD) {
+      thick(c, s * .045, '#7a4a21', () => { c.beginPath(); c.moveTo(r * 1.15, -r * .8); c.quadraticCurveTo(r * 1.9, 0, r * 1.15, r * .8); });
+      ln(c, r * 1.15, -r * .8, r * 1.15, r * .8, s * .015);
+    }
     face(c, s, { dy: .02, angry: 1 });
   },
   rakete(c, s) {
@@ -250,8 +255,8 @@ export const BALLS = {
   },
   messer(c, s) {
     const r = s * .36; body(c, s, '#d6dae0');
-    c.save(); c.translate(r * 1.0, -r * .1); c.rotate(.35);
-    pl(c, [[0, -r * .12], [r * 1.5, -r * .12], [r * 1.75, r * .25], [0, r * .25]], '#f1f4f8'); pl(c, [[-r * .7, -r * .15], [0, -r * .15], [0, r * .28], [-r * .7, r * .28]], '#7a4a21'); c.restore();
+    if (!NOHELD) { c.save(); c.translate(r * 1.0, -r * .1); c.rotate(.35);
+    pl(c, [[0, -r * .12], [r * 1.5, -r * .12], [r * 1.75, r * .25], [0, r * .25]], '#f1f4f8'); pl(c, [[-r * .7, -r * .15], [0, -r * .15], [0, r * .28], [-r * .7, r * .28]], '#7a4a21'); c.restore(); }
     face(c, s, { angry: 1, mouth: 'flat', blush: 0 });
   },
   pfanne(c, s) {
@@ -692,6 +697,11 @@ export const PARTS = {
   blade: [18, c => { el(c, 12, 0, 12, 4, '#cfd6e2'); ci(c, 0, 0, 2.6, '#8a8f99'); }],
   pan: [24, c => { c.beginPath(); c.ellipse(0, 0, 13, 18, 0, 0, 7); FS(c, '#585d68'); c.beginPath(); c.ellipse(0, 0, 9, 14, 0, 0, 7); c.fillStyle = '#7a8090'; c.fill(); }],
   shieldarc: [30, c => { c.lineWidth = 7; c.strokeStyle = INK; c.beginPath(); c.arc(0, 0, 26, -.8, .8); c.stroke(); c.lineWidth = 4; c.strokeStyle = '#9fb3cf'; c.beginPath(); c.arc(0, 0, 26, -.8, .8); c.stroke(); }],
+  barrel: [32, c => { pl(c, [[9, -4.5], [31, -4.5], [31, 4.5], [9, 4.5]], '#8f97a6'); pl(c, [[28, -6.5], [33, -6.5], [33, 6.5], [28, 6.5]], '#6d7584'); ci(c, 8, 0, 6.5, '#7d8594'); }],
+  bow: [34, c => { thick(c, 3.2, '#7a4a21', () => { c.beginPath(); c.moveTo(19, -17); c.quadraticCurveTo(36, 0, 19, 17); }); ln(c, 19, -17, 19, 17, 1.1, '#f1ecdc'); ci(c, 29, 0, 1.6, '#4a2c12'); }],
+  bownock: [34, c => { ln(c, 3, 0, 25, 0, 2.6, '#7a4a21'); pl(c, [[24, -3.6], [33, 0], [24, 3.6]], '#d6dae2'); pl(c, [[3, 0], [-1, -4], [6, 0], [-1, 4]], '#d33a3a'); }],
+  knife: [40, c => { pl(c, [[9, -3.2], [18, -3.2], [18, 3.2], [9, 3.2]], '#7a4a21'); pl(c, [[18, -4.2], [32, -4.2], [38, 2], [18, 4.2]], '#eef2f8'); }],
+  blaster: [32, c => { pl(c, [[9, -4], [26, -4], [26, 3], [9, 3]], '#8aa0c8'); pl(c, [[9, 2], [15, 2], [14, 9], [9, 9]], '#4d5f86'); ci(c, 27, -.5, 2.8, '#ff6a8a'); }],
   swirl: [20, c => { c.lineWidth = 3; for (let k = 0; k < 2; k++) { c.beginPath(); c.arc(0, 0, 12 + k * 7, k * 3, k * 3 + 3.6); c.stroke(); } }]
 };
 

@@ -220,6 +220,7 @@ export const OBJS = {
 export function newObj(sim, k, b, x, y, extra) {
   const o = { k, team: b.team, owner: b.id, x, y, vx: 0, vy: 0, cd: {}, dead: false };
   for (const key in extra) o[key] = extra[key];
+  if (extra.vx || extra.vy) b.fireT = sim.t;   // nur für die Darstellung (Waffe zuckt zurück)
   return spawn(sim, o);
 }
 
