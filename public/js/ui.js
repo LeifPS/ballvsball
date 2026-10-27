@@ -461,38 +461,48 @@ async function market(resetPage) {
 }
 
 /* ================= Tauschen ================= */
+// Ball-Kachel im Tausch: unbekannte Sorten (hast du selbst nicht) erscheinen als Silhouette mit ???
+function tball(b, o) {
+  o = o || {};
+  const hid = !b.type, d = hid ? null : DEFS[b.type];
+  return '<' + (o.act ? 'button' : 'div') + ' class="ttile' + (o.on ? ' on' : '') + (hid ? ' hid' : '') + '"' + (o.act ? ' data-act="' + o.act + '" data-uid="' + b.uid + '"' : '') + (d ? ' style="--rc:' + RARITY[d.rarity].color + '"' : '') + '>' +
+    ball(hid ? 'stachel' : b.type, 58, .72, hid ? 'data-dark="1"' : '') + '<span class="tn">' + (hid ? '???' : esc(d.name)) + '</span>' + (b.stars ? '<span class="ts">' + starsHTML(b.stars, 12) + '</span>' : '') + (o.on ? '<span class="tck">' + gi('check', 20) + '</span>' : '') + '</' + (o.act ? 'button' : 'div') + '>';
+}
+const tside = (list, coins) => '<div class="tcol">' + (list.length ? list.map(b => tball(b)).join('') : '') + (coins ? '<div class="tcoin">' + coinHTML(coins) + '</div>' : '') + (!list.length && !coins ? '<span class="mute small">nichts</span>' : '') + '</div>';
 async function trades() {
   S.screen = 'trades'; setView(null);
   const tab = S.tr.tab;
+  let r;
+  if (S.trSkip && S.trData) { r = S.trData; S.trSkip = false; } else { r = await api('/api/trades'); if (r.err) { toast(errText(r.err)); return; } S.trData = r; }
   let body = '';
   if (tab === 'new') {
     const t = S.tnew, myFree = S.me.balls.filter(b => !b.lock);
-    const chip = (b, set, act) => '<button class="tab' + (set.has(b.uid) ? ' on' : '') + '" data-act="' + act + '" data-uid="' + b.uid + '">' + esc(ballName(b.type)) + (b.stars ? ' ' + b.stars + '*' : '') + '</button>';
-    body = '<div class="row gap6"><div class="inp grow"><input id="tname" placeholder="Spielername" value="' + esc(t.name) + '"></div><button class="btn sm pri" data-act="tfind">Suchen</button></div>' +
-      '<div class="err" id="err"></div>' +
-      (t.player ? '<div class="panel"><h3>Du gibst</h3><div class="tabs mt">' + (myFree.map(b => chip(b, t.give, 'tgive')).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
+    const sumG = t.give.size, sumW = t.want.size;
+    body = '<div class="panel"><p class="small mute" style="margin-bottom:6px">Mit wem willst du tauschen?</p><div class="row gap6"><div class="inp grow"><input id="tname" placeholder="Spielername" value="' + esc(t.name) + '"></div><button class="btn sm pri" data-act="tfind">Suchen</button></div><div class="err" id="err"></div></div>' +
+      (t.player ? '<div class="panel tplayer"><b>' + esc(t.player.name) + '</b><span class="small mute">' + t.player.wins + ' Siege - ' + t.player.losses + ' Niederlagen</span></div>' +
+        '<div class="panel"><h3>Du gibst</h3><div class="tgrid">' + (myFree.map(b => tball(b, { act: 'tgive', on: t.give.has(b.uid) })).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
         '<div class="row gap6 mt"><span>und</span><div class="inp" style="width:100px"><input id="cgive" type="number" inputmode="numeric" min="0" placeholder="0"></div>' + gi('coin', 22) + '</div></div>' +
-        '<div class="panel"><h3>Du willst von ' + esc(t.player.name) + '</h3><div class="tabs mt">' + (t.player.balls.map(b => chip(b, t.want, 'twant')).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
+        '<div class="tarrow">' + '<span style="display:inline-flex;transform:rotate(-90deg)">' + gi('arrow', 28) + '</span>' + '</div>' +
+        '<div class="panel"><h3>Du bekommst von ' + esc(t.player.name) + '</h3><p class="small mute">Bälle, die du noch nicht kennst, bleiben verdeckt.</p><div class="tgrid">' + (t.player.balls.map(b => tball(b, { act: 'twant', on: t.want.has(b.uid) })).join('') || '<span class="mute small">Nichts frei</span>') + '</div>' +
         '<div class="row gap6 mt"><span>und</span><div class="inp" style="width:100px"><input id="cwant" type="number" inputmode="numeric" min="0" placeholder="0"></div>' + gi('coin', 22) + '</div></div>' +
-        btn('Angebot senden', 'tsend', '', 'pri') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Suche einen Spieler über seinen Namen.</p>');
+        '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du gibst ' + sumG + ' Ball' + (sumG === 1 ? '' : 'e') + ' und bekommst ' + sumW + ' Ball' + (sumW === 1 ? '' : 'e') + '.</p>' +
+        btn('Angebot senden', 'tsend', '', 'pri big') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Suche einen Spieler über seinen Namen.</p>');
   } else {
-    const r = await api('/api/trades');
-    if (r.err) { toast(errText(r.err)); return; }
     const list = tab === 'in' ? r.incoming : tab === 'out' ? r.outgoing : r.history;
-    const bl = a => a.length ? a.map(b => esc(b.type ? ballName(b.type) : '?') + (b.stars ? ' ' + b.stars + '*' : '')).join(', ') : '-';
+    const ST = { accepted: 'angenommen', declined: 'abgelehnt', cancelled: 'zurückgezogen', expired: 'abgelaufen' };
     body = list.length ? list.map(t => {
       const other = t.mine ? t.to : t.from;
       let acts = '';
-      if (tab === 'in') acts = '<div class="row gap6"><button class="btn sm green" data-act="tans" data-id="' + t.id + '" data-a="accept">Annehmen</button><button class="btn sm red" data-act="tans" data-id="' + t.id + '" data-a="decline">Ablehnen</button></div>';
-      else if (tab === 'out') acts = '<button class="btn sm" data-act="tans" data-id="' + t.id + '" data-a="cancel">Zurückziehen</button>';
+      if (tab === 'in') acts = '<div class="row gap6"><div class="grow"><button class="btn sm green" style="width:100%" data-act="tans" data-id="' + t.id + '" data-a="accept">Annehmen</button></div><div class="grow"><button class="btn sm red" style="width:100%" data-act="tans" data-id="' + t.id + '" data-a="decline">Ablehnen</button></div></div>';
+      else if (tab === 'out') acts = '<button class="btn sm" style="width:100%" data-act="tans" data-id="' + t.id + '" data-a="cancel">Zurückziehen</button>';
       const you = t.mine ? t.give : t.want, they = t.mine ? t.want : t.give, cy = t.mine ? t.coinsGive : t.coinsWant, ct = t.mine ? t.coinsWant : t.coinsGive;
-      const ST = { accepted: 'angenommen', declined: 'abgelehnt', cancelled: 'zurückgezogen', expired: 'abgelaufen' };
-      return '<div class="card col" style="gap:6px"><div class="row sb"><b>' + esc(other) + '</b>' + (tab === 'hist' ? '<span class="small">' + (ST[t.status] || t.status) + '</span>' : '') + '</div>' +
-        '<p class="small">Du gibst: ' + bl(you) + (cy ? ' + ' + coinHTML(cy) : '') + '</p><p class="small">Du bekommst: ' + bl(they) + (ct ? ' + ' + coinHTML(ct) : '') + '</p>' + acts + '</div>';
-    }).join('') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Nichts da.</p>';
+      return '<div class="card tcard"><div class="row sb"><b style="font:400 24px var(--f-display)">' + esc(other) + '</b>' + (tab === 'hist' ? '<span class="small tst ' + t.status + '">' + (ST[t.status] || t.status) + '</span>' : '') + '</div>' +
+        '<div class="tflow"><div class="tbox"><span class="small mute">Du gibst</span>' + tside(you, cy) + '</div><div class="tmid">' + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 22) + '</span>' + gi('arrow', 22) + '</div><div class="tbox"><span class="small mute">Du bekommst</span>' + tside(they, ct) + '</div></div>' + acts + '</div>';
+    }).join('') : '<div class="panel center"><p>Hier ist nichts.</p></div>';
   }
-  const tabs = [['in', 'Eingehend'], ['out', 'Ausgehend'], ['new', 'Neu'], ['hist', 'Verlauf']];
-  show('<div class="col">' + backBar('Tauschen') + '<div class="tabs">' + tabs.map(t => '<button class="tab' + (tab === t[0] ? ' on' : '') + '" data-act="ttab" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' + body + '</div>');
+  const cnt = { in: r.incoming.length, out: r.outgoing.length };
+  const tabs = [['in', 'Eingehend'], ['out', 'Ausgehend'], ['new', 'Neues Angebot'], ['hist', 'Verlauf']];
+  show('<div class="col">' + backBar('Tauschen') + '<div class="tabs ttabs">' + tabs.map(t => '<button class="tab' + (tab === t[0] ? ' on' : '') + '" data-act="ttab" data-v="' + t[0] + '">' + t[1] + (cnt[t[0]] ? '<i class="tbadge">' + cnt[t[0]] + '</i>' : '') + '</button>').join('') + '</div>' + body + '</div>');
 }
 
 /* ================= Mehrspieler ================= */
@@ -930,7 +940,7 @@ const ACT = {
 };
 function keepTradeInputs() {
   const a = ($('#cgive') || {}).value, b = ($('#cwant') || {}).value, nm = ($('#tname') || {}).value;
-  S.tnew.name = nm || S.tnew.name;
+  S.tnew.name = nm || S.tnew.name; S.trSkip = true;
   trades().then(() => { if ($('#cgive')) $('#cgive').value = a || ''; if ($('#cwant')) $('#cwant').value = b || ''; });
 }
 document.addEventListener('pointerdown', () => unlock(), { once: false, passive: true });

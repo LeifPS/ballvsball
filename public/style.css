@@ -174,3 +174,27 @@ canvas.boxart{display:block;flex:none;flex-shrink:0;max-width:none}
 .mart .mb{display:block;line-height:0}
 .mvs{font-size:28px;margin:0 2px;color:var(--ink)}
 .htile.off{filter:grayscale(.85);opacity:.6;cursor:default}
+
+/* Tauschen */
+.ttabs .tab{position:relative}
+.tbadge{position:absolute;top:-9px;right:-6px;min-width:22px;height:22px;padding:0 5px;border-radius:12px;background:#e4574a;color:#fff;border:2px solid var(--ink);font:400 15px/18px var(--f-display);font-style:normal;text-align:center}
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px;max-height:340px;overflow:auto;padding:4px}
+.ttile{position:relative;display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 2px 6px;background:var(--paper) var(--noise);border:2.4px solid var(--ink);border-radius:var(--wob2);box-shadow:1px 3px 0 var(--ink);color:var(--ink);min-width:0;line-height:1.05}
+.ttile .tn{font:400 17px/1.05 var(--f-body);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ttile[style*="--rc"]{border-bottom:5px solid var(--rc)}
+button.ttile:active{transform:translate(1px,2px)}
+.ttile.on{background:#fff2b0;box-shadow:0 0 0 3px #f4c942,1px 3px 0 var(--ink)}
+.ttile .tck{position:absolute;top:-8px;right:-6px;background:#a9e0a0;border:2px solid var(--ink);border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center}
+.ttile.hid{background:#d9d4c3 var(--noise)}
+.tplayer{display:flex;flex-direction:column;align-items:center;gap:2px}
+.tplayer b{font:400 30px var(--f-display)}
+.tarrow{display:flex;justify-content:center;margin:-6px 0}
+.tcard{display:flex;flex-direction:column;gap:8px}
+.tflow{display:grid;grid-template-columns:1fr 34px 1fr;gap:4px;align-items:start}
+.tbox{display:flex;flex-direction:column;gap:4px;min-width:0}
+.tcol{display:grid;grid-template-columns:repeat(auto-fill,minmax(70px,1fr));gap:6px}
+.tcol .ttile{box-shadow:1px 2px 0 var(--ink)}
+.tmid{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;align-self:center}
+.tcoin{grid-column:1/-1;text-align:center;font:400 22px var(--f-display)}
+.tst{padding:1px 10px;border:2px solid var(--ink);border-radius:12px;background:#eee}
+.tst.accepted{background:#a9e0a0}.tst.declined,.tst.cancelled,.tst.expired{background:#ffb4a8}

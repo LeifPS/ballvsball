@@ -375,12 +375,16 @@ export class Store extends DurableObject {
     if (!u) return { err: 'auth' };
     const p = this.userByName(String(name || '').trim());
     if (!p) return { err: 'no_player' };
-    const balls = this.q('SELECT uid,type,stars FROM balls WHERE owner=? AND lock=0 ORDER BY uid', p.id);
+    // Bälle, die du selbst nicht besitzt (nicht entdeckt hast), bleiben für dich verdeckt
+    const known = this.knownTypes(u.id);
+    const balls = this.q('SELECT uid,type,stars FROM balls WHERE owner=? AND lock=0 ORDER BY uid', p.id).map(b => known.has(b.type) ? b : { uid: b.uid, type: null, stars: 0 });
     return { ok: true, player: { name: p.name, wins: p.wins, losses: p.losses, balls }, self: p.id === u.id };
   }
-  tradeView(t, meId) {
+  knownTypes(userId) { return new Set(this.q('SELECT DISTINCT type FROM balls WHERE owner=?', userId).map(r => r.type)); }
+  tradeView(t, meId, known) {
     const ids = s => JSON.parse(s);
-    const bt = list => list.map(uid => { const b = this.q('SELECT uid,type,stars FROM balls WHERE uid=?', uid)[0]; return b || { uid, type: null }; });
+    known = known || this.knownTypes(meId);
+    const bt = list => list.map(uid => { const b = this.q('SELECT uid,type,stars FROM balls WHERE uid=?', uid)[0]; return b && known.has(b.type) ? b : { uid, type: null, stars: 0 }; });
     const from = this.userById(t.from_id), to = this.userById(t.to_id);
     return {
       id: t.id, from: from ? from.name : '?', to: to ? to.name : '?', mine: t.from_id === meId,
@@ -396,9 +400,10 @@ export class Store extends DurableObject {
     const inc = this.q("SELECT * FROM trades WHERE to_id=? AND status='pending' ORDER BY id DESC", u.id);
     const out = this.q("SELECT * FROM trades WHERE from_id=? AND status='pending' ORDER BY id DESC", u.id);
     const hist = this.q("SELECT * FROM trades WHERE (from_id=? OR to_id=?) AND status!='pending' ORDER BY closed DESC LIMIT 12", u.id, u.id);
+    const known = this.knownTypes(u.id);
     return {
-      ok: true, incoming: inc.map(t => this.tradeView(t, u.id)), outgoing: out.map(t => this.tradeView(t, u.id)),
-      history: hist.map(t => this.tradeView(t, u.id))
+      ok: true, incoming: inc.map(t => this.tradeView(t, u.id, known)), outgoing: out.map(t => this.tradeView(t, u.id, known)),
+      history: hist.map(t => this.tradeView(t, u.id, known))
     };
   }
   closeTrade(t, status) {
