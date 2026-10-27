@@ -1,7 +1,7 @@
 // Zeichnen der Bälle, Geschosse und Effekte (Tonlinge-Stil, vorgerenderte Sprites mit 3 Boil-Frames).
 import { DEFS } from './engine.js';
 import { INK, DPR, mkSprite, spr, sketchCtx } from './sk.js';
-import { BALLS, OB, PARTS, S0, R0, setNoHeld } from './ballart.js';
+import { BALLS, VARIANTS, OB, PARTS, S0, R0, setNoHeld } from './ballart.js';
 import { nearestEnemy } from './core.js';
 
 const SC = DPR > 1.5 ? 1.35 : 1;
@@ -11,7 +11,7 @@ const KS = { riese: .87, glas: 1.28, toast: .98, kreisel: .94, ufo: .8 };   // S
 
 export function bodySprite(type, fight) {
   if (fight && HELD[type]) return BODYF[type] || (BODYF[type] = mkSprite('b_' + type, SIDE, S0, (c, s) => { setNoHeld(true); try { BALLS[type](c, s); } finally { setNoHeld(false); } }, SC));
-  return BODY[type] || (BODY[type] = mkSprite('b_' + type, SIDE, S0, BALLS[type], SC));
+  return BODY[type] || (BODY[type] = mkSprite('b_' + type, SIDE, S0, BALLS[type] || VARIANTS[type], SC));
 }
 // Gehaltene Waffen: drehen sich im Kampf zum nächsten Gegner und zucken beim Schuss zurück
 const BODYF = {};
@@ -102,7 +102,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   else if (type === 'tornado') { const p = partSprite('swirl'); spr(g, p, 0, 0, f, (b.r + 14) / p.rad, tm * 4, .55); }
   /* Körper */
   g.save(); g.rotate(tilt); g.scale(sx * bob * k, sy * bob * k);
-  const sp = bodySprite(type, !b.preview);
+  const sp = bodySprite(type === 'erik' && st.emo != null ? 'erik_' + 'wfta'[st.emo] : type, !b.preview);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
   // Weißes Aufblinken: nur die Silhouette des Balls (kein Kreis), bei Treffern kurz, bei Dauerschaden langsam pulsierend
   const pulse = b.dotT > 0 ? .55 * Math.pow(Math.max(0, Math.sin(tm * 13 + b.id)), 2) : 0;

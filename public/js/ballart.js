@@ -68,6 +68,21 @@ function hatch(c, r, col, clip) {  // Streifen im Körper
   clip(); c.restore();
 }
 
+
+// Erik hat vier Stimmungen (w = wütend, f = fröhlich, t = traurig, a = ängstlich): jede mit eigenem Gesicht
+function erikArt(c, s, emo) {
+  const r = s * .36, H = '#f2cf5a', skin = { w: '#ffb59c', f: '#ffd9b8', t: '#cfdcff', a: '#d3efd0' }[emo];
+  body(c, s, skin);
+  c.beginPath(); c.moveTo(-r * 1.02, -r * .05); c.bezierCurveTo(-r * 1.25, -r * 1.4, r * 1.25, -r * 1.4, r * 1.02, -r * .05); c.quadraticCurveTo(r * .55, -r * .5, r * .1, -r * .66); c.quadraticCurveTo(-r * .4, -r * .42, -r * 1.02, -r * .05); c.closePath(); FS(c, H);
+  pl(c, [[r * .2, -r * 1.05], [r * .5, -r * 1.45], [r * .65, -r * .95]], H);
+  if (emo === 'w') { face(c, s, { angry: 1, mouth: 'frown', er: .17, blush: 0 }); [-1, 1].forEach(d => { c.lineWidth = s * .03; c.beginPath(); c.moveTo(d * r * .9, -r * .95); c.quadraticCurveTo(d * r * 1.15, -r * 1.25, d * r * .95, -r * 1.55); c.stroke(); }); }
+  else if (emo === 't') { face(c, s, { sad: 1, mouth: 'frown', blush: 0 }); [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .36, r * .1); c.quadraticCurveTo(d * r * .5, r * .5, d * r * .36, r * .75); c.quadraticCurveTo(d * r * .22, r * .5, d * r * .36, r * .1); c.closePath(); FS(c, '#7ec6ff'); }); }
+  else if (emo === 'a') { face(c, s, { mouth: 'o', er: .27, sp: .38, blush: 0 }); c.beginPath(); c.moveTo(r * .92, -r * .55); c.quadraticCurveTo(r * 1.2, -r * .15, r * .92, r * .05); c.quadraticCurveTo(r * .65, -r * .15, r * .92, -r * .55); c.closePath(); FS(c, '#9fd8ff'); }
+  else { face(c, s, { mouth: 'grin', dy: .0 }); stars(c, [[-r * .95, -r * .95, r * .22], [r * 1.0, -r * .35, r * .18]], '#ffe36a'); }
+  c.fillStyle = 'rgba(190,110,70,.55)'; [[-.5, .3], [-.38, .38], [.5, .3], [.38, .38]].forEach(p => { c.beginPath(); c.arc(p[0] * r, p[1] * r, s * .012, 0, 7); c.fill(); });
+}
+export const VARIANTS = { erik_w: (c, s) => erikArt(c, s, 'w'), erik_f: (c, s) => erikArt(c, s, 'f'), erik_t: (c, s) => erikArt(c, s, 't'), erik_a: (c, s) => erikArt(c, s, 'a') };
+
 /* ---------- Die Bälle ---------- */
 export const BALLS = {
   /* ===== Standard ===== */
@@ -502,13 +517,7 @@ export const BALLS = {
     c.beginPath(); c.moveTo(-r * .98, -r * .15); c.quadraticCurveTo(0, -r * 1.1, r * .98, -r * .15); c.quadraticCurveTo(r * .5, -r * .55, 0, -r * .6); c.quadraticCurveTo(-r * .5, -r * .55, -r * .98, -r * .15); c.closePath(); FS(c, H);
     face(c, s, { mouth: 'grin', er: .24, dy: .02 });
   },
-  erik(c, s) {
-    const r = s * .36, H = '#f2cf5a';
-    body(c, s, '#ffd9b8');
-    c.beginPath(); c.moveTo(-r * 1.02, -r * .05); c.bezierCurveTo(-r * 1.25, -r * 1.4, r * 1.25, -r * 1.4, r * 1.02, -r * .05); c.quadraticCurveTo(r * .55, -r * .5, r * .1, -r * .66); c.quadraticCurveTo(-r * .4, -r * .42, -r * 1.02, -r * .05); c.closePath(); FS(c, H);
-    pl(c, [[r * .2, -r * 1.05], [r * .5, -r * 1.45], [r * .65, -r * .95]], H);
-    face(c, s, { mouth: 'grin', dy: .0 }); c.fillStyle = 'rgba(190,110,70,.55)'; [[-.5, .3], [-.38, .38], [.5, .3], [.38, .38]].forEach(p => { c.beginPath(); c.arc(p[0] * r, p[1] * r, s * .012, 0, 7); c.fill(); });
-  },
+  erik(c, s) { erikArt(c, s, 'f'); },
   ida(c, s) {
     const r = s * .36, H = '#f2cf5a';
     [-1, 1].forEach(d => el(c, d * r * .98, r * .5, r * .34, r * 1.1, H, d * .08));

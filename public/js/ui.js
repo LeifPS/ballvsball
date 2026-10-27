@@ -253,17 +253,21 @@ function home() {
   if (new Set(S.me.balls.map(b => b.type)).size < 3) return tutorial();
   S.screen = 'home'; setView(null); closeOverlay(); setScene('menu');
   const me = S.me, types = new Set(me.balls.map(b => b.type)).size, ev = eventLive();
-  show('<div class="col" style="padding-top:2px"><div class="row sb" style="padding-right:50px"><div class="pill">' + esc(me.name) + '</div></div><div class="row" style="justify-content:flex-end;margin-top:-6px">' + wallet() + '</div>' +
+  const top3 = [...new Set(me.balls.map(b => b.type))].sort((x, y) => RARITY[DEFS[y].rarity].order - RARITY[DEFS[x].rarity].order).slice(0, 3);
+  show('<div class="col" style="padding-top:2px"><div class="row sb" style="padding-right:50px"><div class="pill">' + esc(me.name) + '</div><button class="btn sm" style="min-height:40px;padding:4px 10px" data-act="settings" aria-label="Einstellungen">' + gi('gear', 26) + '</button></div><div class="row" style="justify-content:flex-end;margin-top:-6px">' + wallet() + '</div>' +
     '<h1 class="jit">Ball gegen Ball</h1>' +
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
     '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
     (ev ? '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="halloween">' + gi('token', 46) + '<div class="grow"><h3>Halloween-Box ist da!</h3><span class="small">' + timeLeft(me.eventEnd - now()) + ' - 6 neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>' : '') +
-    btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'queue1', '', 'fight') + btn('Mit Freunden spielen', 'friends') + btn('Mehrspieler (3 oder 4)', 'multi') +
-    '<div class="row gap6"><div class="grow">' + btn('Sammlung', 'collection') + '</div><div class="grow">' + btn('Ballboxen', 'box') + '</div></div>' +
-    '<div class="row gap6"><div class="grow">' + btn('Markt', 'market') + '</div><div class="grow">' + btn('Tauschen', 'trades') + '</div></div>' +
-    (me.dailyReady ? btn('Tagesbelohnung abholen' + (ev ? ' (+5 Marken)' : ''), 'daily', '', 'green') : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
-    (/[?&]test=1/.test(location.search) ? btn('TEST: unendlich Münzen und Marken', 'testcoins', '', 'red') : '') +
-    btn(gi('gear', 26) + ' Einstellungen', 'settings') + '</div>');
+    btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'queue1', '', 'fight') +
+    '<div class="row gap6"><button class="htile wide" style="--tc:#ffd9d0" data-act="multi"><span class="hv">' + gi('crown', 38) + '</span><b>Mehrspieler</b><span class="small">3 oder 4 Spieler</span></button>' +
+    '<button class="htile wide" style="--tc:#d6e6ff" data-act="friends"><span class="hv">' + gi('heart', 36) + '</span><b>Mit Freunden</b><span class="small">Raum mit Code</span></button></div>' +
+    '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + BALL_IDS.length + ' Bällen</span></button>' +
+    '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
+    '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="market"><span class="hv">' + gi('coin', 40) + gi('coin', 30) + '</span><b>Markt</b><span class="small">Kaufen und verkaufen</span></button>' +
+    '<button class="htile" style="--tc:#f3d6f0" data-act="trades"><span class="hv">' + gi('arrow', 34) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 34) + '</span></span><b>Tauschen</b><span class="small">Mit anderen Spielern</span></button></div>' +
+    (me.dailyReady ? '<button class="htile daily" data-act="daily"><span class="hv">' + gi('star', 44, '#ffd45a') + '</span><span class="grow"><b>Tagesbelohnung abholen</b><span class="small">' + (ev ? 'Münzen und +5 Marken' : 'Münzen für heute') + '</span></span></button>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
+    (/[?&]test=1/.test(location.search) ? btn('TEST: unendlich Münzen und Marken', 'testcoins', '', 'red') : '') + '</div>');
 }
 
 /* ================= Sammlung ================= */

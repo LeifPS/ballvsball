@@ -19,6 +19,14 @@ export function sprintEnd(b, id) {
   return false;
 }
 
+// Eriks Stimmung: 0 wütend, 1 fröhlich, 2 traurig, 3 ängstlich (ändert Tempo)
+function erikMood(b, emo) {
+  b.st.emo = emo;
+  const sp = [175, 150, 105, 235][emo], d = Math.hypot(b.vx, b.vy) || 1;
+  b.speed = sp; b.vx = b.vx / d * sp; b.vy = b.vy / d * sp;
+}
+function tick2(b, key, next) { b.st[key] = (b.st[key] || 0) - DT; if (b.st[key] > 0) return false; b.st[key] = next; return true; }
+
 const N = {
   thore: {
     name: 'Thore', rarity: 'legendaer', hp: 125, speed: 170, r: 15, dmg: 'Sehr hoch',
@@ -35,15 +43,27 @@ const N = {
   },
   erik: {
     name: 'Erik', rarity: 'legendaer', hp: 135, speed: 150, r: 18, dmg: 'Sehr hoch',
-    desc: 'Erik (10): schießt Bälle im Fächer. Jeder dritte Schuss ist ein Kracher mit Rückstoß.',
+    desc: 'Erik (10): hat Launen, die alle paar Sekunden wechseln. Wütend: Schussfächer und Kracher. Fröhlich: heilt sich und wirft Partybälle. Traurig: weint Pfützen. Ängstlich: rennt und schreit Gegner nieder.',
     strong: 'Gegner in der Ecke', weak: 'Schildball',
-    init(b) { b.st.cd = 1; b.st.n = 0; },
+    contact: (b, sim) => (b.st.emo === 0 ? 11 : b.st.emo === 2 ? 4 : 7) + sim.t * .1, contactCd: .5,
+    init(b) { b.st.cd = 1; b.st.n = 0; b.st.emo = 1; b.st.mood = 4.5; erikMood(b, 1); },
     update(b, sim) {
-      if (!tick(b, Math.max(1.7, 2.3 - sim.t * .012))) return;
+      b.st.mood -= DT;
+      if (b.st.mood <= 0) { b.st.mood = 5; erikMood(b, (b.st.emo + 1) % 4); fx(sim, 'dash', b.x, b.y, 0); b.st.cd = Math.min(b.st.cd, .5); }
+      const emo = b.st.emo;
+      if (emo === 1) heal(sim, b, 2.6 * DT);
+      if (emo === 2) { if (tick2(b, 'tc', .85)) newObj(sim, 'puddle', b, b.x, b.y, { r: 25, life: 4, dps: 8 + sim.t * .09, vis: 'rain' }); return; }
+      if (!tick(b, emo === 0 ? Math.max(1.2, 1.7 - sim.t * .01) : emo === 1 ? 1.9 : 1.6)) return;
       const e = nearestEnemy(sim, b);
       if (!e) return;
-      for (let i = -1; i <= 1; i++) shot(sim, b, e, { speed: 270, r: 6, dmg: 6 + sim.t * .08, vis: 'tennis', lead: .4, pierce: 1, pcd: .5 }, i * .2);
-      if (b.st.n++ % 3 === 2) wave(sim, b, b.x, b.y, { sp: 200, maxR: 105, dmg: 11 + sim.t * .14, push: 1, vis: 'shock' });
+      if (emo === 0) {
+        for (let i = -1; i <= 1; i++) shot(sim, b, e, { speed: 270, r: 6, dmg: 6 + sim.t * .08, vis: 'tennis', lead: .4, pierce: 1, pcd: .5 }, i * .2);
+        if (b.st.n++ % 3 === 2) wave(sim, b, b.x, b.y, { sp: 200, maxR: 105, dmg: 11 + sim.t * .14, push: 1, vis: 'shock' });
+      } else if (emo === 1) {
+        for (let i = -1; i <= 1; i += 2) shot(sim, b, e, { speed: 200, r: 7, dmg: 4 + sim.t * .06, vis: 'gold', lead: .3, pierce: 1, pcd: .5, life: 4 }, i * .35);
+      } else {
+        wave(sim, b, b.x, b.y, { sp: 230, maxR: 95, dmg: 6 + sim.t * .09, stun: .6, vis: 'phase' });
+      }
     }
   },
   ida: {
@@ -151,7 +171,7 @@ const N = {
 };
 
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
-const DM5 = { thore: .72, erik: .8, ida: 1.45, leif: .78, sandra: .6, alexander: .55, lilli: 1.3, lexi: 2.24, finni: 1.31, ursel: 1.51 };
+const DM5 = { thore: .72, erik: .86, ida: 1.45, leif: .78, sandra: .6, alexander: .55, lilli: 1.3, lexi: 2.24, finni: 1.31, ursel: 1.51 };
 const BOX_OF = { familie: ['thore', 'erik', 'ida', 'leif', 'sandra', 'alexander', 'lilli', 'lexi', 'finni', 'ursel'] };
 for (const box in BOX_OF) for (const id of BOX_OF[box]) {
   N[id].box = box;
