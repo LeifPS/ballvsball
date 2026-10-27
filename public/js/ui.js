@@ -507,8 +507,8 @@ function multi() {
   show('<div class="col">' + backBar('Kampf') +
     '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle, wie viele Spieler kämpfen. Fehlende Spieler füllen Bots auf.</p>' +
     grp(2, 'queue1', '1 gegen 1', 'Der Klassiker: drei Leben', '#ffd9a0') +
-    grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: zwei Leben', '#d6ecff') +
-    grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: zwei Leben', '#dff3c8') + '</div>');
+    grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#d6ecff') +
+    grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#dff3c8') + '</div>');
 }
 
 /* ================= Freunde ================= */
@@ -582,7 +582,7 @@ function matchIntro() {
   show('<div class="col center" style="margin-top:8vh"><h2 class="jit pop" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + (m.ffa ? 'Spieler gefunden!' : 'Gegner gefunden!') + '</h2><div class="panel pop">' +
     (m.ffa ? m.players.map(p => '<p><b style="color:' + PLAYER_COL[p.team] + '">' + nm(p) + '</b></p>').join('') : m.n === 2 ? '<h3>' + nm(m.players[0]) + '</h3><div class="big" style="font-size:40px;margin:4px 0">gegen</div><h3 style="color:var(--red)">' + nm(m.players[1]) + '</h3>' :
       '<p><b style="color:' + TEAM_COL[0] + '">Team Blau:</b> ' + [0, 1].map(i => nm(m.players[i])).join(' und ') + '</p><p><b style="color:' + TEAM_COL[1] + '">Team Rot:</b> ' + [2, 3].map(i => nm(m.players[i])).join(' und ') + '</p><p class="small mute">Eure Leben werden im Team geteilt.</p>') +
-    '<p class="mute mt">' + (m.ffa ? 'Jeder gegen jeden. Zwei Leben. Wer zuerst besiegt wird, verliert ein Leben. Der Letzte gewinnt.' : 'Drei Leben. Wer keins mehr hat, verliert.') + '</p></div></div>');
+    '<p class="mute mt">' + (m.ffa ? 'Jeder gegen jeden. Zwei Leben. In jeder Runde verlieren alle außer dem Besten ein Leben. Der Letzte gewinnt.' : 'Drei Leben. Wer keins mehr hat, verliert.') + '</p></div></div>');
 }
 let pickSel = null, countdownEnd = 0;
 function startCountdown(secs, id) {
@@ -677,10 +677,11 @@ function fightScreen(m) {
     M.lives = m.lives; const mh = $('#mh'); if (mh) mh.outerHTML = matchHeader();
     if (!M.ffa) { sfx(win ? 'win' : 'lose'); if (win) confetti(46); }
     if (M.ffa) {
-      const fp = m.first >= 0 ? M.players.find(p => p.team === m.first) : null, mine = m.first === myTeam, out = M.lives[myTeam] <= 0;
-      sfx(mine ? 'lose' : 'win'); if (!mine && m.first >= 0) confetti(30);
-      $('#fres').innerHTML = '<div class="panel center pop"><h2 class="jit" style="font-size:40px;color:' + (!fp ? '#8a6a1a' : mine ? '#c93030' : '#2f8a3a') + '">' + (!fp ? 'Unentschieden!' : mine ? 'Du verlierst ein Leben!' : esc(fp.name) + ' verliert ein Leben!') + '</h2><p class="small mute">' +
-        (mine && out ? 'Das war dein letztes Leben.' : !fp ? 'Niemand verliert ein Leben.' : m.over ? 'Das war der letzte Kampf.' : '') + '</p></div>';
+      const L = m.losers || [], mine = L.includes(myTeam), out = M.lives[myTeam] <= 0, nm = M.players.filter(p => L.includes(p.team) && p.team !== myTeam).map(p => esc(p.name));
+      sfx(mine ? 'lose' : 'win'); if (!mine) confetti(30);
+      const head = !L.length ? 'Unentschieden!' : mine ? 'Du verlierst ein Leben!' : 'Du bleibst verschont!';
+      const sub = !L.length ? 'Niemand verliert ein Leben.' : (mine ? (out ? 'Das war dein letztes Leben. ' : '') + (nm.length ? 'Auch ' + nm.join(', ') + ' verlieren eins.' : '') : nm.join(', ') + (nm.length > 1 ? ' verlieren' : ' verliert') + ' ein Leben.') + (m.over && !mine ? ' Das war der letzte Kampf.' : '');
+      $('#fres').innerHTML = '<div class="panel center pop"><h2 class="jit" style="font-size:40px;color:' + (!L.length ? '#8a6a1a' : mine ? '#c93030' : '#2f8a3a') + '">' + head + '</h2><p class="small mute">' + sub + '</p></div>';
       $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext', '', 'pri') + '</div>';
       window.scrollTo(0, document.body.scrollHeight); return;
     }

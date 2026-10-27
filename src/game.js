@@ -367,19 +367,18 @@ export class Game extends DurableObject {
     };
     const res = runFight(cfg);
     if (m.ffa) {
-      // Jeder gegen jeden: Wer zuerst komplett besiegt wurde, verliert ein Leben (bei Gleichstand niemand).
-      // Läuft die Zeit ab, ohne dass jemand besiegt wurde, verliert das Team mit den wenigsten Lebenspunkten.
-      let first = -1;
-      if (res.elim.length) {
-        const tied = res.elim.filter(e => e.step === res.elim[0].step);
-        if (tied.length === 1) first = tied[0].team;
-      } else {
-        const fr = Object.entries(res.frac).map(([t, f]) => [Number(t), f]).sort((x, y) => x[1] - y[1]);
-        if (fr.length > 1 && fr[0][1] < fr[1][1] - 1e-9) first = fr[0][0];
-      }
-      if (first >= 0) m.lives[first]--;
+      // Jeder gegen jeden: Nur der Beste der Runde verliert kein Leben, alle anderen verlieren eins.
+      // Beste = letzter Überlebender; sterben die letzten gleichzeitig (oder läuft die Zeit ab), sind die Gleichstarken die Besten und verlieren nichts.
+      const teams = live.map(p => p.team), out = new Map(res.elim.map(e => [e.team, e.step]));
+      const alive = teams.filter(t => !out.has(t));
+      let top;
+      if (alive.length === 1) top = alive;
+      else if (alive.length === 0) { const mx = Math.max(...out.values()); top = teams.filter(t => out.get(t) === mx); }
+      else { const mx = Math.max(...alive.map(t => res.frac[t] || 0)); top = alive.filter(t => Math.abs((res.frac[t] || 0) - mx) < 1e-9); }
+      const losers = teams.filter(t => !top.includes(t));
+      for (const t of losers) m.lives[t]--;
       const left = live.filter(p => m.lives[p.team] > 0).length;
-      m.fight = { cfg, steps: res.steps, winner: res.winner, first, elim: res.elim.map(e => e.team), reason: res.reason, lives: m.lives.slice(), over: left <= 1, round: m.round };
+      m.fight = { cfg, steps: res.steps, winner: res.winner, losers, top, reason: res.reason, lives: m.lives.slice(), over: left <= 1, round: m.round };
     } else {
       const draw = res.winner < 0;   // Unentschieden: keine Leben abziehen
       if (!draw) m.lives[1 - res.winner]--;
@@ -425,8 +424,9 @@ export class Game extends DurableObject {
   // Mehrspieler: wer kein Leben mehr hat, scheidet aus und bekommt sofort sein Ergebnis (Platz = Zahl der noch Aktiven vor dem Ausscheiden)
   endFightFfa(m) {
     const live = this.livePlayers(m);
+    const stay = live.filter(q => m.lives[q.team] > 0).length;
     for (const p of live.filter(q => m.lives[q.team] <= 0)) {
-      const place = this.livePlayers(m).length;
+      const place = stay + 1;   // gleichzeitig Ausgeschiedene teilen sich den Platz
       p.out = true;
       this.eliminate(m, p, place);
     }
