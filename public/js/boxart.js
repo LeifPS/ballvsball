@@ -200,7 +200,8 @@ export function drawBoxArt(g, id, t, size, opts) {
   const frame = Math.floor(T * 7) % 3;
   const forced = opts && opts.open != null;   // Ausschüttanimation: Deckel fest offen, kein Wackeln, kein Lichtkegel
   g.save(); g.scale(size / 100, size / 100);
-  g.translate(50, 96); g.scale(1.04, 1.04); g.translate(-50, -96);
+  const fit = id === 'gefuehl' ? .82 : 1.04;   // Gefühlsbox: Arme und Beine ragen heraus, deshalb etwas kleiner
+  g.translate(50, 96); g.scale(fit, fit); g.translate(-50, -96);
   g.lineJoin = g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3;
   const c = sketchCtx(g, strSeed('bx' + id) + frame * 1.713, 22); c.lineWidth = 3;
   // Rhythmus: kurzes Wackeln, dann springt der Deckel auf
