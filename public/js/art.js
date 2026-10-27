@@ -72,10 +72,11 @@ function whiteOf(cv) {
 
 /* ---------- Ball ---------- */
 // Koordinaten in Arena-Einheiten; tf = Boil-Frame, tm = Sekunden
-function badge(g, x, y, txt, col) {
+function badge(g, x, y, txt, col, tf) {
   g.save(); g.font = '700 15px "Patrick Hand", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
-  const w = g.measureText(txt).width + 12;
-  g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = 1.8; g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - 9, w, 18, 8) : g.rect(x - w / 2, y - 9, w, 18); g.fill(); g.stroke();
+  const w = g.measureText(txt).width + 12, sk = sketchCtx(g, 5.1 + (tf % 3) * 1.713, 22);
+  g.lineJoin = g.lineCap = 'round'; g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = 1.8; sk.lineWidth = 1.8;
+  sk.beginPath(); sk.moveTo(x - w / 2, y - 9); sk.lineTo(x + w / 2, y - 9); sk.lineTo(x + w / 2, y + 9); sk.lineTo(x - w / 2, y + 9); sk.closePath(); sk.fill(); sk.stroke();
   g.fillStyle = '#fff'; g.strokeStyle = INK; g.lineWidth = 2.4; g.strokeText(txt, x, y + 1); g.fillText(txt, x, y + 1); g.restore();
 }
 export function drawBall(g, b, sim, tf, tm, tint) {
@@ -158,13 +159,13 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   if (wk) {
     const isW = type === 'wuet' || (type === 'gefuehl' && st.mode === 1);
     ringJ(g, 0, 0, b.r + 5, 2.2, isW ? 'rgba(230,50,40,.85)' : 'rgba(110,140,200,.8)', tf, b.id + 3);
-    badge(g, 0, -b.r - 25, isW ? '×2' : '½', isW ? '#e8453c' : '#8fb0e8');
+    badge(g, 0, -b.r - 25, isW ? '×2' : '½', isW ? '#e8453c' : '#8fb0e8', tf + b.id);
   }
   if (type === 'stolz' && st.proud && !b.preview) star(g, 0, -b.r - 20, 4.4 + Math.sin(tm * 6) * .6, '#ffd21f');
   if ((type === 'herrscher' || type === 'kleinexplus') && st.shield) { g.save(); g.fillStyle = 'rgba(170,220,255,.28)'; g.beginPath(); g.arc(0, 0, b.r + 6, 0, 7); g.fill(); g.restore(); ringJ(g, 0, 0, b.r + 6, 2.4, 'rgba(255,255,255,.95)', tf, b.id + 4); ringJ(g, 0, 0, b.r + 6, 1.2, INK, tf + 1, b.id + 6); }
-  if (type === 'kleinexplus') { g.strokeStyle = INK; g.lineWidth = 2; g.lineCap = 'round'; for (let i = 0; i < 4; i++) { const a = tm * 6 + i * 1.571; g.beginPath(); g.arc(0, 0, b.r + 7, a, a + .7); g.stroke(); } }
-  if (type === 'gefuehl') { g.save(); g.globalAlpha = (ghost ? .45 : 1) * .5; for (let i = 0; i < 4; i++) { const a = tm * .9 + i * 1.571; g.fillStyle = '#a79fb6'; g.beginPath(); g.ellipse(Math.cos(a) * b.r * 1.05, Math.sin(a) * b.r * .95, b.r * .36, b.r * .26, a, 0, 7); g.fill(); } g.restore(); }
-  if (b.silenced && !b.preview) { g.save(); g.globalAlpha *= .9; g.fillStyle = '#e8e4d6'; g.strokeStyle = INK; g.lineWidth = 1.6; g.beginPath(); g.arc(0, -b.r - 24, 8, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(-5, -b.r - 19); g.lineTo(5, -b.r - 29); g.stroke(); g.restore(); }
+  if (type === 'kleinexplus') { g.strokeStyle = INK; g.lineWidth = 2; g.lineCap = 'round'; const sk = sketchCtx(g, 2.7 + (tf % 3) * 1.713, 18); sk.lineWidth = 2; for (let i = 0; i < 4; i++) { const a = tm * 6 + i * 1.571; sk.beginPath(); sk.arc(0, 0, b.r + 7, a, a + .7); sk.stroke(); } }
+  if (type === 'gefuehl') { g.save(); g.globalAlpha = (ghost ? .45 : 1) * .55; const sk = sketchCtx(g, 4.4 + (tf % 3) * 1.713, 26); g.strokeStyle = INK; g.lineWidth = 1.4; sk.lineWidth = 1.4; for (let i = 0; i < 4; i++) { const a = tm * .9 + i * 1.571; g.fillStyle = '#a79fb6'; sk.beginPath(); sk.ellipse(Math.cos(a) * b.r * 1.05, Math.sin(a) * b.r * .95, b.r * .36, b.r * .26, a, 0, 7); sk.fill(); sk.stroke(); } g.restore(); }
+  if (b.silenced && !b.preview) { g.save(); g.globalAlpha *= .95; const sk = sketchCtx(g, 6.6 + (tf % 3) * 1.713, 20); g.lineJoin = g.lineCap = 'round'; g.fillStyle = '#e8e4d6'; g.strokeStyle = INK; g.lineWidth = 1.8; sk.lineWidth = 1.8; sk.beginPath(); sk.arc(0, -b.r - 24, 8, 0, 7); sk.fill(); sk.stroke(); sk.beginPath(); sk.moveTo(-5, -b.r - 19); sk.lineTo(5, -b.r - 29); sk.stroke(); g.restore(); }
   const H = HELD[type];
   if (H && !b.preview) {
     const e = nearestEnemy(sim, b), ta = e ? Math.atan2(e.y - b.y, e.x - b.x) : (v.aim == null ? 0 : v.aim);
@@ -313,6 +314,12 @@ export function addFx(e) {
   else if (k === 'levelup') { pt({ k: 'star', x, y, age: 0, life: .9, vx: 0, vy: -40, sz: 7 }); snd('coin', .6); }
   else if (k === 'grab') { sparks(x, y, 5, '#c9aeee', 70, .35, 3); snd('hit', .6); }
   else if (k === 'breath') { snd('whoosh'); }
+  else if (k === 'helper') { pt({ k: 'ring', x, y, age: 0, life: .45, r: 22, col: '#7ad66a' }); sparks(x, y, 9, '#c9a6ff', 90, .6, 3); sparks(x, y, 5, '#7ad66a', 70, .5, 2.6); snd('helper'); }
+  else if (k === 'grow') { pt({ k: 'ring', x, y, age: 0, life: .9, r: e.a * 2.2, col: '#ffe45a' }); pt({ k: 'ring', x, y, age: 0, life: .7, r: e.a * 1.5, col: '#ff7ab8' }); snd('grow'); }
+  else if (k === 'mood') { const cols = ['#a8e68c', '#e8453c', '#6aa8ff']; pt({ k: 'ring', x, y, age: 0, life: .55, r: 34, col: cols[e.a | 0] }); sparks(x, y, 8, cols[e.a | 0], 100, .6, 3); snd('mood'); }
+  else if (k === 'mute') { pt({ k: 'ring', x, y, age: 0, life: .4, r: e.a * 2.2, col: '#b8b4a8' }); sparks(x, y, 6, '#d8d4c8', 70, .45, 2.8); snd('mute'); }
+  else if (k === 'bombdrop') { snd('bombdrop', .8); }
+  else if (k === 'shield') { pt({ k: 'ring', x, y, age: 0, life: .5, r: e.a * 3, col: '#bfe4ff' }); sparks(x, y, 10, '#ffffff', 110, .5, 2.8); snd('shield'); }
 }
 export function burst(x, y, n, cols) {   // Konfetti für Sieg
   for (let i = 0; i < n; i++) pt({ k: 'conf', x: x + (rnd() - .5) * 40, y, age: 0, life: 1.6 + rnd() * .8, vx: (rnd() - .5) * 260, vy: -160 - rnd() * 200, col: cols[i % cols.length], sz: 3 + rnd() * 3, rot: rnd() * 6 });

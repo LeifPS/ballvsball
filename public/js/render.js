@@ -96,47 +96,43 @@ const CUP = { x0: 96, x1: 204, y0: 376, y1: 442 };
 function wob(sk, pts, close) { sk.beginPath(); pts.forEach((q, i) => i ? sk.lineTo(q[0], q[1]) : sk.moveTo(q[0], q[1])); if (close) sk.closePath(); }
 function drawDropperDecor(x, sk, L) {
   x.lineJoin = x.lineCap = 'round';
+  // alles mit wackeliger Kontur und versetzter Füllung (sk.fill / sk.stroke), nie mit geraden Canvas-Füllungen
+  const shape = (pts, col, lw) => { sk.lineWidth = lw || 3.2; sk.strokeStyle = INK; x.strokeStyle = INK; x.fillStyle = col; wob(sk, pts, true); sk.fill(); sk.stroke(); };
+  const rect = (x0, y0, x1, y1, col, lw) => shape([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], col, lw);
   if (L.grates) for (const r of L.grates) {   // Gitter: dunkler Schacht mit Stäben
-    x.fillStyle = '#3b3a46'; x.fillRect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
-    x.strokeStyle = '#9a98a8'; sk.lineWidth = 2.4; sk.strokeStyle = '#9a98a8';
-    for (let gx = r[0] + 7; gx < r[2] - 3; gx += 12) { sk.beginPath(); sk.moveTo(gx, r[1] + 2); sk.lineTo(gx, r[3] - 2); sk.stroke(); }
-    sk.beginPath(); sk.moveTo(r[0] + 2, r[1] + 3); sk.lineTo(r[2] - 2, r[1] + 3); sk.stroke();
-    sk.lineWidth = 3.2; sk.strokeStyle = INK; x.strokeStyle = INK; wob(sk, [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]], true); sk.stroke();
+    rect(r[0], r[1], r[2], r[3], '#3b3a46');
+    sk.lineWidth = 2.4; sk.strokeStyle = '#9a98a8';
+    for (let gx = r[0] + 7; gx < r[2] - 3; gx += 12) { sk.beginPath(); sk.moveTo(gx, r[1] + 3); sk.lineTo(gx, r[3] - 3); sk.stroke(); }
+    sk.beginPath(); sk.moveTo(r[0] + 3, r[1] + 5); sk.lineTo(r[2] - 3, r[1] + 5); sk.stroke();
+    sk.strokeStyle = INK;
   }
   if (L.cups) for (const c of L.cups) {   // Fangkörbe: geflochten
-    const w = c.x1 - c.x0, h = c.y1 - c.y0;
-    x.beginPath(); x.moveTo(c.x0, c.y0 - 4); x.lineTo(c.x0, c.y1); x.lineTo(c.x1, c.y1); x.lineTo(c.x1, c.y0 - 4); x.lineTo(c.x1 - 5, c.y0 - 4); x.lineTo(c.x1 - 5, c.y1 - 5); x.lineTo(c.x0 + 5, c.y1 - 5); x.lineTo(c.x0 + 5, c.y0 - 4); x.closePath();
-    x.fillStyle = '#c98b3a'; x.fill();
-    sk.lineWidth = 1.6; sk.strokeStyle = '#7a4a21'; for (let yy = c.y0 + 4; yy < c.y1; yy += 6) { sk.beginPath(); sk.moveTo(c.x0, yy); sk.lineTo(c.x1, yy + 2); sk.stroke(); }
-    sk.lineWidth = 3.2; sk.strokeStyle = INK; wob(sk, [[c.x0, c.y0 - 4], [c.x0, c.y1], [c.x1, c.y1], [c.x1, c.y0 - 4]], false); sk.stroke();
+    shape([[c.x0, c.y0 - 4], [c.x0, c.y1], [c.x1, c.y1], [c.x1, c.y0 - 4], [c.x1 - 5, c.y0 - 4], [c.x1 - 5, c.y1 - 5], [c.x0 + 5, c.y1 - 5], [c.x0 + 5, c.y0 - 4]], '#c98b3a');
+    sk.lineWidth = 1.6; sk.strokeStyle = '#7a4a21'; for (let yy = c.y0 + 4; yy < c.y1; yy += 6) { sk.beginPath(); sk.moveTo(c.x0 + 1, yy); sk.lineTo(c.x1 - 1, yy + 2); sk.stroke(); }
+    sk.strokeStyle = INK;
   }
   if (L.grids) for (const g of L.grids) {   // Gitterablagen: dicke Platte mit Gitter darunter
-    const dx = g[2] - g[0], dy = g[3] - g[1], l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l, nx = -uy, ny = ux, hgt = 30;
-    x.fillStyle = 'rgba(255,255,255,.5)'; x.beginPath(); x.moveTo(g[0], g[1]); x.lineTo(g[2], g[3]); x.lineTo(g[2], g[3] + hgt); x.lineTo(g[0], g[1] + hgt); x.closePath(); x.fill();
+    const dx = g[2] - g[0], dy = g[3] - g[1], hgt = 30;
+    shape([[g[0], g[1]], [g[2], g[3]], [g[2], g[3] + hgt], [g[0], g[1] + hgt]], 'rgba(255,255,255,.55)', 3.4);
     sk.lineWidth = 2; sk.strokeStyle = INK;
-    for (let i = 1; i < 6; i++) { const t = i / 6; sk.beginPath(); sk.moveTo(g[0] + dx * t, g[1] + dy * t); sk.lineTo(g[0] + dx * t, g[1] + dy * t + hgt); sk.stroke(); }
-    sk.beginPath(); sk.moveTo(g[0], g[1] + hgt * .5); sk.lineTo(g[2], g[3] + hgt * .5); sk.stroke();
-    sk.lineWidth = 3.4; wob(sk, [[g[0], g[1]], [g[2], g[3]], [g[2], g[3] + hgt], [g[0], g[1] + hgt]], true); sk.stroke();
+    for (let i = 1; i < 6; i++) { const t = i / 6; sk.beginPath(); sk.moveTo(g[0] + dx * t, g[1] + dy * t + 2); sk.lineTo(g[0] + dx * t, g[1] + dy * t + hgt - 1); sk.stroke(); }
+    sk.beginPath(); sk.moveTo(g[0] + 2, g[1] + hgt * .5); sk.lineTo(g[2] - 2, g[3] + hgt * .5); sk.stroke();
   }
-  // Block über dem Ausgang (Rechteck aus den Wand-Segmenten, die zwischen Gitterablagen und Ausgang liegen)
-  if (L.id === 'gefuehl') {
-    x.fillStyle = '#e8d9a8'; x.fillRect(138, 276, 24, 16); sk.lineWidth = 3.2; sk.strokeStyle = INK; wob(sk, [[138, 276], [162, 276], [162, 292], [138, 292]], true); sk.stroke();
+  if (L.id === 'gefuehl') {   // schmaler Block über dem Ausgang
+    rect(138, 276, 162, 292, '#e8d9a8');
     sk.lineWidth = 1.6; sk.beginPath(); sk.moveTo(142, 284); sk.lineTo(158, 284); sk.stroke();
   }
   if (L.flum) for (const f of L.flum) {   // Flummi-Bumper
-    x.fillStyle = '#ff6fb0'; x.beginPath(); x.arc(f[0], f[1], f[2], 0, 7); x.fill();
-    sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.stroke();
-    x.fillStyle = '#fff'; x.beginPath(); x.arc(f[0], f[1], f[2] * .55, 0, 7); x.fill(); sk.lineWidth = 2; sk.beginPath(); sk.arc(f[0], f[1], f[2] * .55, 0, 7); sk.stroke();
+    x.fillStyle = '#ff6fb0'; sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.fill(); sk.stroke();
+    x.fillStyle = '#fff'; sk.lineWidth = 2; sk.beginPath(); sk.arc(f[0], f[1], f[2] * .55, 0, 7); sk.fill(); sk.stroke();
     x.fillStyle = INK; x.font = '700 9px "Patrick Hand", sans-serif'; x.textAlign = 'center'; x.fillText('flum', f[0], f[1] + 3);
   }
-  if (L.cannons) for (const c of L.cannons) {   // Kanonenrohre entlang der Schrägen
-    const sgn = c.side === 'l' ? 1 : -1, cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2;
-    x.save(); x.translate(cx, cy); x.rotate(sgn * -.95);
-    x.fillStyle = '#7e8696'; x.fillRect(-11, -20, 22, 40);
-    sk.lineWidth = 3; sk.strokeStyle = INK; wob(sk, [[-11, -20], [11, -20], [11, 20], [-11, 20]], true); sk.stroke();
-    x.fillStyle = '#4b5160'; x.fillRect(-13, -24, 26, 7); sk.lineWidth = 2.4; wob(sk, [[-13, -24], [13, -24], [13, -17], [-13, -17]], true); sk.stroke();
-    x.fillStyle = '#2d303a'; x.beginPath(); x.ellipse(0, 6, 8, 5, 0, 0, 7); x.fill();
-    x.restore();
+  if (L.cannons) for (const c of L.cannons) {   // Kanonenrohre entlang der Schrägen (Punkte von Hand gedreht)
+    const sgn = c.side === 'l' ? 1 : -1, cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2, a = sgn * -.95, ca = Math.cos(a), sa = Math.sin(a);
+    const R = pts => pts.map(q => [cx + q[0] * ca - q[1] * sa, cy + q[0] * sa + q[1] * ca]);
+    shape(R([[-11, -20], [11, -20], [11, 20], [-11, 20]]), '#7e8696', 3);
+    shape(R([[-13, -24], [13, -24], [13, -17], [-13, -17]]), '#4b5160', 2.4);
+    shape(R([[-7, 3], [7, 3], [7, 9], [-7, 9]]), '#2d303a', 1.6);
   }
 }
 function boardSprite(col, L) {
@@ -203,11 +199,11 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   // Windräder (drehen sich mit der Simulationszeit), handgezeichnet wie alles andere: wackelige Kontur, versetzte Füllung, Schraffur
   // Wind: gestrichelte Streifen laufen nach außen; Kanonen blitzen beim Abschuss
   if (L.wind) for (const w of L.wind) {
-    g.save(); g.strokeStyle = 'rgba(80,150,220,.75)'; g.lineWidth = 2; g.lineCap = 'round'; g.setLineDash([7, 6]);
-    const dir = w.ax < 0 ? -1 : 1, mid = (w.x0 + w.x1) / 2;
+    g.save(); g.strokeStyle = 'rgba(80,150,220,.8)'; g.lineWidth = 2.2; g.lineCap = g.lineJoin = 'round';
+    const dir = w.ax < 0 ? -1 : 1, mid = (w.x0 + w.x1) / 2, sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22); sk.lineWidth = 2.2;
     for (let i = 0; i < 4; i++) {
-      const yy = w.y0 + 6 + i * 10 + Math.sin(tm * 3 + i) * 1.5, ph = (tm * 40 + i * 9) % 30;
-      g.lineDashOffset = -dir * ph; g.beginPath(); g.moveTo(mid - dir * 14, yy); g.lineTo(mid + dir * 14, yy - 4); g.stroke();
+      const yy = w.y0 + 6 + i * 10 + Math.sin(tm * 3 + i) * 1.5, ph = ((tm * 36 + i * 9) % 28) * dir - dir * 14;
+      sk.beginPath(); sk.moveTo(mid + ph - dir * 9, yy); sk.quadraticCurveTo(mid + ph, yy - 5, mid + ph + dir * 9, yy - 1); sk.stroke();
     }
     g.restore();
   }

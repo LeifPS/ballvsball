@@ -244,7 +244,7 @@ export function drawBoxArt(g, id, t, size, opts) {
   if (id === 'klein') {   // schwarzer Nebel am Boden
     for (let i = 0; i < 7; i++) {
       const ph = (T * .5 + i / 7) % 1, x = 22 + i * 9 + Math.sin(T * 1.7 + i * 1.9) * 5, y = 90 - ph * 6 + Math.sin(T * 2 + i) * 1.5, r = 7 + (i % 3) * 2.5 + ph * 3;
-      g.globalAlpha = (1 - ph) * .55 + .15; g.fillStyle = i % 2 ? '#14141c' : '#2a2a38'; g.beginPath(); g.ellipse(x, y, r * 1.5, r * .65, 0, 0, 7); g.fill();
+      g.globalAlpha = (1 - ph) * .55 + .15; g.fillStyle = i % 2 ? '#14141c' : '#2a2a38'; c.beginPath(); c.ellipse(x, y, r * 1.5, r * .65, 0, 0, 7); c.fill();
     }
     g.globalAlpha = 1;
   }

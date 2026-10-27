@@ -28,7 +28,7 @@ export function unlock() {
   apply();
 }
 /* ---------- Effekte: KI-erzeugte Samples (ElevenLabs Sound Effects, siehe public/audio) ---------- */
-const SFX_NAMES = ['click', 'back', 'hit', 'tick', 'hit2', 'boom', 'zap', 'die', 'block', 'heal', 'stun', 'dash', 'whoosh', 'nova', 'pop', 'coin', 'go', 'open', 'win', 'lose', 'rare', 'legend'];
+const SFX_NAMES = ['click', 'back', 'hit', 'tick', 'hit2', 'boom', 'zap', 'die', 'block', 'heal', 'stun', 'dash', 'whoosh', 'nova', 'pop', 'coin', 'go', 'open', 'win', 'lose', 'rare', 'legend', 'helper', 'grow', 'mute', 'mood', 'bombdrop', 'shield', 'boing', 'cannon', 'grate', 'catch', 'mythic'];
 const VARY = { hit: .06, hit2: .05, click: .04, pop: .06, tick: .03, block: .05, zap: .05, coin: .02 };   // leichte Tonhöhen-Schwankung, damit sich Wiederholungen nicht gleich anhören
 const buffers = {};
 let loading = false;
@@ -40,9 +40,10 @@ function loadSamples() {
   }
 }
 const LAST = {};
+const FALLBACK = { mythic: 'legend', helper: 'pop', grow: 'whoosh', mute: 'zap', mood: 'coin', bombdrop: 'tick', shield: 'block', boing: 'pop', cannon: 'boom', grate: 'block', catch: 'hit' };   // falls ein neuer Effekt noch nicht geladen ist
 export function sfx(name, v) {
   if (!ctx || mode < 1) return;
-  const buf = buffers[name]; if (!buf) return;
+  const buf = buffers[name] || buffers[FALLBACK[name]]; if (!buf) return;
   const now = ctx.currentTime;
   if (LAST[name] && now - LAST[name] < .035) return;   // nicht dutzendfach pro Moment
   LAST[name] = now;

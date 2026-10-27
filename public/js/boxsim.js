@@ -138,7 +138,7 @@ export function stepBox(s) {
     for (const sg of L.segs) hitSeg(b, sg, .35);
     for (const sg of L.shelves) hitSeg(b, sg, .3);
     for (const p of L.pegs) hitPoint(b, p[0], p[1], p[2], p[3] ? .95 : .45);
-    if (L.flum) for (const f of L.flum) hitPoint(b, f[0], f[1], f[2], 1.12);
+    if (L.flum) for (const f of L.flum) { if (s.ev) { const fx0 = b.x - f[0], fy0 = b.y - f[1], rr0 = BR + f[2] + 1; if (fx0 * fx0 + fy0 * fy0 < rr0 * rr0 && s.step - (b.boing || -99) > 12) { s.ev.push('boing'); b.boing = s.step; } } hitPoint(b, f[0], f[1], f[2], 1.12); }
     if (L.wind) for (const w of L.wind) if (b.x > w.x0 && b.x < w.x1 && b.y > w.y0 && b.y < w.y1) { b.vx += w.ax * BDT; b.vy += w.ay * BDT; }
     if (L.cannons) for (const c of L.cannons) {
       if (b.x > c.x0 && b.x < c.x1 && b.y > c.y0 && b.y < c.y1) {
@@ -146,13 +146,13 @@ export function stepBox(s) {
         b.vx *= .94; b.vy *= .94;
         if (s.t - b.cn > .2) {   // Bumm: Ball wird Richtung (tx, ty) nach oben geschleudert
           const dx = c.tx - b.x, dy = c.ty - b.y, l = Math.sqrt(dx * dx + dy * dy) || 1;
-          b.vx = dx / l * c.pw; b.vy = dy / l * c.pw; b.cn = 0; b.fired = s.step; c.fire = s.step;
+          b.vx = dx / l * c.pw; b.vy = dy / l * c.pw; b.cn = 0; b.fired = s.step; c.fire = s.step; if (s.ev) s.ev.push('cannon');
         }
       } else if (b.cn && !(b.x > c.x0 - 6 && b.x < c.x1 + 6 && b.y > c.y0 - 6 && b.y < c.y1 + 6)) b.cn = 0;
     }
     if (L.traps) for (const tr of L.traps) {
       if (b.x > tr.x0 && b.x < tr.x1 && b.y > tr.y0 && b.y < tr.y1) {
-        b.out = tr.k; b.outStep = s.step;
+        b.out = tr.k; b.outStep = s.step; if (s.ev) s.ev.push(tr.k === 'cup' ? 'catch' : 'grate');
         if (tr.k === 'cup') { b.vx = b.vy = 0; b.vr = 0; b.cup = tr; }
         else { b.vx *= .3; b.vy = Math.max(b.vy, 60); }
         break;

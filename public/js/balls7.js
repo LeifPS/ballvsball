@@ -13,7 +13,7 @@ function addHelper(sim, owner, type) {
   h.st.boss = owner.id;
   if (owner.def.id === 'herrscher' || owner.type === 'herrscher') { h.hp = h.maxHp = h.maxHp * TUNE.helpHp; }
   sim.teamMax[owner.team] = (sim.teamMax[owner.team] || 0) + h.maxHp;
-  fx(sim, 'dash', owner.x, owner.y, 0);
+  fx(sim, 'helper', owner.x, owner.y, 0);
   return h;
 }
 
@@ -60,7 +60,7 @@ const N = {
     contact: () => 0,
     takes: (b, sim) => sim.t < TUNE.expT0 + TUNE.expProt ? 0 : 1,   // Anlaufschutz: eine Schutzblase hält ihn in den ersten Sekunden unverwundbar
     init(b) { b.st.nx = 0; },
-    update(b, sim) { b.st.shield = sim.t < TUNE.expT0 + TUNE.expProt; },
+    update(b, sim) { const sh = sim.t < TUNE.expT0 + TUNE.expProt; if (b.st.shield && !sh) fx(sim, 'shield', b.x, b.y, b.r); b.st.shield = sh; },
     onWall(b, sim) {
       if (sim.t < b.st.nx || sim.t < TUNE.expT0) return;
       const e = nearestEnemy(sim, b);
@@ -69,6 +69,7 @@ const N = {
       if (n >= 3) return;
       b.st.nx = sim.t + TUNE.expCd;
       // Die Bombe landet dort, wo der Gegner gleich sein wird (Warnring zeigt es an)
+      fx(sim, 'bombdrop', b.x, b.y, 0);
       newObj(sim, 'bomb', b, clampPt(e.x + e.vx * .55), clampPt(e.y + e.vy * .55), { r: TUNE.expR, fuse: TUNE.expFuse, dmg: 1e9, fxk: 'boom' });
     }
   },
@@ -77,7 +78,7 @@ const N = {
     desc: 'Stark und zäh. Wenn er gegen die Wand prallt, wird die Arena kurz größer.',
     strong: 'Fast alles', weak: 'Bomben',
     contact: (b, sim) => 22 + sim.t * .25, contactCd: .5,
-    onWall(b, sim) { sim.growTo = 40; sim.growUntil = sim.t + 3; }
+    onWall(b, sim) { if (sim.t >= (sim.growUntil || 0)) fx(sim, 'grow', b.x, b.y, 60); sim.growTo = 40; sim.growUntil = sim.t + 3; }
   },
 
   /* ================= Gefühlsbox ================= */
@@ -126,7 +127,10 @@ const N = {
     desc: 'Schnüffelt am Gegner: Der kann nur noch durch Berührung Schaden machen, alle Fähigkeiten sind aus.',
     strong: 'Fähigkeits-Bälle', weak: 'Reine Nahkämpfer',
     contact: (b, sim) => 8 + sim.t * .1, contactCd: .45,
-    update(b, sim) { for (const e of sim.balls) if (!e.dead && e.team !== b.team) e.silNext = true; }
+    update(b, sim) {
+      b.st.mt = (b.st.mt || 0) - DT;
+      for (const e of sim.balls) if (!e.dead && e.team !== b.team) { if (!e.silNext && !e.silenced && b.st.mt <= 0) { fx(sim, 'mute', e.x, e.y, e.r); b.st.mt = 4; } e.silNext = true; }
+    }
   },
   stolz: {
     name: 'Stolzer Ball', rarity: 'episch', hp: 80, speed: 140, r: 18, dmg: 'Mittel',
@@ -163,7 +167,7 @@ const N = {
     init(b) { b.st.mode = 0; b.st.t = 4; },
     update(b, sim) {
       b.st.t -= DT;
-      if (b.st.t <= 0) { b.st.t = 4; b.st.mode = (b.st.mode + 1) % 3; fx(sim, 'dash', b.x, b.y, 0); }
+      if (b.st.t <= 0) { b.st.t = 4; b.st.mode = (b.st.mode + 1) % 3; fx(sim, 'mood', b.x, b.y, b.st.mode); }
       if (b.st.mode === 2) FEEL.angst.tick(b); else { b.r = b.def.r; FEEL.froh.tick(b, sim); }
     }
   },

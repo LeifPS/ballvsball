@@ -394,7 +394,7 @@ async function openBox(id) {
   const W = Math.min(window.innerWidth - 28, 300), H = Math.round(W / (BW + 16) * BOX_H);
   show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Los geht\'s!</h2><canvas id="bc" class="view"></canvas><p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Der erste Ball durch die Öffnung unten gehört dir.<br>Tippen zum Überspringen.</p></div>');
   const cv = $('#bc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  const s = createBox(r.seed, 10, layoutOf(b.id)); let acc = 0, fin = 0, shown = false, lastN = 0, flash = 0, skip = false;
+  const s = createBox(r.seed, 10, layoutOf(b.id)); s.ev = [];   // Ereignisse (Flummi, Kanone, Gitter, Korb) für die Geräusche let acc = 0, fin = 0, shown = false, lastN = 0, flash = 0, skip = false;
   SCREEN.onpointerdown = () => { if (S.screen === 'boxplay') skip = true; };
   setView({
     frame(tm, dt, tf) {
@@ -406,6 +406,7 @@ async function openBox(id) {
       if (skip && !shown) { let g = 20000; while (!s.done && s.order.length < 3 && g-- > 0) stepBox(s); }
       acc += dt * 120 * rate;
       while (acc >= 1 && !s.done && s.order.length < 3) { stepBox(s); acc--; }
+      if (skip) s.ev.length = 0; else while (s.ev.length) sfx(s.ev.shift(), .8);
       if (s.order.length > lastN) { if (lastN === 0) { flash = 1; sfx('pop'); } lastN = s.order.length; }
       flash = Math.max(0, flash - dt * 2.5);
       if (s.order.length >= 3 || s.done) { if (!fin) fin = tm; }
@@ -427,7 +428,7 @@ function boxResult(r, s, before, b) {
     '<div class="panel" style="text-align:left"><div class="row sb wrap"><span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
     (near.length ? '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Knapp daneben: ' + near.map(t => '<b style="color:' + RARITY[DEFS[t].rarity].color + ';background:var(--paper);padding:0 6px;border-radius:6px">' + esc(ballName(t)) + '</b>').join(' und ') + ' lag auch vorn!</p>' : '') +
     (new Set(S.me.balls.map(x => x.type)).size < 3 ? btn('Weiter', 'home', '', 'pri big') : btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box')) + '</div>');
-  sfx(rar === 'legendaer' || rar === 'mythisch' ? 'legend' : big ? 'rare' : 'coin');
+  sfx(rar === 'mythisch' ? 'mythic' : rar === 'legendaer' ? 'legend' : big ? 'rare' : 'coin');
   if (big) confetti(rar === 'mythisch' ? 110 : rar === 'legendaer' ? 70 : 40);
 }
 
