@@ -198,16 +198,20 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
   // Windräder (drehen sich mit der Simulationszeit), handgezeichnet wie alles andere: wackelige Kontur, versetzte Füllung, Schraffur
   // Wind: gestrichelte Streifen laufen nach außen; Kanonen blitzen beim Abschuss
-  if (L.wind) for (const w of L.wind) {   // Wind: Schwünge laufen über die ganze Fläche in Windrichtung
+  if (L.wind) for (const w of L.wind) {   // Wind: wenige, ruhige Schwünge, die in Windrichtung durch die Fläche ziehen und ein- und ausblenden
     g.save(); g.beginPath(); g.rect(w.x0, w.y0, w.x1 - w.x0, w.y1 - w.y0); g.clip();
     g.beginPath(); L.poly.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();   // nur im Dropper-Inneren
-    g.strokeStyle = 'rgba(80,150,220,.8)'; g.lineWidth = 2.2; g.lineCap = g.lineJoin = 'round';
-    const wl = Math.hypot(w.ax, w.ay) || 1, ux = w.ax / wl, uy = w.ay / wl, sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22); sk.lineWidth = 2.2;
-    const wd = w.x1 - w.x0, ht = w.y1 - w.y0, span = Math.max(wd, ht) + 40, rows = Math.max(1, Math.floor(ht / 11)), cols = Math.max(1, Math.round(wd / 34));
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
-      const ph = ((tm * 40 + r * 13 + c * 29 + (r % 2) * 17) % span) - 20, bx = w.x0 + (c + .5) / cols * wd + ux * ph - ux * span / 2 * .0, by = w.y0 + (r + .5) / rows * ht + uy * ph;
-      const px = ((bx - w.x0 + wd * 4) % wd) + w.x0, py = ((by - w.y0 + ht * 4) % ht) + w.y0;
-      sk.beginPath(); sk.moveTo(px - ux * 9, py - uy * 9); sk.quadraticCurveTo(px - uy * 4, py + ux * 4, px + ux * 9, py + uy * 9); sk.stroke();
+    g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#5a9ee0';
+    const wd = w.x1 - w.x0, ht = w.y1 - w.y0, horiz = Math.abs(w.ax) >= Math.abs(w.ay), sgn = (horiz ? w.ax : w.ay) < 0 ? -1 : 1;
+    const n = Math.max(3, Math.min(14, Math.round(wd * ht / 1000))), sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22);
+    const hs = i => { const v = Math.sin(i * 127.1 + w.x0 * .31 + w.y0 * .17) * 43758.5453; return v - Math.floor(v); };
+    for (let i = 0; i < n; i++) {
+      const lane = hs(i + 1), t = (tm * (.22 + hs(i + 9) * .18) + hs(i + 5)) % 1, fade = Math.sin(t * Math.PI);
+      const along = horiz ? (sgn > 0 ? w.x0 + t * wd : w.x1 - t * wd) : (sgn > 0 ? w.y0 + t * ht : w.y1 - t * ht);
+      const px = horiz ? along : w.x0 + lane * wd, py = horiz ? w.y0 + lane * ht + Math.sin(tm * 2 + i) * 2 : along, L2 = 12 + hs(i + 3) * 8;
+      g.globalAlpha = .95 * fade; g.lineWidth = 2.4; sk.lineWidth = 2.4;
+      const dx = horiz ? sgn * L2 : 0, dy = horiz ? 0 : sgn * L2;
+      sk.beginPath(); sk.moveTo(px - dx, py - dy); sk.quadraticCurveTo(px - dy * .5, py + dx * .5, px + dx, py + dy); sk.stroke();
     }
     g.restore();
   }
