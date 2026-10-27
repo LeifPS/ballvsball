@@ -173,3 +173,4 @@ canvas.boxart{display:block;flex:none;flex-shrink:0;max-width:none}
 .mart .mrow{display:flex;justify-content:center;margin-top:-10px}.mart .mrow:first-child{margin-top:0}
 .mart .mb{display:block;line-height:0}
 .mvs{font-size:28px;margin:0 2px;color:var(--ink)}
+.htile.off{filter:grayscale(.85);opacity:.6;cursor:default}

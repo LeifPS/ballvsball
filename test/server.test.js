@@ -172,29 +172,14 @@ if (end) {
   const after = (await api('/api/me', t1)).me.coins;
   ok(after - before === end.coins && end.coins === (end.win ? 40 : 10), 'Belohnung gebucht: ' + end.coins);
 }
-// Mehrspieler: zu viert (1 Mensch + 3 Bots), jeder gegen jeden
+// Mehrspieler ist wegen Wartung gesperrt
 {
-  const wsF = await connect(t1);
-  let rF = 0, endF = null, okF = true, t1F = Date.now();
-  wsF._h = m => {
-    if (m.t === 'match_start') okF = okF && m.ffa === true && m.n === 4;
-    if (m.t === 'pick_phase') wsF.send(JSON.stringify({ t: 'pick', uid: m.hand[0].uid }));
-    if (m.t === 'reveal') wsF.send(JSON.stringify({ t: 'dir', deg: 77 }));
-    if (m.t === 'fight') {
-      rF++;
-      const rr = runFight(m.cfg);
-      if (rr.winner !== m.winner || rr.steps !== m.steps) okF = false;
-      wsF.send(JSON.stringify({ t: 'ready' }));
-    }
-    if (m.t === 'match_end') endF = m;
-  };
+  const wsF = await connect(t1); let err = null;
+  wsF._h = m => { if (m.t === 'error') err = m.code; };
   await new Promise(r => setTimeout(r, 300));
-  const bF = (await api('/api/me', t1)).me.coins;
   wsF.send(JSON.stringify({ t: 'queue', mode: 4 }));
-  while (!endF && Date.now() - t1F < 240000) await new Promise(r => setTimeout(r, 200));
-  ok(!!endF && endF.ffa, 'Mehrspieler zu viert beendet nach ' + Math.round((Date.now() - t1F) / 1000) + ' s (' + rF + ' Runden), Platz ' + (endF && endF.place));
-  ok(okF, 'Mehrspieler: Client-Simulation stimmt mit Server überein');
-  if (endF) { const aF = (await api('/api/me', t1)).me.coins; ok(aF - bF === endF.coins && endF.coins > 0, 'Mehrspieler-Belohnung gebucht: ' + endF.coins); }
+  await new Promise(r => setTimeout(r, 500));
+  ok(err === 'maintenance', 'Mehrspieler gesperrt (Wartung)');
 }
 // Spielstand übertragen
 {
