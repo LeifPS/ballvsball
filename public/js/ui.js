@@ -394,7 +394,7 @@ async function openBox(id) {
   const W = Math.min(window.innerWidth - 28, 300), H = Math.round(W / (BW + 16) * BOX_H);
   show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Los geht\'s!</h2><canvas id="bc" class="view"></canvas><p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Der erste Ball durch die Öffnung unten gehört dir.<br>Tippen zum Überspringen.</p></div>');
   const cv = $('#bc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  const s = createBox(r.seed, 10, layoutOf(b.id)); s.ev = [];   // Ereignisse (Flummi, Kanone, Gitter, Korb) für die Geräusche let acc = 0, fin = 0, shown = false, lastN = 0, flash = 0, skip = false;
+  const s = createBox(r.seed, 10, layoutOf(b.id)); s.ev = [] /* Ereignisse (Flummi, Kanone, Gitter, Korb) für die Geräusche */; let acc = 0, fin = 0, shown = false, lastN = 0, flash = 0, skip = false;
   SCREEN.onpointerdown = () => { if (S.screen === 'boxplay') skip = true; };
   setView({
     frame(tm, dt, tf) {

@@ -36,7 +36,7 @@ function loadSamples() {
   if (loading || !ctx) return;
   loading = true;
   for (const n of SFX_NAMES) {
-    fetch('/audio/' + n + '.mp3').then(r => r.arrayBuffer()).then(ab => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej))).then(buf => { buffers[n] = buf; }).catch(() => { });
+    fetch('/audio/' + n + '.mp3').then(r => { if (!r.ok) throw new Error('fehlt'); return r.arrayBuffer(); }).then(ab => ctx.decodeAudioData(ab)).then(buf => { buffers[n] = buf; }).catch(() => { });   // fehlende Dateien werden still übersprungen
   }
 }
 const LAST = {};
