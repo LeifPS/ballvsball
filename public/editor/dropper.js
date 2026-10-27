@@ -183,7 +183,7 @@ function draw() {
   for (const a of def.shelves) { line(a, '#1d2742', 7); line(a, '#d9a441', 4); }
   for (const a of def.segs) line(a, '#1d2742', 4);
   for (const sp of def.spinners) { g.strokeStyle = '#1d2742'; g.lineWidth = sp.w * 2 * K + 2; g.beginPath(); g.moveTo(sx(sp.x - sp.len), sy(sp.y)); g.lineTo(sx(sp.x + sp.len), sy(sp.y)); g.stroke(); g.strokeStyle = '#ffd45a'; g.lineWidth = sp.w * 2 * K - 2; g.beginPath(); g.moveTo(sx(sp.x - sp.len), sy(sp.y)); g.lineTo(sx(sp.x), sy(sp.y)); g.stroke(); g.strokeStyle = '#4fa3e8'; g.beginPath(); g.moveTo(sx(sp.x), sy(sp.y)); g.lineTo(sx(sp.x + sp.len), sy(sp.y)); g.stroke(); g.beginPath(); g.arc(sx(sp.x), sy(sp.y), 7 * K * .6, 0, 7); g.fillStyle = '#e0533a'; g.fill(); }
-  for (const f of def.flum) { g.beginPath(); g.arc(sx(f[0]), sy(f[1]), f[2] * K, 0, 7); g.fillStyle = '#ff6fb0'; g.fill(); g.strokeStyle = '#1d2742'; g.lineWidth = 2; g.stroke(); g.fillStyle = '#1d2742'; g.font = '11px sans-serif'; g.fillText('flum', sx(f[0]) - 12, sy(f[1]) + 4); }
+  for (const f of def.flum) { g.beginPath(); g.arc(sx(f[0]), sy(f[1]), f[2] * K, 0, 7); g.fillStyle = '#ff6fb0'; g.fill(); g.strokeStyle = '#1d2742'; g.lineWidth = 2; g.stroke(); }
   for (const p of def.pegs) { g.beginPath(); g.arc(sx(p[0]), sy(p[1]), p[2] * K, 0, 7); g.fillStyle = p[3] ? '#e0533a' : '#c9b88a'; g.fill(); g.strokeStyle = '#1d2742'; g.lineWidth = 2; g.stroke(); }
   // hängengebliebene Bälle aus der Statistik
   g.fillStyle = 'rgba(220,40,40,.55)'; for (const s of stuck) { g.beginPath(); g.arc(sx(s[0]), sy(s[1]), 4, 0, 7); g.fill(); }

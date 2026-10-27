@@ -262,7 +262,6 @@ function home() {
     '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
     (ev ? '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="halloween">' + gi('token', 46) + '<div class="grow"><h3>Halloween-Box ist da!</h3><span class="small">' + timeLeft(me.eventEnd - now()) + ' - 6 neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>' : '') +
     btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'multi', '', 'fight') +
-    '<div class="row gap6"><button class="htile wide" style="--tc:#d6e6ff" data-act="friends"><span class="hv">' + gi('heart', 36) + '</span><b>Mit Freunden spielen</b><span class="small">Raum mit Code</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + BALL_IDS.length + ' Bällen</span></button>' +
     '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="market"><span class="hv">' + gi('coin', 40) + gi('coin', 30) + '</span><b>Markt</b><span class="small">Kaufen und verkaufen</span></button>' +
@@ -422,7 +421,7 @@ function boxResult(r, s, before, b) {
   const near = s.order.slice(1, 3).map(i => r.cands[i]).filter(t => RARITY[DEFS[t].rarity].order > RARITY[rar].order);
   const have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price && boxActive(b.id, now());
   const big = rar === 'episch' || rar === 'legendaer' || rar === 'mythisch';
-  show('<div class="col res"><h1 class="jit pop" style="color:#fff;text-shadow:3px 4px 0 var(--ink)">' + esc(d.name) + '!</h1><div>' + rarHTML(rar).replace('rar"', 'rar" style="font-size:22px;background:var(--paper);padding:1px 10px;border:2px solid var(--ink);border-radius:8px;color:' + RARITY[rar].color + '"') + '</div>' +
+  show('<div class="col res"><h1 class="jit pop" style="color:#fff;text-shadow:3px 4px 0 var(--ink)">' + esc(d.name) + '!</h1><div>' + '<span class="rarpill">' + rarHTML(rar) + '</span>' + '</div>' +
     '<div class="hero sheet-ball" style="min-height:250px;align-items:center">' + (big ? '<div class="rays"></div>' : '') + '<div class="pop" style="position:relative">' + ball(r.ball.type, 240, .66) + '</div></div>' +
     (isNew ? '<div class="center"><span class="tag" style="font-size:24px;padding:2px 14px">Neu in deiner Sammlung!</span></div>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast ihn schon (Duplikat). Verkaufe oder tausche ihn.</p>') +
     '<div class="panel" style="text-align:left"><div class="row sb wrap"><span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
@@ -520,13 +519,14 @@ function multi() {
     '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle, wie viele Spieler kämpfen. Fehlende Spieler füllen Bots auf.</p>' +
     grp(2, 'queue1', '1 gegen 1', 'Der Klassiker: drei Leben', '#ffd9a0') +
     grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#d6ecff') +
-    grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#dff3c8') + '</div>');
+    grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#dff3c8') +
+    '<button class="htile mode" style="--tc:#ffe0f0" data-act="friends"><span class="mart"><span class="hv">' + gi('heart', 40, '#ff6f9a') + gi('heart', 30, '#ff9ac4') + '</span><span class="codebig jit" style="font-size:26px;letter-spacing:3px">ABCD</span></span><span class="grow"><b>Mit Freunden</b><span class="small">Raum mit Code, ohne Belohnung</span></span></button></div>');
 }
 
 /* ================= Freunde ================= */
 function friends() {
   S.screen = 'friends'; setView(null);
-  show('<div class="col">' + backBar('Mit Freunden') +
+  show('<div class="col">' + backBar('Mit Freunden', 'multi') +
     '<div class="panel"><p class="center">Erstelle einen Raum und gib deinen Freunden den Code. Leere Plätze füllen Bots auf. Es gibt keine Belohnung, aber auch keine Verluste.</p></div>' +
     btn('Raum erstellen: 1 gegen 1', 'room1', '', 'pri') + btn('Raum erstellen: 2 gegen 2', 'room2') +
     '<h3 class="center mt" style="color:#fff;text-shadow:2px 2px 0 var(--ink)">Einem Raum beitreten</h3><div class="inp"><input id="rc" maxlength="4" placeholder="CODE" style="text-transform:uppercase;text-align:center;font:400 34px var(--f-display)"></div>' + btn('Beitreten', 'roomjoin') + '</div>');
