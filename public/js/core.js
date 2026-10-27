@@ -126,7 +126,7 @@ export function hurt(sim, t, amt, src, kind) {
   if (src && src.def.dm && kind !== 'reflect') amt *= src.def.dm * src.pm;
   // Anlaufphase: am Anfang wird weniger Schaden gemacht, damit kein Kampf unter ca. 8 s endet
   if (sim.t < 8 && kind !== 'reflect') amt *= .3 + .7 * (sim.t / 8);
-  if (d.takes) amt *= d.takes(t, sim, kind);
+  if (d.takes && !t.silenced) amt *= d.takes(t, sim, kind);
   t.hp -= amt;
   if (kind !== 'dot') t.flash = .12;
   if (src) sim.dealt[src.team] = (sim.dealt[src.team] || 0) + amt;
@@ -135,7 +135,8 @@ export function hurt(sim, t, amt, src, kind) {
     t.dotT = .2; t.dotAcc = (t.dotAcc || 0) + amt;
     if (sim.t >= (t.dotNext || 0)) { fx(sim, 'tick', t.x, t.y, t.dotAcc); t.dotAcc = 0; t.dotNext = sim.t + .5; }
   }
-  if (d.onHurt) d.onHurt(t, amt, src, kind, sim);
+  if (src && src.def.lifesteal && !src.dead && amt < 1e6) src.hp = Math.min(src.maxHp, src.hp + amt * src.def.lifesteal);   // Liebender Ball: heilt um den ausgeteilten Schaden
+  if (d.onHurt && !t.silenced) d.onHurt(t, amt, src, kind, sim);
   return amt;
 }
 export function heal(sim, b, amt) {
@@ -155,9 +156,9 @@ export function stun(sim, t, secs) {
 }
 
 // Arena schrumpft in langen Kämpfen: nach ENRAGE_T rücken die Wände von allen Seiten zusammen (bis auf etwa die halbe Kantenlänge)
-export function insetOf(sim) { return sim.t > ENRAGE_T ? Math.min(75, (sim.t - ENRAGE_T) * 1.8) : 0; }
+export function insetOf(sim) { return (sim.t > ENRAGE_T ? Math.min(75, (sim.t - ENRAGE_T) * 1.8) : 0) - (sim.grow || 0); }   // Kleiner Großer: sim.grow > 0 vergrößert die Arena (negativer Abstand)
 function wallHit(sim, b, side) {
-  if (b.stun > 0 || !b.def.onWall) return;
+  if (b.stun > 0 || !b.def.onWall || b.silenced) return;
   let px, py;
   const ins = insetOf(sim);
   if (side === 'l') { px = ins; py = b.y; } else if (side === 'r') { px = BOX - ins; py = b.y; }
@@ -185,7 +186,7 @@ function dealContact(sim, a, b) {
   if (dmg <= 0) return;
   a.hitCd[b.id] = sim.t + (a.def.contactCd || .5);
   const dealt = hurt(sim, b, dmg, a, 'contact');
-  if (a.def.onContact) a.def.onContact(a, b, sim, dealt);
+  if (a.def.onContact && !a.silenced) a.def.onContact(a, b, sim, dealt);
 }
 
 function kill(sim, b) {
@@ -198,6 +199,7 @@ export function stepSim(sim) {
   if (sim.over) return;
   sim.t += DT; sim.step++;
   const balls = sim.balls;
+  if (sim.growTo !== undefined || sim.grow) { const gt = sim.t < (sim.growUntil || 0) ? (sim.growTo || 0) : 0; sim.grow = (sim.grow || 0) + (gt - (sim.grow || 0)) * .09; if (sim.grow < .05 && gt === 0) sim.grow = 0; }
   for (let i = 0; i < balls.length; i++) {
     const b = balls[i];
     if (b.dead) continue;
@@ -208,7 +210,8 @@ export function stepSim(sim) {
     if (b.stun > 0) { b.stun -= DT; if (b.stun <= 0) { b.stun = 0; b.stunImm = 1.5; } }
     else if (b.stunImm > 0) b.stunImm -= DT;
     b.noMove = false;
-    if (b.stun <= 0 && b.def.update) b.def.update(b, sim);
+    b.silenced = b.silNext; b.silNext = false;   // Neugieriger Ball: Fähigkeiten des Gegners aus (wirkt mit einem Schritt Verzögerung)
+    if (b.stun <= 0 && b.def.update && !b.silenced) b.def.update(b, sim);
     if (!b.noMove) moveBall(sim, b);
   }
   // Ball gegen Ball: abprallen (Tempo bleibt), bei Gegnern Kontaktschaden

@@ -72,6 +72,12 @@ function whiteOf(cv) {
 
 /* ---------- Ball ---------- */
 // Koordinaten in Arena-Einheiten; tf = Boil-Frame, tm = Sekunden
+function badge(g, x, y, txt, col) {
+  g.save(); g.font = '700 15px "Patrick Hand", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const w = g.measureText(txt).width + 12;
+  g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = 1.8; g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - 9, w, 18, 8) : g.rect(x - w / 2, y - 9, w, 18); g.fill(); g.stroke();
+  g.fillStyle = '#fff'; g.strokeStyle = INK; g.lineWidth = 2.4; g.strokeText(txt, x, y + 1); g.fillText(txt, x, y + 1); g.restore();
+}
 export function drawBall(g, b, sim, tf, tm, tint) {
   const d = b.def, st = b.st || {}, v = vstate(b), f = tf + b.id, type = b.type;
   const k = b.r / R0 * (KS[type] || 1), x = b.x, y = b.y;
@@ -102,7 +108,13 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   else if (type === 'tornado') { const p = partSprite('swirl'); spr(g, p, 0, 0, f, (b.r + 14) / p.rad, tm * 4, .55); }
   /* Körper */
   g.save(); g.rotate(tilt); g.scale(sx * bob * k, sy * bob * k);
-  const sp = bodySprite(type === 'erik' && st.emo != null ? 'erik_' + 'wfta'[st.emo] : type, !b.preview);
+  if (type === 'herrscher') {   // Regenbogen-Körper, dreht sich langsam
+    const gr = g.createConicGradient ? g.createConicGradient(tm * 1.6, 0, 0) : g.createLinearGradient(-R0, -R0, R0, R0);
+    ['#ff3b3b', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#8a5cff', '#ff3bd0', '#ff3b3b'].forEach((c, i, a) => gr.addColorStop(i / (a.length - 1), c));
+    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.ellipse(-R0 * .42, -R0 * .5, R0 * .16, R0 * .09, -.7, 0, 7); g.fill();
+  }
+  const sp = bodySprite(type === 'erik' && st.emo != null ? 'erik_' + 'wfta'[st.emo] : type === 'gefuehl' && st.mode != null ? 'gefuehl_' + 'fwa'[st.mode] : type, !b.preview);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
   // Weißes Aufblinken: nur die Silhouette des Balls (kein Kreis), bei Treffern kurz, bei Dauerschaden langsam pulsierend
   const pulse = b.dotT > 0 ? .55 * Math.pow(Math.max(0, Math.sin(tm * 13 + b.id)), 2) : 0;
@@ -140,6 +152,19 @@ export function drawBall(g, b, sim, tf, tm, tint) {
     const ax = st.ax, ay = st.ay, p = objSprite('fireZone');
     for (let i = 0; i < 9; i++) { const dist = b.r + 8 + i * 15, w = .45 + i * .1; spr(g, p, ax * dist, ay * dist, f + i, w * (.9 + .15 * Math.sin(tm * 14 + i)), 0, .88); }
   }
+  /* Gefühle: Zustandsanzeigen */
+  const weakT = type === 'froh' || type === 'wuet' || (type === 'gefuehl' && st.mode < 2);
+  const wk = weakT && st.weak && !b.preview;
+  if (wk) {
+    const isW = type === 'wuet' || (type === 'gefuehl' && st.mode === 1);
+    ringJ(g, 0, 0, b.r + 5, 2.2, isW ? 'rgba(230,50,40,.85)' : 'rgba(110,140,200,.8)', tf, b.id + 3);
+    badge(g, 0, -b.r - 25, isW ? '×2' : '½', isW ? '#e8453c' : '#8fb0e8');
+  }
+  if (type === 'stolz' && st.proud && !b.preview) star(g, 0, -b.r - 20, 4.4 + Math.sin(tm * 6) * .6, '#ffd21f');
+  if (type === 'herrscher' && st.shield) { g.save(); g.fillStyle = 'rgba(170,220,255,.28)'; g.beginPath(); g.arc(0, 0, b.r + 6, 0, 7); g.fill(); g.restore(); ringJ(g, 0, 0, b.r + 6, 2.4, 'rgba(255,255,255,.95)', tf, b.id + 4); ringJ(g, 0, 0, b.r + 6, 1.2, INK, tf + 1, b.id + 6); }
+  if (type === 'kleinexplus') { g.strokeStyle = INK; g.lineWidth = 2; g.lineCap = 'round'; for (let i = 0; i < 4; i++) { const a = tm * 6 + i * 1.571; g.beginPath(); g.arc(0, 0, b.r + 7, a, a + .7); g.stroke(); } }
+  if (type === 'gefuehl') { g.save(); g.globalAlpha = (ghost ? .45 : 1) * .5; for (let i = 0; i < 4; i++) { const a = tm * .9 + i * 1.571; g.fillStyle = '#a79fb6'; g.beginPath(); g.ellipse(Math.cos(a) * b.r * 1.05, Math.sin(a) * b.r * .95, b.r * .36, b.r * .26, a, 0, 7); g.fill(); } g.restore(); }
+  if (b.silenced && !b.preview) { g.save(); g.globalAlpha *= .9; g.fillStyle = '#e8e4d6'; g.strokeStyle = INK; g.lineWidth = 1.6; g.beginPath(); g.arc(0, -b.r - 24, 8, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(-5, -b.r - 19); g.lineTo(5, -b.r - 29); g.stroke(); g.restore(); }
   const H = HELD[type];
   if (H && !b.preview) {
     const e = nearestEnemy(sim, b), ta = e ? Math.atan2(e.y - b.y, e.x - b.x) : (v.aim == null ? 0 : v.aim);
@@ -172,6 +197,11 @@ export function drawBallIn(ctx, type, size, tm, tf, fit, dark) {
   const w = size * (fit || .62) * (BIG[type] || 1) * 2.15;
   ctx.save(); ctx.translate(size / 2, size / 2 + Math.sin(tm * 3 + type.length) * size * .012);
   if (dark) { ctx.filter = 'brightness(0)'; ctx.globalAlpha = .22; }
+  if (type === 'herrscher') {
+    const rr = R0 * w / SIDE, gr = ctx.createConicGradient ? ctx.createConicGradient(tm * 1.6, 0, 0) : ctx.createLinearGradient(-rr, -rr, rr, rr);
+    ['#ff3b3b', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#8a5cff', '#ff3bd0', '#ff3b3b'].forEach((c, i, a) => gr.addColorStop(i / (a.length - 1), c));
+    ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rr, 0, 7); ctx.fill();
+  }
   ctx.drawImage(sp.fr[((tf % 3) + 3) % 3], -w / 2, -w / 2, w, w);
   ctx.restore();
 }
@@ -310,13 +340,14 @@ export function drawFx(g, dt, tf) {
 }
 // Lebensbalken über dem Ball
 export function drawHpBar(g, b, myTeam, colMine, colFoe, teamCols) {
-  const w = Math.max(22, b.r * 1.7), h = 4.4, x = b.x - w / 2, y = b.y - b.r - 10, fr = Math.max(0, Math.min(1, b.hp / b.maxHp));
+  const w = Math.max(22, b.r * 1.7), h = 4.4, x = b.x - w / 2, y = b.y - b.r - 10, bm = b.barMax || b.maxHp, fr = Math.max(0, Math.min(1, b.hp / bm)), base = b.maxHp / bm;
   // Handgezeichnet: leicht schiefer Rahmen (pro Ball stabil), Füllung mit Buntstift-Schraffur
   const j = n => Math.sin(b.id * 12.9 + n * 78.2) * .9;
   const frame = () => { g.beginPath(); g.moveTo(x + j(1), y + j(2)); g.lineTo(x + w + j(3), y + j(4) * .6); g.lineTo(x + w + j(5), y + h + j(6)); g.lineTo(x + j(7), y + h + j(8) * .6); g.closePath(); };
   g.save(); g.lineJoin = 'round'; g.lineCap = 'round'; frame(); g.fillStyle = '#f6efd9'; g.fill();
   if (fr > 0) {
-    g.save(); frame(); g.clip(); const fw = w * fr; g.fillStyle = teamCols ? teamCols[b.team] : b.team === myTeam ? colMine : colFoe; g.fillRect(x, y, fw, h);
+    g.save(); frame(); g.clip(); const fw = w * fr; g.fillStyle = teamCols ? teamCols[b.team] : b.team === myTeam ? colMine : colFoe; g.fillRect(x, y, Math.min(fw, w * base), h);
+    if (fr > base) { g.fillStyle = '#ffd21f'; g.fillRect(x + w * base, y, fw - w * base, h); }
     g.strokeStyle = 'rgba(255,255,255,.5)'; g.lineWidth = 1; g.beginPath(); for (let sx = x - h; sx < x + fw; sx += 3.2) { g.moveTo(sx, y + h); g.lineTo(sx + h, y); } g.stroke();
     g.strokeStyle = INK; g.lineWidth = 1.3; g.beginPath(); g.moveTo(x + fw + j(9) * .5, y); g.lineTo(x + fw + j(10) * .5, y + h); g.stroke(); g.restore();
   }

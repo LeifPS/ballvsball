@@ -54,7 +54,8 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
   g.beginPath(); g.rect(ax + 2, ay + 2, AS - 4, AS - 4); g.clip();
   // Wackeln
   if (fxState.shake > .05) { g.translate((Math.random() - .5) * fxState.shake * 1.6, (Math.random() - .5) * fxState.shake * 1.6); fxState.shake *= Math.pow(.02, dt); }
-  g.translate(ax, ay); const k = AS / BOX; g.scale(k, k);
+  const gr = Math.max(0, sim.grow || 0), k = AS / (BOX + 2 * gr);   // Kleiner Großer: Kamera zoomt heraus, die Arena ist größer
+  g.translate(ax + gr * k, ay + gr * k); g.scale(k, k);
   for (const e of sim.fx) addFx(e);
   sim.fx.length = 0;
   const ffa = players && players.length > 2 && players.every((p, i) => p.team === i), objs = sim.objs, myTeam = players && mySlot >= 0 && players[mySlot] ? players[mySlot].team : 0;

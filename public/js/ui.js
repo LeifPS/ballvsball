@@ -750,7 +750,7 @@ function fightScreen(m) {
         const h = hp[p.slot]; if (!h) continue;
         let cur = 0, mx = 0;
         for (const b of sim.balls) if (b.slot === p.slot) { mx += b.maxHp; if (!b.dead) cur += Math.max(0, b.hp); }
-        const base = sim.slotMax[p.slot] || mx || 1, pc = Math.max(0, Math.min(100, cur / base * 100));
+        const base = mx || 1, pc = Math.max(0, Math.min(100, cur / base * 100));
         h.bar.style.width = pc.toFixed(1) + '%';
       }
     }

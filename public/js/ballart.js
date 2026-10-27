@@ -716,3 +716,62 @@ export const PARTS = {
 
 /* ---------- Stufen der Wirkung eines Balls auf die Fläche (Rahmen) ---------- */
 export const BALL_EXT = { riese: 1.2, drache: 1.1 };
+
+/* ---------- Kleinbox und Gefühlsbox ---------- */
+function brow(c, x1, y1, x2, y2, s) { c.lineWidth = s * .05; c.beginPath(); c.moveTo(x1, y1); c.lineTo(x2, y2); c.stroke(); }
+function sweat(c, x, y, r) { c.beginPath(); c.moveTo(x, y - r * .5); c.quadraticCurveTo(x + r * .35, y + r * .1, x, y + r * .35); c.quadraticCurveTo(x - r * .35, y + r * .1, x, y - r * .5); c.closePath(); FS(c, '#9fd8ff'); }
+function heart(c, x, y, r, col) { c.beginPath(); c.moveTo(x, y + r * .8); c.bezierCurveTo(x - r * 1.5, y - r * .2, x - r * .6, y - r * 1.1, x, y - r * .35); c.bezierCurveTo(x + r * .6, y - r * 1.1, x + r * 1.5, y - r * .2, x, y + r * .8); c.closePath(); FS(c, col); }
+// Gesichter der Gefühlsbälle
+function emo(c, s, k) {
+  const r = s * .36, ey = -r * .08, sp = r * .36;
+  const eyes = (er, bl) => [-1, 1].forEach(d => cEye(c, d * sp, ey, er, bl || 1, s));
+  c.lineWidth = s * .035;
+  if (k === 'froh') { eyes(r * .2); cBlush(c, -r * .62, r * .34, s); cBlush(c, r * .62, r * .34, s); c.beginPath(); c.arc(0, r * .28, r * .3, .1, PI - .1); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.stroke(); }
+  else if (k === 'wuet') { eyes(r * .17, .8); brow(c, -sp - r * .3, ey - r * .42, -sp + r * .2, ey - r * .2, s); brow(c, sp + r * .3, ey - r * .42, sp - r * .2, ey - r * .2, s); c.beginPath(); c.arc(0, r * .62, r * .22, PI + .3, -.3); c.stroke(); }
+  else if (k === 'gelassen') { eyes(r * .19, .85); [-1, 1].forEach(d => { c.lineWidth = s * .04; c.beginPath(); c.moveTo(d * sp - r * .22, ey - r * .06); c.lineTo(d * sp + r * .22, ey - r * .06); c.stroke(); }); c.lineWidth = s * .035; c.beginPath(); c.moveTo(-r * .22, r * .4); c.lineTo(r * .22, r * .4); c.stroke(); }
+  else if (k === 'verlegen') { eyes(r * .18, .9); cBlush(c, -r * .62, r * .3, s, .75); cBlush(c, r * .62, r * .3, s, .75); c.beginPath(); c.moveTo(-r * .25, r * .45); c.quadraticCurveTo(-r * .12, r * .3, 0, r * .45); c.quadraticCurveTo(r * .12, r * .6, r * .25, r * .45); c.stroke(); sweat(c, r * .85, -r * .3, r * .3); }
+  else if (k === 'angst') { eyes(r * .25, 1.05); brow(c, -sp - r * .25, ey - r * .55, -sp + r * .25, ey - r * .7, s); brow(c, sp + r * .25, ey - r * .55, sp - r * .25, ey - r * .7, s); c.beginPath(); c.moveTo(-r * .3, r * .5); c.quadraticCurveTo(-r * .15, r * .35, 0, r * .5); c.quadraticCurveTo(r * .15, r * .65, r * .3, r * .5); c.stroke(); sweat(c, -r * .85, -r * .35, r * .3); sweat(c, r * .8, r * .1, r * .22); }
+  else if (k === 'neugier') { [-1, 1].forEach(d => cEye(c, d * sp, ey, r * .22, 1, s)); brow(c, -sp - r * .22, ey - r * .5, -sp + r * .2, ey - r * .6, s); brow(c, sp - r * .2, ey - r * .35, sp + r * .25, ey - r * .4, s); c.beginPath(); c.arc(r * .08, r * .45, r * .1, 0, 7); c.stroke(); }
+  else if (k === 'stolz') { [-1, 1].forEach(d => { c.lineWidth = s * .05; c.beginPath(); c.arc(d * sp, ey + r * .05, r * .2, PI + .2, -.2); c.stroke(); }); brow(c, -sp - r * .25, ey - r * .4, -sp + r * .25, ey - r * .5, s); brow(c, sp + r * .25, ey - r * .4, sp - r * .25, ey - r * .5, s); c.lineWidth = s * .035; c.beginPath(); c.moveTo(-r * .3, r * .4); c.quadraticCurveTo(0, r * .55, r * .3, r * .3); c.stroke(); cBlush(c, -r * .62, r * .3, s); cBlush(c, r * .62, r * .3, s); }
+  else if (k === 'neid') { [-1, 1].forEach(d => { c.lineWidth = s * .03; c.fillStyle = '#fff'; c.beginPath(); c.ellipse(d * sp, ey, r * .22, r * .17, 0, 0, 7); c.fill(); c.stroke(); dot(c, d * sp + r * .14, ey, r * .1); }); brow(c, -sp - r * .25, ey - r * .33, -sp + r * .22, ey - r * .15, s); brow(c, sp + r * .25, ey - r * .33, sp - r * .22, ey - r * .15, s); c.lineWidth = s * .035; c.beginPath(); c.moveTo(-r * .28, r * .45); c.quadraticCurveTo(0, r * .35, r * .28, r * .5); c.stroke(); }
+  else if (k === 'liebe') { [-1, 1].forEach(d => heart(c, d * sp, ey, r * .24, '#ff4f7a')); c.beginPath(); c.arc(0, r * .3, r * .26, .15, PI - .15); c.stroke(); cBlush(c, -r * .66, r * .3, s); cBlush(c, r * .66, r * .3, s); }
+}
+const mixBody = (c, s, col, k) => { body(c, s, col); emo(c, s, k); };
+function smokeRing(c, s) { const r = s * .36; c.save(); c.globalAlpha = .55; for (let i = 0; i < 7; i++) { const a = i / 7 * 6.283; el(c, Math.cos(a) * r * 1.05, Math.sin(a) * r * 1.0, r * .38, r * .28, '#a79fb6', a); } c.restore(); }
+const feelArt = {
+  froh: (c, s) => mixBody(c, s, '#a8e68c', 'froh'),
+  wuet: (c, s) => { const r = s * .36; [-.5, 0, .5].forEach(x => { c.beginPath(); c.moveTo(x * r, -r * .95); c.quadraticCurveTo(x * r + r * .25, -r * 1.35, x * r, -r * 1.6); c.stroke(); }); mixBody(c, s, '#e8453c', 'wuet'); },
+  gelassen: (c, s) => mixBody(c, s, '#f6d84a', 'gelassen'),
+  verlegen: (c, s) => mixBody(c, s, '#ff9ac4', 'verlegen'),
+  aengstlich: (c, s) => mixBody(c, s, '#6aa8ff', 'angst'),
+  neugierig: (c, s) => mixBody(c, s, '#3fae5a', 'neugier'),
+  stolz: (c, s) => mixBody(c, s, '#ffd21f', 'stolz'),
+  neid: (c, s) => mixBody(c, s, '#e85aa8', 'neid'),
+  liebend: (c, s) => mixBody(c, s, '#b57aff', 'liebe'),
+  gefuehl: (c, s) => { smokeRing(c, s); mixBody(c, s, '#a8e68c', 'froh'); }
+};
+Object.assign(BALLS, feelArt, {
+  kleinstachel(c, s) { const r = s * .36; [[1, 1], [-1, 1], [1, -1], [-1, -1]].forEach(d => spike(c, d[0] * r * .7, d[1] * r * .7, Math.atan2(d[1], d[0]) + 1.5708, s * .22, s * .08, '#2b2d36')); body(c, s, '#23252d'); face(c, s, { angry: 1, mouth: 'flat', blush: 0, er: .2 }); },
+  kleinerhelfer(c, s) {
+    const r = s * .36, g = c.createLinearGradient(0, -r, 0, r); g.addColorStop(0, '#7ad66a'); g.addColorStop(.38, '#7ad66a'); g.addColorStop(.5, '#a06ae0'); g.addColorStop(.62, '#a06ae0'); g.addColorStop(.75, '#f2c43a'); g.addColorStop(1, '#ee6a3a');
+    ln(c, r * .5, -r * .1, r * 1.35, -r * 1.05, s * .04, '#7a4a21'); stars(c, [[r * 1.4, -r * 1.12, r * .3]], '#ffe36a');
+    body(c, s, g);
+    [-1, 1].forEach(d => { c.lineWidth = s * .05; c.beginPath(); c.moveTo(d * r * .55, -r * .12); c.quadraticCurveTo(d * r * .35, -r * .26, d * r * .12, -r * .12); c.stroke(); });
+    c.lineWidth = s * .035; c.beginPath(); c.arc(0, r * .4, r * .16, .2, PI - .2); c.stroke();
+  },
+  minihelfer(c, s) { const r = s * .36; body(c, s, '#3fc45a'); [-1, 1].forEach(d => { c.lineWidth = s * .05; c.beginPath(); c.moveTo(d * r * .55, -r * .05); c.quadraticCurveTo(d * r * .35, -r * .2, d * r * .12, -r * .05); c.stroke(); }); },
+  kleinexplus(c, s) { body(c, s, '#23252d'); const r = s * .36; dot(c, -r * .25, -r * .1, r * .16, '#fff'); dot(c, r * .25, -r * .1, r * .16, '#fff'); },
+  kleinergross(c, s) { const r = s * .36, g = c.createLinearGradient(r, -r, -r, r); g.addColorStop(0, '#ffe45a'); g.addColorStop(1, '#ff7ab8'); body(c, s, g); face(c, s, { mouth: 'grin', er: .2 }); },
+  herrscher(c, s) {
+    // Körper wird im Kampf als drehender Regenbogenverlauf darunter gezeichnet; hier nur Umriss und Gesicht
+    const r = s * .36; c.beginPath(); c.ellipse(0, 0, r, r, 0, 0, 7); c.stroke();
+    [-1, 1].forEach(d => { c.fillStyle = '#fff'; c.beginPath(); c.ellipse(d * r * .36, -r * .08, r * .24, r * .27, 0, 0, 7); c.fill(); c.stroke(); c.lineWidth = s * .04; c.beginPath(); c.moveTo(d * r * .36 - r * .1, -r * .2); c.quadraticCurveTo(d * r * .36 - r * .1, -r * .32, d * r * .36 + r * .02, -r * .3); c.quadraticCurveTo(d * r * .36 + r * .12, -r * .27, d * r * .36, -r * .1); c.stroke(); dot(c, d * r * .36, r * .04, r * .03); });
+    c.lineWidth = s * .035; c.beginPath(); c.arc(0, r * .32, r * .2, .15, PI - .15); c.stroke();
+  }
+});
+Object.assign(VARIANTS, {
+  gefuehl_f: (c, s) => { smokeRing(c, s); mixBody(c, s, '#a8e68c', 'froh'); },
+  gefuehl_w: (c, s) => { smokeRing(c, s); feelArt.wuet(c, s); },
+  gefuehl_a: (c, s) => { smokeRing(c, s); mixBody(c, s, '#6aa8ff', 'angst'); }
+});
+OB.peinlich = [7, c => { ci(c, 0, 0, 7, '#ff9ac4'); dot(c, -2.4, -1.5, 1.2, INK); dot(c, 2.4, -1.5, 1.2, INK); c.lineWidth = 1.3; c.beginPath(); c.moveTo(-3, 3); c.quadraticCurveTo(0, 1.4, 3, 3.4); c.stroke(); dot(c, -5, 1, 1.5, 'rgba(255,60,90,.6)'); dot(c, 5, 1, 1.5, 'rgba(255,60,90,.6)'); }, 4];
