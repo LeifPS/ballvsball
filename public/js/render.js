@@ -203,14 +203,14 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
     g.beginPath(); L.poly.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();   // nur im Dropper-Inneren
     g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#5a9ee0';
     const wd = w.x1 - w.x0, ht = w.y1 - w.y0, horiz = Math.abs(w.ax) >= Math.abs(w.ay), sgn = (horiz ? w.ax : w.ay) < 0 ? -1 : 1;
-    const n = Math.max(3, Math.min(14, Math.round(wd * ht / 1000))), sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22);
-    const hs = i => { const v = Math.sin(i * 127.1 + w.x0 * .31 + w.y0 * .17) * 43758.5453; return v - Math.floor(v); };
-    for (let i = 0; i < n; i++) {
-      const lane = hs(i + 1), t = (tm * (.22 + hs(i + 9) * .18) + hs(i + 5)) % 1, fade = Math.sin(t * Math.PI);
-      const along = horiz ? (sgn > 0 ? w.x0 + t * wd : w.x1 - t * wd) : (sgn > 0 ? w.y0 + t * ht : w.y1 - t * ht);
-      const px = horiz ? along : w.x0 + lane * wd, py = horiz ? w.y0 + lane * ht + Math.sin(tm * 2 + i) * 2 : along, L2 = 12 + hs(i + 3) * 8;
-      g.globalAlpha = .95 * fade; g.lineWidth = 2.4; sk.lineWidth = 2.4;
-      const dx = horiz ? sgn * L2 : 0, dy = horiz ? 0 : sgn * L2;
+    const sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22), span = horiz ? wd : ht, thick = horiz ? ht : wd;
+    const lanes = Math.max(1, Math.round(thick / 28)), per = Math.max(1, Math.round(span / 80));   // gleichmäßige Bahnen, auf jeder Bahn gleichmäßig verteilte Schwünge
+    g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#6aa6e4'; g.lineWidth = 1.8; sk.lineWidth = 1.8;
+    for (let l = 0; l < lanes; l++) for (let k = 0; k < per; k++) {
+      const t = (tm * .22 + (k + (l % 2) * .5 + l * .17) / per) % 1, fade = Math.sin(t * Math.PI);
+      const along = sgn > 0 ? t * span : span - t * span, lane = (l + .5) / lanes * thick;
+      const px = horiz ? w.x0 + along : w.x0 + lane, py = horiz ? w.y0 + lane : w.y0 + along, dx = horiz ? sgn * 10 : 0, dy = horiz ? 0 : sgn * 10;
+      g.globalAlpha = .75 * fade;
       sk.beginPath(); sk.moveTo(px - dx, py - dy); sk.quadraticCurveTo(px - dy * .5, py + dx * .5, px + dx, py + dy); sk.stroke();
     }
     g.restore();
