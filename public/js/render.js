@@ -1,7 +1,7 @@
 // Arena und Ballbox-Minispiel zeichnen.
 import { BOX } from './engine.js';
 import { insetOf } from './core.js';
-import { SEGS, PEGS, SHELVES, SPINNERS, BW, BH, BR, EXIT_Y } from './boxsim.js';
+import { BW, BH, BR, EXIT_Y, layoutOf } from './boxsim.js';
 import { DEFS, RARITY } from './engine.js';
 import { INK, DPR, mkSprite, sketchCtx, strSeed } from './sk.js';
 import { bodySprite, drawBall, drawObj, drawFx, addFx, drawHpBar, ringJ, star, fxState, GROUND } from './art.js';
@@ -92,8 +92,56 @@ const BOARD = {};
 const TOP = 190;                       // Platz über dem Spielfeld für die Kiste (Weltkoordinaten -TOP..)
 export const BOX_H = BH + 186;         // sichtbare Höhe: von y = -170 bis unter den Becher
 const CUP = { x0: 96, x1: 204, y0: 376, y1: 442 };
-function boardSprite(col) {
-  if (BOARD[col]) return BOARD[col];
+// Handgezeichnete Besonderheiten der Dropper (Gitter, Körbe, Gitterablagen, Block, Flummi, Kanonen)
+function wob(sk, pts, close) { sk.beginPath(); pts.forEach((q, i) => i ? sk.lineTo(q[0], q[1]) : sk.moveTo(q[0], q[1])); if (close) sk.closePath(); }
+function drawDropperDecor(x, sk, L) {
+  x.lineJoin = x.lineCap = 'round';
+  if (L.grates) for (const r of L.grates) {   // Gitter: dunkler Schacht mit Stäben
+    x.fillStyle = '#3b3a46'; x.fillRect(r[0], r[1], r[2] - r[0], r[3] - r[1]);
+    x.strokeStyle = '#9a98a8'; sk.lineWidth = 2.4; sk.strokeStyle = '#9a98a8';
+    for (let gx = r[0] + 7; gx < r[2] - 3; gx += 12) { sk.beginPath(); sk.moveTo(gx, r[1] + 2); sk.lineTo(gx, r[3] - 2); sk.stroke(); }
+    sk.beginPath(); sk.moveTo(r[0] + 2, r[1] + 3); sk.lineTo(r[2] - 2, r[1] + 3); sk.stroke();
+    sk.lineWidth = 3.2; sk.strokeStyle = INK; x.strokeStyle = INK; wob(sk, [[r[0], r[1]], [r[2], r[1]], [r[2], r[3]], [r[0], r[3]]], true); sk.stroke();
+  }
+  if (L.cups) for (const c of L.cups) {   // Fangkörbe: geflochten
+    const w = c.x1 - c.x0, h = c.y1 - c.y0;
+    x.beginPath(); x.moveTo(c.x0, c.y0 - 4); x.lineTo(c.x0, c.y1); x.lineTo(c.x1, c.y1); x.lineTo(c.x1, c.y0 - 4); x.lineTo(c.x1 - 5, c.y0 - 4); x.lineTo(c.x1 - 5, c.y1 - 5); x.lineTo(c.x0 + 5, c.y1 - 5); x.lineTo(c.x0 + 5, c.y0 - 4); x.closePath();
+    x.fillStyle = '#c98b3a'; x.fill();
+    sk.lineWidth = 1.6; sk.strokeStyle = '#7a4a21'; for (let yy = c.y0 + 4; yy < c.y1; yy += 6) { sk.beginPath(); sk.moveTo(c.x0, yy); sk.lineTo(c.x1, yy + 2); sk.stroke(); }
+    sk.lineWidth = 3.2; sk.strokeStyle = INK; wob(sk, [[c.x0, c.y0 - 4], [c.x0, c.y1], [c.x1, c.y1], [c.x1, c.y0 - 4]], false); sk.stroke();
+  }
+  if (L.grids) for (const g of L.grids) {   // Gitterablagen: dicke Platte mit Gitter darunter
+    const dx = g[2] - g[0], dy = g[3] - g[1], l = Math.hypot(dx, dy), ux = dx / l, uy = dy / l, nx = -uy, ny = ux, hgt = 30;
+    x.fillStyle = 'rgba(255,255,255,.5)'; x.beginPath(); x.moveTo(g[0], g[1]); x.lineTo(g[2], g[3]); x.lineTo(g[2], g[3] + hgt); x.lineTo(g[0], g[1] + hgt); x.closePath(); x.fill();
+    sk.lineWidth = 2; sk.strokeStyle = INK;
+    for (let i = 1; i < 6; i++) { const t = i / 6; sk.beginPath(); sk.moveTo(g[0] + dx * t, g[1] + dy * t); sk.lineTo(g[0] + dx * t, g[1] + dy * t + hgt); sk.stroke(); }
+    sk.beginPath(); sk.moveTo(g[0], g[1] + hgt * .5); sk.lineTo(g[2], g[3] + hgt * .5); sk.stroke();
+    sk.lineWidth = 3.4; wob(sk, [[g[0], g[1]], [g[2], g[3]], [g[2], g[3] + hgt], [g[0], g[1] + hgt]], true); sk.stroke();
+  }
+  // Block über dem Ausgang (Rechteck aus den Wand-Segmenten, die zwischen Gitterablagen und Ausgang liegen)
+  if (L.id === 'gefuehl') {
+    x.fillStyle = '#e8d9a8'; x.fillRect(138, 276, 24, 16); sk.lineWidth = 3.2; sk.strokeStyle = INK; wob(sk, [[138, 276], [162, 276], [162, 292], [138, 292]], true); sk.stroke();
+    sk.lineWidth = 1.6; sk.beginPath(); sk.moveTo(142, 284); sk.lineTo(158, 284); sk.stroke();
+  }
+  if (L.flum) for (const f of L.flum) {   // Flummi-Bumper
+    x.fillStyle = '#ff6fb0'; x.beginPath(); x.arc(f[0], f[1], f[2], 0, 7); x.fill();
+    sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.stroke();
+    x.fillStyle = '#fff'; x.beginPath(); x.arc(f[0], f[1], f[2] * .55, 0, 7); x.fill(); sk.lineWidth = 2; sk.beginPath(); sk.arc(f[0], f[1], f[2] * .55, 0, 7); sk.stroke();
+    x.fillStyle = INK; x.font = '700 9px "Patrick Hand", sans-serif'; x.textAlign = 'center'; x.fillText('flum', f[0], f[1] + 3);
+  }
+  if (L.cannons) for (const c of L.cannons) {   // Kanonenrohre entlang der Schrägen
+    const sgn = c.side === 'l' ? 1 : -1, cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2;
+    x.save(); x.translate(cx, cy); x.rotate(sgn * -.95);
+    x.fillStyle = '#7e8696'; x.fillRect(-11, -20, 22, 40);
+    sk.lineWidth = 3; sk.strokeStyle = INK; wob(sk, [[-11, -20], [11, -20], [11, 20], [-11, 20]], true); sk.stroke();
+    x.fillStyle = '#4b5160'; x.fillRect(-13, -24, 26, 7); sk.lineWidth = 2.4; wob(sk, [[-13, -24], [13, -24], [13, -17], [-13, -17]], true); sk.stroke();
+    x.fillStyle = '#2d303a'; x.beginPath(); x.ellipse(0, 6, 8, 5, 0, 0, 7); x.fill();
+    x.restore();
+  }
+}
+function boardSprite(col, L) {
+  const key = col + L.id;
+  if (BOARD[key]) return BOARD[key];
   const sc = Math.min(2, DPR), W = BW + 40, H = BH + TOP + 50, fr = [];
   for (let f = 0; f < 3; f++) {
     const cv = document.createElement('canvas'); cv.width = Math.ceil(W * sc); cv.height = Math.ceil(H * sc);
@@ -101,18 +149,17 @@ function boardSprite(col) {
     x.lineJoin = x.lineCap = 'round';
     const sk = sketchCtx(x, strSeed(col) + f * 1.9, 120); x.strokeStyle = INK; x.lineWidth = 3.6; sk.lineWidth = 3.6;
     // Hintergrund in Boxfarbe, begrenzt durch Wände
-    x.save(); x.beginPath(); x.moveTo(0, -TOP); x.lineTo(BW, -TOP); x.lineTo(BW, 175); x.lineTo(BW - 135, 372); x.lineTo(BW - 135, 392); x.lineTo(135, 392); x.lineTo(135, 372); x.lineTo(0, 175); x.closePath(); x.clip();
+    x.save(); x.beginPath(); L.poly.forEach((q, i) => i ? x.lineTo(q[0], Math.max(q[1], -TOP)) : x.moveTo(q[0], Math.max(q[1], -TOP))); x.closePath(); x.clip();
     x.fillStyle = '#f6efd9'; x.fillRect(-20, -TOP, W, H);
     x.globalAlpha = .22; x.fillStyle = col; x.fillRect(-20, -TOP, W, H); x.globalAlpha = 1;
     x.strokeStyle = 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; for (let i = -TOP; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
     // Zielzone: Streifen zum Becher
-    x.globalAlpha = .18; x.fillStyle = '#ffd45a'; x.fillRect(135, 330, 30, 70); x.globalAlpha = 1;
+    x.globalAlpha = .18; x.fillStyle = '#ffd45a'; x.fillRect(L.goal[0], L.goal[1], L.goal[2], L.goal[3]); x.globalAlpha = 1;
     x.restore();
     x.strokeStyle = INK; x.lineWidth = 3.6;
-    sk.beginPath(); sk.moveTo(0, -TOP); sk.lineTo(0, 175); sk.lineTo(135, 372); sk.lineTo(135, 392); sk.stroke();
-    sk.beginPath(); sk.moveTo(BW, -TOP); sk.lineTo(BW, 175); sk.lineTo(BW - 135, 372); sk.lineTo(BW - 135, 392); sk.stroke();
+    for (const ln of L.outline) { sk.beginPath(); ln.forEach((q, i) => i ? sk.lineTo(q[0], Math.max(q[1], -TOP)) : sk.moveTo(q[0], Math.max(q[1], -TOP))); sk.stroke(); }
     // Ablagen: Holzbretter, handgezeichnet (wacklige Kontur, versetzte Füllung, Maserung)
-    for (const sh of SHELVES) {
+    for (const sh of L.shelves) {
       const dx = sh[2] - sh[0], dy = sh[3] - sh[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy * 5, ny = ux * 5;
       x.lineJoin = 'round'; x.lineWidth = 3; x.strokeStyle = INK;
       sk.lineWidth = 3; sk.beginPath(); sk.moveTo(sh[0] + nx, sh[1] + ny); sk.lineTo(sh[2] + nx, sh[3] + ny); sk.lineTo(sh[2] - nx, sh[3] - ny); sk.lineTo(sh[0] - nx, sh[1] - ny); sk.closePath();
@@ -122,11 +169,12 @@ function boardSprite(col) {
       sk.strokeStyle = INK; x.strokeStyle = INK;
     }
     x.strokeStyle = INK; x.lineWidth = 3.6;
-    PEGS.forEach(p => {
+    L.pegs.forEach(p => {
       x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = p[3] ? '#e0533a' : '#d9c9a0'; x.fill();
       sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke();
       if (p[3]) { sk.beginPath(); sk.arc(p[0], p[1], p[2] + 4.5, 0, 7); sk.lineWidth = 1.6; sk.strokeStyle = 'rgba(224,83,58,.7)'; sk.stroke(); sk.strokeStyle = INK; x.fillStyle = '#fff'; x.beginPath(); x.arc(p[0], p[1], p[2] * .38, 0, 7); x.fill(); }
     });
+    drawDropperDecor(x, sk, L, col);
     // Auffangbecher unten: geschlossen, mit Boden
     x.beginPath(); x.moveTo(CUP.x0, CUP.y0); x.lineTo(CUP.x0 + 8, CUP.y1); x.lineTo(CUP.x1 - 8, CUP.y1); x.lineTo(CUP.x1, CUP.y0); x.closePath();
     x.fillStyle = '#fff9e0'; x.fill();
@@ -134,7 +182,7 @@ function boardSprite(col) {
     sk.lineWidth = 3.6; sk.beginPath(); sk.moveTo(CUP.x0 - 6, CUP.y0 - 2); sk.lineTo(CUP.x0, CUP.y0); sk.lineTo(CUP.x0 + 8, CUP.y1); sk.lineTo(CUP.x1 - 8, CUP.y1); sk.lineTo(CUP.x1, CUP.y0); sk.lineTo(CUP.x1 + 6, CUP.y0 - 2); sk.stroke();
     fr.push(cv);
   }
-  return (BOARD[col] = { fr, W, H });
+  return (BOARD[key] = { fr, W, H });
 }
 const ease = t => t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t);
 // Die Kiste oben: kippt, schüttet die Bälle aus, richtet sich auf und verschwindet nach oben
@@ -150,10 +198,26 @@ function drawPourer(g, boxId, s, tm) {
 export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   const k = W / (BW + 16);   // 8 Einheiten Rand links und rechts, damit die Wandlinien nicht am Bildrand abgeschnitten werden
   g.save(); g.scale(k, k); g.translate(8, 170);
-  const B = boardSprite(col || '#d9a441');
+  const L = s.L || layoutOf(boxId), B = boardSprite(col || '#d9a441', L);
   g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
   // Windräder (drehen sich mit der Simulationszeit), handgezeichnet wie alles andere: wackelige Kontur, versetzte Füllung, Schraffur
-  for (const sp of SPINNERS) {
+  // Wind: gestrichelte Streifen laufen nach außen; Kanonen blitzen beim Abschuss
+  if (L.wind) for (const w of L.wind) {
+    g.save(); g.strokeStyle = 'rgba(80,150,220,.75)'; g.lineWidth = 2; g.lineCap = 'round'; g.setLineDash([7, 6]);
+    const dir = w.ax < 0 ? -1 : 1, mid = (w.x0 + w.x1) / 2;
+    for (let i = 0; i < 4; i++) {
+      const yy = w.y0 + 6 + i * 10 + Math.sin(tm * 3 + i) * 1.5, ph = (tm * 40 + i * 9) % 30;
+      g.lineDashOffset = -dir * ph; g.beginPath(); g.moveTo(mid - dir * 14, yy); g.lineTo(mid + dir * 14, yy - 4); g.stroke();
+    }
+    g.restore();
+  }
+  if (L.cannons) for (const c of L.cannons) {
+    if (c.fire !== undefined && s.step - c.fire < 14) {
+      const k = 1 - (s.step - c.fire) / 14, sgn = c.side === 'l' ? 1 : -1;
+      star(g, (c.x0 + c.x1) / 2 + sgn * 6, c.y0 - 4, 9 * k + 3, '#ffe14a', tm * 6);
+    }
+  }
+  for (const sp of L.spinners) {
     const a = s.t * sp.om;
     g.save(); g.translate(sp.x, sp.y); g.lineCap = 'round'; g.lineJoin = 'round';
     for (let i = 0; i < 2; i++) {
@@ -173,6 +237,7 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
     if (!b.on) return;
     const type = cands[i], rar = RARITY[DEFS[type].rarity], sp = bodySprite(type);
     let x = b.x, y = b.y;
+    if (b.out === 'grate' && b.y > 420) return;
     if (b.done) {   // gelandet: rollt im Becher an seinen Platz (Gewinner in der Mitte)
       const rank = s.order.indexOf(i), tx = 150 + [0, -26, 26][rank] || 150, fl = CUP.y1 - BR - 4 - (rank > 2 ? 0 : 0);
       x = b.x + (tx - b.x) * ease((b.y - EXIT_Y) / 22); y = Math.min(b.y, fl);

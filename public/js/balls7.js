@@ -49,7 +49,7 @@ const N = {
     }
   },
   minihelfer: {
-    name: 'Minihelfer', rarity: 'selten', hp: 14, speed: 150, r: 8, dmg: 'Niedrig', dm: 1.15,
+    name: 'Minihelfer', rarity: 'selten', hp: 14, speed: 150, r: 8, dmg: 'Niedrig', dm: 1.23,
     desc: 'Ein kleiner grüner Helfer.', strong: '-', weak: '-',
     contact: (b, sim) => 7 + sim.t * .1, contactCd: .5
   },
@@ -142,7 +142,7 @@ const N = {
   },
   neid: {
     name: 'Neidischer Ball', rarity: 'episch', hp: 70, speed: 140, r: 18, dmg: 'Mittel',
-    desc: 'Je seltener der Gegner, desto mehr Leben und Schaden hat er (von 70 Leben bis 230).',
+    desc: 'Je seltener der Gegner, desto mehr Leben und Schaden hat er (von 95 Leben bis 235).',
     strong: 'Seltene Gegner', weak: 'Gewöhnliche Gegner',
     contact: (b, sim) => (14 + sim.t * .15) * (b.st.dm || 1), contactCd: .5,
     update(b, sim) {
@@ -150,9 +150,9 @@ const N = {
       b.st.set = 1;
       let o = 0;
       for (const e of sim.balls) if (e.team !== b.team) o = Math.max(o, RARITY[e.def.rarity].order);
-      const hp = (70 + 40 * o) * b.pm;
+      const hp = (95 + 35 * o) * b.pm;
       sim.teamMax[b.team] += hp - b.maxHp;
-      b.hp = b.maxHp = hp; b.st.dm = .8 + .2 * o; b.st.o = o;
+      b.hp = b.maxHp = hp; b.st.dm = 1 + .15 * o; b.st.o = o;
     }
   },
   gefuehl: {
@@ -198,7 +198,7 @@ N.liebend = Object.assign({}, DEFS.vampir, {
 });
 
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
-const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 2.15, liebend: .95, gefuehl: 2.15, herrscher: 1 };
+const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 2.15, herrscher: 1 };
 const BOX_OF = {
   klein: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
   gefuehl: ['froh', 'wuet', 'gelassen', 'verlegen', 'aengstlich', 'neugierig', 'stolz', 'neid', 'liebend', 'gefuehl', 'herrscher']

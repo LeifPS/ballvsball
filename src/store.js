@@ -363,12 +363,15 @@ export class Store extends DurableObject {
       types = types.filter(t => DEFS[t].name.toLowerCase().includes(needle));
     }
     if (!types.length) return { ok: true, items: [], total: 0 };
-    const ph = types.map(() => '?').join(',');
+    // SQLite erlaubt höchstens 100 Platzhalter: bei vielen Sorten lieber die ausgeschlossenen Sorten angeben
+    let cond, args;
+    if (types.length > 80) { const ex = BALL_IDS.filter(t => !types.includes(t)); cond = ex.length ? 'b.type NOT IN (' + ex.map(() => '?').join(',') + ')' : '1=1'; args = ex; }
+    else { cond = 'b.type IN (' + types.map(() => '?').join(',') + ')'; args = types; }
     const order = o.sort === 'new' ? 'b.listed_at DESC' : o.sort === 'high' ? 'b.price DESC' : 'b.price ASC, b.listed_at DESC';
     const page = Math.max(0, int(o.page || 0, 0, 1000) || 0);
     const items = this.q(`SELECT b.uid,b.type,b.stars,b.price,b.owner,u.name seller FROM balls b JOIN users u ON u.id=b.owner
-      WHERE b.lock=1 AND b.type IN (${ph}) ORDER BY ${order} LIMIT 40 OFFSET ?`, ...types, page * 40);
-    const total = this.q(`SELECT COUNT(*) c FROM balls WHERE lock=1 AND type IN (${ph})`, ...types)[0].c;
+      WHERE b.lock=1 AND ${cond} ORDER BY ${order} LIMIT 40 OFFSET ?`, ...args, page * 40);
+    const total = this.q(`SELECT COUNT(*) c FROM balls b WHERE b.lock=1 AND ${cond}`, ...args)[0].c;
     return { ok: true, items: items.map(i => ({ uid: i.uid, type: i.type, stars: i.stars, price: i.price, seller: i.seller, mine: i.owner === u.id })), total };
   }
 

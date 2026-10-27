@@ -20,3 +20,18 @@ let tries = 0, found = -1;
 for (let sd = 1; sd < 3000; sd++) { tries++; const r = simBox(sd, 10); if (r.order[0] === 4 && r.order[1] === 7) { found = sd; break; } }
 console.log('boxsim ok. Nie fertig:', fails, '/', N, ' Ø erste Ankunft', (tsum / N).toFixed(1), 's, max', tmax.toFixed(1), 's; Gewinner-Verteilung', winners.join(','), '; Seed für 4>7 nach', tries, 'Versuchen');
 assert.ok(found > 0);
+
+// Eigene Dropper (Kleinbox, Gefühlsbox): fast immer kommt mindestens ein Ball unten an, und die Ergebnisse sind reproduzierbar
+import { LAYOUTS } from '../public/js/boxsim.js';
+for (const id of ['klein', 'gefuehl']) {
+  let ok = 0;
+  for (let sd = 1; sd <= 80; sd++) {
+    const r = simBox(sd * 31, 10, LAYOUTS[id]);
+    assert.strictEqual(new Set(r.order).size, 10);
+    if (r.reached > 0) ok++;
+    const s2 = createBox(sd * 31, 10, LAYOUTS[id]); while (!s2.done && s2.order.length < 3) stepBox(s2);
+    assert.deepStrictEqual(r.order.slice(0, r.reached), s2.order.slice(0, r.reached));
+  }
+  assert.ok(ok >= 70, id + ': zu oft kommt kein Ball unten an (' + ok + '/80)');
+  console.log('Dropper', id, 'ok:', ok + '/80 mit Gewinner');
+}

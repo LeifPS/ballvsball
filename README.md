@@ -28,3 +28,10 @@ Deployment: Push auf `main` (Cloudflare Worker Build). Keine weiteren Ressourcen
 ## Seltenheit und Sterne
 - Epische und legendäre Bälle haben eine zweite, stärkere Fähigkeit zusätzlich zur ersten (`public/js/balls3.js`). Es gibt keine gemeinsamen Seltenheits-Effekte.
 - Sterne: Duplikate verbessern einen Ball (+8 % Leben und Schaden je Stern, max. 5; Kosten in `boxes.js`, `UP_COST`).
+
+## Kleinbox und Gefühlsbox (Mythisch)
+
+- `public/js/balls7.js`: 15 neue Bälle (Kleinbox: Kleiner Stachel, Kleiner Helfer, Kleiner Explus, Kleiner Großer; Gefühlsbox: Fröhlich, Wütend, Gelassen, Verlegen, Ängstlich, Neugierig, Stolz, Neidisch, Liebend, Gefühlsball, Gefühlsherrscher). `TUNE` enthält die Stellschrauben für Explus und Herrscher.
+- Neue Seltenheit **Mythisch** (Gewicht 0,5, Bots haben nie welche, im Kampf Auswahlgewicht 3).
+- Dropper pro Box (`LAYOUTS` in `public/js/boxsim.js`): Gitter, Fangkörbe, Kanonen, Wind, Flummi.
+- Balancing: `node tools/autotune7.js <ball>` sucht den dm-Faktor, `node tools/quick.js <ball>` zeigt die Siegquote, `node tools/boxstats.js` prüft die Dropper.

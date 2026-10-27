@@ -12,6 +12,8 @@ const THEMES = {
   suess: { body: '#e85fa5', lid: '#ffd0e6', glow: '#fff2a0' },
   familie: { body: '#e8725a', lid: '#ffd9a8', glow: '#ffe6a8' },
   dino: { body: '#6aa84f', lid: '#c9b88a', glow: '#e8ffb0' },
+  klein: { body: '#3b3b4c', lid: '#25252f', glow: '#d9c8ff' },
+  gefuehl: { body: '#8fd16a', lid: '#ffe14a', glow: '#ffd0f0' },
   halloween: { body: '#f58a1f', lid: '#d96e0c', glow: '#ffe14a' }
 };
 const hashId = id => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
@@ -84,6 +86,29 @@ const BODY = {
     c.fillStyle = 'rgba(255,240,216,.8)'; c.lineWidth = 0;
     [[27, 80], [73, 80], [24, 62], [76, 62]].forEach((p, i) => { c.save(); c.translate(p[0], p[1] + Math.sin(t * 3 + i) * 1); c.beginPath(); c.ellipse(0, 0, 2.6, 2.2, 0, 0, 7); c.fill(); [[-3.6, -3.4], [-1.2, -4.6], [1.2, -4.6], [3.6, -3.4]].forEach(q => { c.beginPath(); c.arc(q[0], q[1], 1, 0, 7); c.fill(); }); c.restore(); });
   },
+  klein(c, t) {
+    c.lineWidth = 2; c.strokeStyle = '#6a6a80'; c.beginPath(); c.moveTo(27, 62); c.quadraticCurveTo(50, 67, 73, 62); c.moveTo(27, 74); c.quadraticCurveTo(50, 79, 73, 74); c.stroke(); c.strokeStyle = INK;
+    c.lineWidth = 3; [[40, 66], [60, 66]].forEach((p, i) => { c.beginPath(); c.arc(p[0], p[1], 3.4, 0, 7); FS(c, '#fff'); c.fillStyle = INK; c.beginPath(); c.arc(p[0] + .6, p[1] + .4, 1.5, 0, 7); c.fill(); });
+    c.globalAlpha = .55 + .4 * Math.abs(Math.sin(t * 3)); star4(c, 66, 56, 3, '#ffe36a'); c.globalAlpha = 1;
+  },
+  gefuehl(c, t) {
+    // drei Farbfelder mit je einem Gesicht: wütend, normal, fröhlich (nach der Zeichnung von Erik und Thore)
+    c.lineWidth = 0;
+    c.fillStyle = '#8fd16a'; c.fillRect(21, 51, 20, 36); c.fillStyle = '#b9a2e8'; c.fillRect(41, 51, 20, 36); c.fillStyle = '#ff9a5a'; c.fillRect(61, 51, 18, 36);
+    c.lineWidth = 3; c.strokeStyle = INK;
+    const face = (x, y, col, kind, ph) => {
+      const by = Math.sin(t * 3 + ph) * 1.2;
+      c.beginPath(); c.ellipse(x, y + by, 7, 8.5, 0, 0, 7); FS(c, col);
+      c.fillStyle = INK; c.lineWidth = 1.8;
+      c.beginPath(); c.arc(x - 2.6, y - 2 + by, 1.1, 0, 7); c.fill(); c.beginPath(); c.arc(x + 2.6, y - 2 + by, 1.1, 0, 7); c.fill();
+      c.beginPath();
+      if (kind === 'w') { c.moveTo(x - 5, y - 5 + by); c.lineTo(x - 1, y - 3 + by); c.moveTo(x + 5, y - 5 + by); c.lineTo(x + 1, y - 3 + by); c.moveTo(x - 3, y + 5 + by); c.quadraticCurveTo(x, y + 2.5 + by, x + 3, y + 5 + by); }
+      else if (kind === 'n') { c.moveTo(x - 3, y + 4 + by); c.lineTo(x + 3, y + 4 + by); }
+      else { c.moveTo(x - 3.4, y + 2.5 + by); c.quadraticCurveTo(x, y + 7 + by, x + 3.4, y + 2.5 + by); }
+      c.stroke(); c.lineWidth = 3;
+    };
+    face(31, 71, '#ff8a8a', 'w', 0); face(51, 71, '#ffe66a', 'n', 2); face(70, 71, '#6fc27a', 'f', 4);
+  },
   halloween(c, t) {
     c.lineWidth = 2; c.strokeStyle = '#b4560c';
     c.beginPath(); c.moveTo(38, 50); c.quadraticCurveTo(30, 69, 38, 88); c.moveTo(62, 50); c.quadraticCurveTo(70, 69, 62, 88); c.stroke();
@@ -146,6 +171,17 @@ const LID = {
     c.beginPath(); c.rect(41, -32, 6, 10); FS(c, '#8a5a3a');
     c.beginPath(); c.rect(29, -12, 12, 12); FS(c, '#fff0d8'); c.fillStyle = '#ffd45a'; c.fillRect(31, -10, 8, 8);
   },
+  klein(c, t) {
+    c.lineWidth = 3; c.beginPath(); c.arc(35, -19, 4.5, 0, 7); FS(c, '#6a6a80');
+    c.globalAlpha = .6 + .3 * Math.sin(t * 4); star4(c, 50, -10, 3, '#d9c8ff'); c.globalAlpha = 1;
+  },
+  gefuehl(c, t) {
+    // Schleife aus zwei großen blauen Schlaufen
+    c.lineWidth = 3; c.strokeStyle = INK;
+    c.beginPath(); c.moveTo(35, -16); c.bezierCurveTo(14, -52, 12, -50, 20, -28); c.bezierCurveTo(24, -20, 30, -17, 35, -16); c.closePath(); FS(c, 'rgba(155,185,235,.6)');
+    c.beginPath(); c.moveTo(35, -16); c.bezierCurveTo(56, -52, 58, -50, 50, -28); c.bezierCurveTo(46, -20, 40, -17, 35, -16); c.closePath(); FS(c, 'rgba(155,185,235,.6)');
+    c.beginPath(); c.arc(35, -17, 3.4, 0, 7); FS(c, '#7a9ad6');
+  },
   halloween(c, t) {
     c.lineWidth = 3; c.beginPath(); c.moveTo(33, -16); c.quadraticCurveTo(33, -26, 39, -29); c.lineTo(42, -26); c.quadraticCurveTo(38, -24, 38, -16); c.closePath(); FS(c, '#5cae4a');
     c.lineWidth = 2.4; c.beginPath(); c.moveTo(40, -27); c.quadraticCurveTo(48, -32, 47, -24); c.stroke();
@@ -183,14 +219,35 @@ export function drawBoxArt(g, id, t, size, opts) {
     const by = 46 - open * 22 - Math.abs(Math.sin(T * 7)) * 6;
     c.lineWidth = 3; c.beginPath(); c.arc(62, by, 8, 0, 7); FS(c, '#fff'); c.beginPath(); c.moveTo(54.5, by - 2); c.quadraticCurveTo(62, by + 3, 69.5, by - 2); c.stroke();
   }
+  if (id === 'gefuehl') {   // Schleifen als Arme und Beine: Beine laufen, Arme winken
+    const ws = forced ? 0 : Math.sin(T * 6), wa = forced ? 0 : Math.sin(T * 4.5);
+    c.lineWidth = 3; const rib = '#8fb0e8';
+    [[1, 1], [-1, -1]].forEach((d, i) => {
+      const sx = i ? 80 : 20, dr = i ? 1 : -1, sw = wa * (i ? 1 : -1);
+      c.beginPath(); c.moveTo(sx, 60); c.bezierCurveTo(sx + dr * 8, 56 - sw * 4, sx + dr * 14, 62 + sw * 6, sx + dr * 20, 54 + sw * 8); c.lineTo(sx + dr * 23, 50 + sw * 8); c.bezierCurveTo(sx + dr * 15, 58 + sw * 6, sx + dr * 9, 52 - sw * 4, sx, 52); c.closePath(); FS(c, rib);
+    });
+    [[0, -1], [1, 1]].forEach(([k, sg]) => {
+      const lx = k ? 64 : 30, lift = ws * sg * 5;
+      c.beginPath(); c.moveTo(lx, 88); c.lineTo(lx + 4 + lift * .6, 98 - Math.max(0, lift) * 0.5); c.lineTo(lx + 12 + lift, 98 - Math.max(0, lift) * .5); c.lineTo(lx + 10, 88); c.closePath(); FS(c, rib);
+    });
+  }
   // Körper
-  c.beginPath(); c.rect(20, 50, 60, 38); FS(c, th.body);
+  if (id === 'klein') { c.beginPath(); c.moveTo(24, 50); c.lineTo(24, 80); c.quadraticCurveTo(24, 90, 50, 90); c.quadraticCurveTo(76, 90, 76, 80); c.lineTo(76, 50); c.closePath(); FS(c, th.body); }
+  else { c.beginPath(); c.rect(20, 50, 60, 38); FS(c, th.body); }
   (BODY[id] || BODY.standard)(c, T);
   // Deckel
   g.save(); g.translate(15, 52 - open * 5); g.rotate(-open * (forced ? .9 : .42));
-  c.beginPath(); c.rect(0, -16, 70, 16); FS(c, th.lid);
+  if (id === 'klein') { c.beginPath(); c.moveTo(6, 0); c.quadraticCurveTo(0, -10, 10, -14); c.quadraticCurveTo(35, -20, 60, -14); c.quadraticCurveTo(70, -10, 64, 0); c.closePath(); FS(c, th.lid); }
+  else { c.beginPath(); c.rect(0, -16, 70, 16); FS(c, th.lid); }
   (LID[id] || LID.standard)(c, T);
   g.restore();
+  if (id === 'klein') {   // schwarzer Nebel am Boden
+    for (let i = 0; i < 7; i++) {
+      const ph = (T * .5 + i / 7) % 1, x = 22 + i * 9 + Math.sin(T * 1.7 + i * 1.9) * 5, y = 90 - ph * 6 + Math.sin(T * 2 + i) * 1.5, r = 7 + (i % 3) * 2.5 + ph * 3;
+      g.globalAlpha = (1 - ph) * .55 + .15; g.fillStyle = i % 2 ? '#14141c' : '#2a2a38'; g.beginPath(); g.ellipse(x, y, r * 1.5, r * .65, 0, 0, 7); g.fill();
+    }
+    g.globalAlpha = 1;
+  }
   if (id === 'halloween') bat(c, 50 + Math.cos(T * 1.3) * 38, 22 + Math.sin(T * 2.6) * 6, T);
   // Funken beim Öffnen
   if (open > .05 && !forced) for (let i = 0; i < 5; i++) { const ph = (T * 1.4 + i * .21) % 1, x = 28 + i * 11 + Math.sin(T * 5 + i) * 3, y = 48 - ph * 36; g.globalAlpha = open * (1 - ph); star4(c, x, y, 3 + (i % 2) * 1.6, i % 2 ? '#fff' : th.glow); }
