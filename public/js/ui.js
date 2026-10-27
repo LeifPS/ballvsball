@@ -231,10 +231,12 @@ function onMsg(m) {
     case 'unqueued': home(); break;
     case 'room': S.room = m; roomScreen(); break;
     case 'room_left': S.room = null; friends(); break;
-    case 'match_start': S.match = { players: m.players, you: m.you, n: m.n, mode: m.mode, ffa: !!m.ffa, lives: m.lives, friendly: m.friendly, round: 0 }; if (m.resume) toast('Wieder verbunden.'); else matchIntro(); break;
-    case 'pick_phase': pickScreen(m); break;
-    case 'reveal': dirScreen(m); break;
-    case 'fight': fightScreen(m); break;
+    case 'match_start': S.match = { seen: '', players: m.players, you: m.you, n: m.n, mode: m.mode, ffa: !!m.ffa, lives: m.lives, friendly: m.friendly, round: 0 }; if (m.resume) toast('Wieder verbunden.'); else matchIntro(); break;
+    case 'pick_phase': case 'reveal': case 'fight':
+      // Wiederholte Meldungen (verspätete "Weiter"-Antworten) dürfen die laufende Phase nicht neu starten
+      if (S.match && S.match.seen === m.t + m.round) break;
+      if (S.match) S.match.seen = m.t + m.round;
+      (m.t === 'pick_phase' ? pickScreen : m.t === 'reveal' ? dirScreen : fightScreen)(m); break;
     case 'match_end': matchEnd(m); break;
     case 'left': S.match = null; home(); break;
   }
@@ -259,9 +261,8 @@ function home() {
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
     '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
     (ev ? '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="halloween">' + gi('token', 46) + '<div class="grow"><h3>Halloween-Box ist da!</h3><span class="small">' + timeLeft(me.eventEnd - now()) + ' - 6 neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>' : '') +
-    btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'queue1', '', 'fight') +
-    '<div class="row gap6"><button class="htile wide" style="--tc:#ffd9d0" data-act="multi"><span class="hv">' + gi('crown', 38) + '</span><b>Mehrspieler</b><span class="small">3 oder 4 Spieler</span></button>' +
-    '<button class="htile wide" style="--tc:#d6e6ff" data-act="friends"><span class="hv">' + gi('heart', 36) + '</span><b>Mit Freunden</b><span class="small">Raum mit Code</span></button></div>' +
+    btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'multi', '', 'fight') +
+    '<div class="row gap6"><button class="htile wide" style="--tc:#d6e6ff" data-act="friends"><span class="hv">' + gi('heart', 36) + '</span><b>Mit Freunden spielen</b><span class="small">Raum mit Code, 2 bis 4 Spieler</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + BALL_IDS.length + ' Bällen</span></button>' +
     '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="market"><span class="hv">' + gi('coin', 40) + gi('coin', 30) + '</span><b>Markt</b><span class="small">Kaufen und verkaufen</span></button>' +
@@ -497,10 +498,17 @@ async function trades() {
 /* ================= Mehrspieler ================= */
 function multi() {
   S.screen = 'multi'; setView(null);
-  show('<div class="col">' + backBar('Mehrspieler') +
-    '<div class="panel"><p class="center">Jeder gegen jeden: Alle kämpfen gleichzeitig in einer Arena. Jeder hat zwei Leben. Wer in einer Runde zuerst besiegt wird, verliert ein Leben. Wer keins mehr hat, scheidet aus. Der Letzte gewinnt. Fehlende Spieler füllen Bots auf.</p></div>' +
-    btn('Zu dritt kämpfen', 'queue3', '', 'pri') + btn('Zu viert kämpfen', 'queue4', '', 'pri') +
-    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Mit Freunden: Unter "Mit Freunden spielen" kannst du einen Raum für 3 oder 4 Spieler erstellen.</p></div>');
+  const owned = [...new Set(S.me.balls.map(b => b.type))], pick = i => owned[(i * 7 + 3) % owned.length] || 'stachel';
+  const grp = (n, act, title, sub, tc) => {
+    const bs = []; for (let i = 0; i < n; i++) bs.push('<span class="mb">' + ball(pick(i + n), 66, .7, i % 2 ? 'data-dark="1"' : '') + '</span>');
+    const arr = n === 2 ? bs[0] + '<span class="mvs jit">VS</span>' + bs[1] : n === 3 ? '<span class="mrow">' + bs[0] + '</span><span class="mrow">' + bs[1] + bs[2] + '</span>' : '<span class="mrow">' + bs[0] + bs[1] + '</span><span class="mrow">' + bs[2] + bs[3] + '</span>';
+    return '<button class="htile mode' + (n === 2 ? ' two' : '') + '" style="--tc:' + tc + '" data-act="' + act + '"><span class="mart">' + arr + '</span><span class="grow"><b>' + title + '</b><span class="small">' + sub + '</span></span></button>';
+  };
+  show('<div class="col">' + backBar('Kampf') +
+    '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle, wie viele Spieler kämpfen. Fehlende Spieler füllen Bots auf.</p>' +
+    grp(2, 'queue1', '1 gegen 1', 'Der Klassiker: drei Leben', '#ffd9a0') +
+    grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: zwei Leben', '#d6ecff') +
+    grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: zwei Leben', '#dff3c8') + '</div>');
 }
 
 /* ================= Freunde ================= */

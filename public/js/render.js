@@ -69,10 +69,15 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
   // Zusammenrückende Wände (Wut-Phase): gestreifter Warnrand und neue Wandlinie
   const ins = insetOf(sim);
   if (ins > .5) {
-    g.save(); g.fillStyle = 'rgba(224,83,58,.22)';
-    g.fillRect(0, 0, BOX, ins); g.fillRect(0, BOX - ins, BOX, ins); g.fillRect(0, ins, ins, BOX - 2 * ins); g.fillRect(BOX - ins, ins, ins, BOX - 2 * ins);
-    g.strokeStyle = 'rgba(224,83,58,.35)'; g.lineWidth = 3; g.beginPath(); for (let i = -BOX; i < BOX * 2; i += 16) { g.moveTo(i, 0); g.lineTo(i + BOX, BOX); } g.save(); g.beginPath(); g.rect(0, 0, BOX, BOX); g.rect(ins, ins, BOX - 2 * ins, BOX - 2 * ins); g.clip('evenodd'); g.stroke(); g.restore();
-    g.lineWidth = 3.2; g.strokeStyle = INK; g.lineJoin = 'round'; g.strokeRect(ins, ins, BOX - 2 * ins, BOX - 2 * ins);
+    // Neue Wand handgezeichnet: wackelige Doppellinie, Buntstift-Schraffur im gesperrten Rand
+    g.save(); g.beginPath(); g.rect(0, 0, BOX, BOX); g.rect(ins, ins, BOX - 2 * ins, BOX - 2 * ins); g.clip('evenodd');
+    g.fillStyle = 'rgba(224,83,58,.2)'; g.fillRect(0, 0, BOX, BOX);
+    const sh = sketchCtx(g, 3.1 + (tf % 3) * 1.713, 46); g.strokeStyle = 'rgba(200,70,45,.5)'; g.lineWidth = 2.2; sh.lineWidth = 2.2;
+    sh.beginPath(); for (let i = -BOX; i < BOX * 2; i += 15) { sh.moveTo(i, 0); sh.lineTo(i + BOX, BOX); } sh.stroke();
+    g.restore();
+    g.save(); g.lineJoin = g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 3.4;
+    const wl = sketchCtx(g, 9.7 + (tf % 3) * 1.713, 70); wl.lineWidth = 3.4;
+    wl.beginPath(); wl.rect(ins, ins, BOX - 2 * ins, BOX - 2 * ins); wl.stroke();
     g.restore();
   }
   for (const b of sim.balls) if (!b.dead && !opt.noBars) drawHpBar(g, b, myTeam, '#4f90e8', '#e4574a', ffa ? PLAYER_COL : null);
