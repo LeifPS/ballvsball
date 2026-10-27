@@ -161,7 +161,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
     badge(g, 0, -b.r - 25, isW ? '×2' : '½', isW ? '#e8453c' : '#8fb0e8');
   }
   if (type === 'stolz' && st.proud && !b.preview) star(g, 0, -b.r - 20, 4.4 + Math.sin(tm * 6) * .6, '#ffd21f');
-  if (type === 'herrscher' && st.shield) { g.save(); g.fillStyle = 'rgba(170,220,255,.28)'; g.beginPath(); g.arc(0, 0, b.r + 6, 0, 7); g.fill(); g.restore(); ringJ(g, 0, 0, b.r + 6, 2.4, 'rgba(255,255,255,.95)', tf, b.id + 4); ringJ(g, 0, 0, b.r + 6, 1.2, INK, tf + 1, b.id + 6); }
+  if ((type === 'herrscher' || type === 'kleinexplus') && st.shield) { g.save(); g.fillStyle = 'rgba(170,220,255,.28)'; g.beginPath(); g.arc(0, 0, b.r + 6, 0, 7); g.fill(); g.restore(); ringJ(g, 0, 0, b.r + 6, 2.4, 'rgba(255,255,255,.95)', tf, b.id + 4); ringJ(g, 0, 0, b.r + 6, 1.2, INK, tf + 1, b.id + 6); }
   if (type === 'kleinexplus') { g.strokeStyle = INK; g.lineWidth = 2; g.lineCap = 'round'; for (let i = 0; i < 4; i++) { const a = tm * 6 + i * 1.571; g.beginPath(); g.arc(0, 0, b.r + 7, a, a + .7); g.stroke(); } }
   if (type === 'gefuehl') { g.save(); g.globalAlpha = (ghost ? .45 : 1) * .5; for (let i = 0; i < 4; i++) { const a = tm * .9 + i * 1.571; g.fillStyle = '#a79fb6'; g.beginPath(); g.ellipse(Math.cos(a) * b.r * 1.05, Math.sin(a) * b.r * .95, b.r * .36, b.r * .26, a, 0, 7); g.fill(); } g.restore(); }
   if (b.silenced && !b.preview) { g.save(); g.globalAlpha *= .9; g.fillStyle = '#e8e4d6'; g.strokeStyle = INK; g.lineWidth = 1.6; g.beginPath(); g.arc(0, -b.r - 24, 8, 0, 7); g.fill(); g.stroke(); g.beginPath(); g.moveTo(-5, -b.r - 19); g.lineTo(5, -b.r - 29); g.stroke(); g.restore(); }

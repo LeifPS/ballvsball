@@ -3,7 +3,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { DEFS, BALL_IDS, RARITY, ballsInBox, MAX_STARS } from '../public/js/engine.js';
 import { BOX_BY_ID, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
-import { simBox } from '../public/js/boxsim.js';
+import { simBox, layoutOf } from '../public/js/boxsim.js';
 
 const START_COINS = 300;     // genau drei Standard-Boxen für das Tutorial
 const TUTORIAL_BALLS = ['stachel', 'feuer', 'bumerang'];   // die ersten drei Bälle im Tutorial, in dieser Reihenfolge
@@ -301,15 +301,16 @@ export class Store extends DurableObject {
     const base = Math.floor(rnd() * 2000000000);
     for (let k = 0; k < 900 && seed < 0; k++) {
       const s = (base + k * 7919) % 2147483647;
-      const r = simBox(s, 10);
-      if (r.order[0] !== winIdx) continue;
+      const r = simBox(s, 10, layoutOf(boxId));
+      if (r.reached < 1 || r.order[0] !== winIdx) continue;
       if (baitIdx >= 0 && k < 600 && r.order[1] !== baitIdx && r.order[2] !== baitIdx) continue;
       seed = s;
     }
     if (seed < 0) {
       for (let k = 0; k < 5000 && seed < 0; k++) {
         const s = (base + 913 + k * 104729) % 2147483647;
-        if (simBox(s, 10).order[0] === winIdx) seed = s;
+        const r2 = simBox(s, 10, layoutOf(boxId));
+        if (r2.reached > 0 && r2.order[0] === winIdx) seed = s;
       }
     }
     if (cfg.cur === 'tokens') this.q('UPDATE users SET tokens=tokens-?, boxes=boxes+1 WHERE id=?', cfg.price, u.id);
