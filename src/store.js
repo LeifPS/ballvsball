@@ -23,7 +23,8 @@ function pickWeighted(weights) {
   for (let i = 0; i < weights.length; i++) { r -= weights[i]; if (r < 0) return i; }
   return weights.length - 1;
 }
-const RAR_KEYS = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
+const RAR_KEYS = ['gewoehnlich', 'selten', 'episch', 'legendaer', 'mythisch'];
+const DECOY_W = [40, 30, 20, 10, 1];
 function randType(rarity, box) {
   let list = ballsInBox(box).filter(id => DEFS[id].rarity === rarity);
   if (!list.length) list = ballsInBox(box);
@@ -262,13 +263,14 @@ export class Store extends DurableObject {
     const owned = new Set(this.q('SELECT type FROM balls WHERE owner=?', u.id).map(x => x.type));
     const tutorial = owned.size < MIN_FREE;
     if (tutorial && boxId !== 'standard') return { err: 'tutorial_box' };
-    let rIdx = pickWeighted(RAR_KEYS.map(k => RARITY[k].weight)), reward;
+    const present = RAR_KEYS.map(k => ballsInBox(boxId).some(id => DEFS[id].rarity === k));   // nur Seltenheiten, die diese Box wirklich hat
+    let rIdx = pickWeighted(RAR_KEYS.map((k, i) => present[i] ? RARITY[k].weight : 0)), reward;
     if (tutorial) {
       rIdx = 0;
       reward = TUTORIAL_BALLS.find(t => !owned.has(t));
     } else reward = randType(RAR_KEYS[rIdx], boxId);
     // Mitspieler in der Schüssel: auch mal seltene, damit man "knapp daneben" erlebt
-    const decoyRar = () => RAR_KEYS[pickWeighted([40, 30, 20, 10])];
+    const decoyRar = () => RAR_KEYS[pickWeighted(DECOY_W.map((w, i) => present[i] ? w : 0))];
     // Keine zwei gleichen Bälle in der Schüssel (soweit die Box genug verschiedene hat), nie Bälle aus anderen Boxen
     const used = new Set([reward]), cands = [];
     for (let i = 0; i < 10; i++) {
@@ -285,8 +287,8 @@ export class Store extends DurableObject {
     cands[winIdx] = reward;
     // Bait: ein besserer Ball soll knapp Zweiter oder Dritter werden
     let baitIdx = -1;
-    if (rIdx < 3 && rnd() < .7) {
-      const higher = RAR_KEYS.slice(rIdx + 1);
+    if (rIdx < RAR_KEYS.length - 1 && rnd() < .7) {
+      const higher = RAR_KEYS.slice(rIdx + 1).filter(k => present[RAR_KEYS.indexOf(k)]);
       const w = higher.map((k, i) => i === 0 ? 55 : 30 / i);
       let bt;
       for (let tr = 0; tr < 60; tr++) { bt = randType(higher[pickWeighted(w)], boxId); if (!cands.includes(bt) || tr === 59) break; }

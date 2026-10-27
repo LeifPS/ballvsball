@@ -45,7 +45,7 @@ const BALLS = new Set();
 const coinHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('coin', 22) + '</span>';
 const tokHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('token', 22) + '</span>';
 const priceHTML = b => b.cur === 'tokens' ? tokHTML(b.price) : coinHTML(b.price);
-const rarHTML = r => '<span class="rar" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
+const rarHTML = r => '<span class="rar' + (r === 'mythisch' ? ' myth' : '') + '" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
 const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
 
 const starsHTML = (n, size) => n ? '<span class="stars" style="white-space:nowrap">' + Array.from({ length: n }, () => gi('star', size || 15, '#ffd45a')).join('') + '</span>' : '';
@@ -96,7 +96,7 @@ async function api(path, body) {
 }
 function setMe(me) { S.me = me; if (me.now) S.skew = me.now - Date.now(); }
 const ballName = t => DEFS[t] ? DEFS[t].name : '?';
-const SORT = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
+const SORT = ['gewoehnlich', 'selten', 'episch', 'legendaer', 'mythisch'];
 function typeCounts() {
   const c = {};
   for (const b of S.me.balls) { c[b.type] = c[b.type] || { n: 0, free: 0, list: [] }; c[b.type].n++; if (!b.lock) c[b.type].free++; c[b.type].list.push(b); }
@@ -328,7 +328,7 @@ function collection(keep) {
 }
 function detail(type) {
   const d = DEFS[type], c = typeCounts()[type], box = BOX_BY_ID[d.box];
-  const sugg = { gewoehnlich: 40, selten: 100, episch: 250, legendaer: 700 }[d.rarity];
+  const sugg = { gewoehnlich: 40, selten: 100, episch: 250, legendaer: 700, mythisch: 3000 }[d.rarity];
   let own = '';
   if (c) {
     const lvl = Math.max(...c.list.map(x => x.stars)), free = c.list.filter(x => !x.lock);
@@ -420,15 +420,15 @@ function boxResult(r, s, before, b) {
   const d = DEFS[r.ball.type], isNew = !before.has(r.ball.type), rar = d.rarity;
   const near = s.order.slice(1, 3).map(i => r.cands[i]).filter(t => RARITY[DEFS[t].rarity].order > RARITY[rar].order);
   const have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price && boxActive(b.id, now());
-  const big = rar === 'episch' || rar === 'legendaer';
+  const big = rar === 'episch' || rar === 'legendaer' || rar === 'mythisch';
   show('<div class="col res"><h1 class="jit pop" style="color:#fff;text-shadow:3px 4px 0 var(--ink)">' + esc(d.name) + '!</h1><div>' + rarHTML(rar).replace('rar"', 'rar" style="font-size:22px;background:var(--paper);padding:1px 10px;border:2px solid var(--ink);border-radius:8px;color:' + RARITY[rar].color + '"') + '</div>' +
     '<div class="hero sheet-ball" style="min-height:250px;align-items:center">' + (big ? '<div class="rays"></div>' : '') + '<div class="pop" style="position:relative">' + ball(r.ball.type, 240, .66) + '</div></div>' +
     (isNew ? '<div class="center"><span class="tag" style="font-size:24px;padding:2px 14px">Neu in deiner Sammlung!</span></div>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast ihn schon (Duplikat). Verkaufe oder tausche ihn.</p>') +
     '<div class="panel" style="text-align:left"><div class="row sb wrap"><span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
     (near.length ? '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Knapp daneben: ' + near.map(t => '<b style="color:' + RARITY[DEFS[t].rarity].color + ';background:var(--paper);padding:0 6px;border-radius:6px">' + esc(ballName(t)) + '</b>').join(' und ') + ' lag auch vorn!</p>' : '') +
     (new Set(S.me.balls.map(x => x.type)).size < 3 ? btn('Weiter', 'home', '', 'pri big') : btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box')) + '</div>');
-  sfx(rar === 'legendaer' ? 'legend' : big ? 'rare' : 'coin');
-  if (big) confetti(rar === 'legendaer' ? 70 : 40);
+  sfx(rar === 'legendaer' || rar === 'mythisch' ? 'legend' : big ? 'rare' : 'coin');
+  if (big) confetti(rar === 'mythisch' ? 110 : rar === 'legendaer' ? 70 : 40);
 }
 
 /* ================= Markt ================= */

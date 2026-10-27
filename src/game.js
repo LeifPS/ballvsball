@@ -25,7 +25,7 @@ function shuffle(a) {
   for (let i = a.length - 1; i > 0; i--) { const j = rint(i + 1); [a[i], a[j]] = [a[j], a[i]]; }
   return a;
 }
-const BOT_W = { gewoehnlich: 52, selten: 30, episch: 14, legendaer: 4 };
+const BOT_W = { gewoehnlich: 52, selten: 30, episch: 14, legendaer: 4, mythisch: 0 };   // Bots haben nie Mythische
 function botType() {
   const ids = BALL_IDS.filter(id => DEFS[id].box === 'standard');   // Bots haben nur Standardbälle
   const w = ids.map(id => BOT_W[DEFS[id].rarity] / ids.filter(x => DEFS[x].rarity === DEFS[id].rarity).length);
@@ -35,20 +35,20 @@ function botType() {
   return ids[0];
 }
 
-const RAR_ORDER = ['gewoehnlich', 'selten', 'episch', 'legendaer'];
+const RAR_ORDER = ['gewoehnlich', 'selten', 'episch', 'legendaer', 'mythisch'];
 // Hand: drei verschiedene Sorten. Jede Sorte zählt gleich, egal wie viele Exemplare man besitzt.
 // Pro Platz wird eine Seltenheit mit festen Gewichten gewürfelt. Hat man davon keine freie Sorte mehr, gilt die nächst schlechtere,
 // und nur wenn es keine schlechtere gibt, die nächst bessere. So wird keine Chance durch zusätzliche Bälle schlechter.
-const HAND_W = [40, 30, 20, 10];   // gewoehnlich, selten, episch, legendaer
+const HAND_W = [40, 30, 20, 10, 3];   // gewoehnlich, selten, episch, legendaer, mythisch
 function pickHand(inv) {
   const by = new Map();
   for (const b of inv) { const c = by.get(b.type); if (!c || (b.stars || 0) > (c.stars || 0)) by.set(b.type, b); }
-  const pools = [[], [], [], []];
+  const pools = [[], [], [], [], []];
   for (const b of by.values()) pools[RAR_ORDER.indexOf(DEFS[b.type].rarity)].push(b);
   const hand = [];
   while (hand.length < 3 && pools.some(p => p.length)) {
-    let k = 0, r = rnd() * 100;
-    while (k < 3 && (r -= HAND_W[k]) >= 0) k++;
+    let k = 0, r = rnd() * HAND_W.reduce((a, b) => a + b, 0);
+    while (k < 4 && (r -= HAND_W[k]) >= 0) k++;
     while (k >= 0 && !pools[k].length) k--;
     if (k < 0) { k = 0; while (!pools[k].length) k++; }
     hand.push(pools[k].splice(rint(pools[k].length), 1)[0]);

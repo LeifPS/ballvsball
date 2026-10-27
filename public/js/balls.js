@@ -9,7 +9,8 @@ export const RARITY = {
   gewoehnlich: { name: 'Gewöhnlich', color: '#8d8d8d', weight: 60, order: 0 },
   selten: { name: 'Selten', color: '#3b7fd4', weight: 28, order: 1 },
   episch: { name: 'Episch', color: '#8b4fc9', weight: 10, order: 2 },
-  legendaer: { name: 'Legendär', color: '#e0a800', weight: 2, order: 3 }
+  legendaer: { name: 'Legendär', color: '#e0a800', weight: 2, order: 3 },
+  mythisch: { name: 'Mythisch', color: '#ff5a2a', weight: .5, order: 4 }
 };
 
 export function postHit(sim, o, e, d, ow) {

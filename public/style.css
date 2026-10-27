@@ -198,3 +198,9 @@ button.ttile:active{transform:translate(1px,2px)}
 .tcoin{grid-column:1/-1;text-align:center;font:400 22px var(--f-display)}
 .tst{padding:1px 10px;border:2px solid var(--ink);border-radius:12px;background:#eee}
 .tst.accepted{background:#a9e0a0}.tst.declined,.tst.cancelled,.tst.expired{background:#ffb4a8}
+
+/* Mythisch: animierter Rot-Orange-Verlauf */
+@keyframes mythflow{to{background-position:200% 0}}
+.rar.myth{background:linear-gradient(90deg,#ff2a2a,#ff9a1a,#ffd23a,#ff9a1a,#ff2a2a);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;animation:mythflow 2.4s linear infinite;font-weight:700}
+.rbar.r-mythisch::before,.rbar[style*="#ff5a2a"]::before{background:linear-gradient(90deg,#ff2a2a,#ff9a1a,#ffd23a,#ff9a1a,#ff2a2a);background-size:200% 100%;animation:mythflow 2.4s linear infinite;opacity:1}
+.ttile[style*="#ff5a2a"]{border-bottom-color:#ff7a1a}

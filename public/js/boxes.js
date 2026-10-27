@@ -23,5 +23,6 @@ export const UP_COST = {
   gewoehnlich: [2, 3, 4, 5, 6],
   selten: [2, 3, 4, 5, 6],
   episch: [2, 3, 4, 5, 6],
-  legendaer: [2, 3, 4, 5, 6]
+  legendaer: [2, 3, 4, 5, 6],
+  mythisch: [2, 3, 4, 5, 6]
 };
