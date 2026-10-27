@@ -177,7 +177,7 @@ function draw() {
   for (const r of def.grates) { rect(r[0], r[1], r[2], r[3], '#3b3a46', '#1d2742'); g.strokeStyle = '#9a98a8'; g.lineWidth = 1.5; for (let x = r[0] + 6; x < r[2]; x += 10) { g.beginPath(); g.moveTo(sx(x), sy(r[1])); g.lineTo(sx(x), sy(r[3])); g.stroke(); } }
   for (const r of def.blocks) rect(r[0], r[1], r[2], r[3], '#e8d9a8', '#1d2742');
   for (const c of def.cups) { rect(c.x0, c.y0, c.x1, c.y1, 'rgba(201,139,58,.45)', '#7a4a21'); g.fillStyle = '#7a4a21'; g.font = '11px sans-serif'; g.fillText('Korb', sx(c.x0 + 3), sy(c.y0 + 12)); }
-  for (const w of def.wind) { rect(w.x0, w.y0, w.x1, w.y1, 'rgba(80,150,220,.25)', '#4a96d8'); const cx = (w.x0 + w.x1) / 2, cy = (w.y0 + w.y1) / 2, l = Math.hypot(w.ax, w.ay) || 1; arrow(cx, cy, cx + w.ax / l * 18, cy + w.ay / l * 18, '#2f6fb0'); }
+  for (const w of def.wind) { rect(w.x0, w.y0, w.x1, w.y1, 'rgba(80,150,220,.25)', '#4a96d8'); const l = Math.hypot(w.ax, w.ay) || 1; for (let yy = w.y0 + 12; yy < w.y1; yy += 22) for (let xx = w.x0 + 14; xx < w.x1; xx += 28) arrow(xx - w.ax / l * 9, yy - w.ay / l * 9, xx + w.ax / l * 9, yy + w.ay / l * 9, '#2f6fb0'); }
   for (const c of def.cannons) { rect(c.x0, c.y0, c.x1, c.y1, 'rgba(110,118,134,.45)', '#4b5160'); const cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2; arrow(cx, cy, c.tx, c.ty, '#6b7180', true); g.beginPath(); g.arc(sx(c.tx), sy(c.ty), 5, 0, 7); g.fillStyle = '#e8453c'; g.fill(); }
   for (const a of def.grids) { line(a, '#1d2742', 5); line(a, '#c7d3ea', 2); }
   for (const a of def.shelves) { line(a, '#1d2742', 7); line(a, '#d9a441', 4); }

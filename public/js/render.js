@@ -198,12 +198,15 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
   // Windräder (drehen sich mit der Simulationszeit), handgezeichnet wie alles andere: wackelige Kontur, versetzte Füllung, Schraffur
   // Wind: gestrichelte Streifen laufen nach außen; Kanonen blitzen beim Abschuss
-  if (L.wind) for (const w of L.wind) {
-    g.save(); g.strokeStyle = 'rgba(80,150,220,.8)'; g.lineWidth = 2.2; g.lineCap = g.lineJoin = 'round';
-    const dir = w.ax < 0 ? -1 : 1, mid = (w.x0 + w.x1) / 2, sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22); sk.lineWidth = 2.2;
-    for (let i = 0; i < 4; i++) {
-      const yy = w.y0 + 6 + i * 10 + Math.sin(tm * 3 + i) * 1.5, ph = ((tm * 36 + i * 9) % 28) * dir - dir * 14;
-      sk.beginPath(); sk.moveTo(mid + ph - dir * 9, yy); sk.quadraticCurveTo(mid + ph, yy - 5, mid + ph + dir * 9, yy - 1); sk.stroke();
+  if (L.wind) for (const w of L.wind) {   // Wind: Schwünge laufen über die ganze Fläche in Windrichtung
+    g.save(); g.beginPath(); g.rect(w.x0, w.y0, w.x1 - w.x0, w.y1 - w.y0); g.clip();
+    g.strokeStyle = 'rgba(80,150,220,.8)'; g.lineWidth = 2.2; g.lineCap = g.lineJoin = 'round';
+    const wl = Math.hypot(w.ax, w.ay) || 1, ux = w.ax / wl, uy = w.ay / wl, sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22); sk.lineWidth = 2.2;
+    const wd = w.x1 - w.x0, ht = w.y1 - w.y0, span = Math.max(wd, ht) + 40, rows = Math.max(1, Math.floor(ht / 11)), cols = Math.max(1, Math.round(wd / 34));
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      const ph = ((tm * 40 + r * 13 + c * 29 + (r % 2) * 17) % span) - 20, bx = w.x0 + (c + .5) / cols * wd + ux * ph - ux * span / 2 * .0, by = w.y0 + (r + .5) / rows * ht + uy * ph;
+      const px = ((bx - w.x0 + wd * 4) % wd) + w.x0, py = ((by - w.y0 + ht * 4) % ht) + w.y0;
+      sk.beginPath(); sk.moveTo(px - ux * 9, py - uy * 9); sk.quadraticCurveTo(px - uy * 4, py + ux * 4, px + ux * 9, py + uy * 9); sk.stroke();
     }
     g.restore();
   }
