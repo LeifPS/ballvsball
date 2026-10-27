@@ -62,6 +62,9 @@ function botHand() {
   return types.map((type, i) => ({ uid: -100 - i, type }));
 }
 
+// Zeitgeber dürfen nie unbehandelt abstürzen: sonst wird das ganze Objekt zurückgesetzt und alle Kämpfe sind weg
+const safe = fn => () => { try { const r = fn(); if (r && r.catch) r.catch(e => console.log('timer error', e && e.stack || e)); } catch (e) { console.log('timer error', e && e.stack || e); } };
+
 export class Game extends DurableObject {
   constructor(ctx, env) {
     super(ctx, env);
@@ -75,6 +78,34 @@ export class Game extends DurableObject {
     this.matches = new Map();
     this.userMatch = new Map();   // userId -> match
     this.nextMatch = 1;
+    ctx.blockConcurrencyWhile(async () => { try { await this.restore(); } catch (e) { console.log('restore error', e && e.stack || e); } });
+  }
+  // Kämpfe überleben einen Neustart des Servers (neue Version, Absturz): Zustand wird je Phase gespeichert, Spieler verbinden sich neu
+  save(m) {
+    try {
+      const o = Object.assign({}, m); delete o.timer; delete o.grace;
+      o.players = m.players.map(p => { const q = Object.assign({}, p); delete q.conn; return q; });
+      this.ctx.storage.put('m' + m.id, JSON.stringify(o)); this.ctx.storage.put('next', this.nextMatch);
+    } catch (e) { console.log('save error', e); }
+  }
+  forget(m) { try { this.ctx.storage.delete('m' + m.id); } catch (e) { } }
+  async restore() {
+    const nx = await this.ctx.storage.get('next'); if (nx) this.nextMatch = nx;
+    const all = await this.ctx.storage.list({ prefix: 'm' });
+    for (const [key, val] of all) {
+      let m; try { m = JSON.parse(val); } catch (e) { this.ctx.storage.delete(key); continue; }
+      if (!m || m.over || m.aborted) { this.ctx.storage.delete(key); continue; }
+      m.timer = null; m.grace = 0;
+      for (const p of m.players) { p.conn = null; p.dc = Date.now(); }
+      this.matches.set(m.id, m);
+      for (const p of m.players) if (!p.bot && !p.left && !p.out) this.userMatch.set(p.userId, m);
+      const rem = Math.max(1000, (m.deadline || 0) - Date.now());
+      if (m.phase === 'pick') m.timer = setTimeout(safe(() => this.endPick(m)), rem + 600);
+      else if (m.phase === 'dir') m.timer = setTimeout(safe(() => this.endDir(m)), rem + 600);
+      else if (m.phase === 'fight') m.timer = setTimeout(safe(() => this.endFight(m)), rem);
+      else m.timer = setTimeout(safe(() => this.startRound(m)), 1500);
+      m.grace = setTimeout(safe(() => { m.grace = 0; if (!m.over && !this.humansActive(m)) this.abort(m); }), 45000);
+    }
   }
   store() { return this.env.STORE.get(this.env.STORE.idFromName('main')); }
 
@@ -144,9 +175,9 @@ export class Game extends DurableObject {
     if (c.match && c.p && c.p.conn === c) {
       c.p.conn = null; c.p.dc = Date.now();
       const m = c.match;
-      setTimeout(() => this.progress(m), GONE_MS + 500);
+      setTimeout(safe(() => this.progress(m)), GONE_MS + 500);
       // Kurze Verbindungsabbrüche (Handy-Netz) sollen den Kampf nicht beenden: 45 s Zeit zum Wiederverbinden
-      if (!this.humansActive(m) && !m.grace) m.grace = setTimeout(() => { m.grace = 0; if (!m.over && !this.humansActive(m)) this.abort(m); }, 45000);
+      if (!this.humansActive(m) && !m.grace) m.grace = setTimeout(safe(() => { m.grace = 0; if (!m.over && !this.humansActive(m)) this.abort(m); }), 45000);
       this.progress(m);
     }
   }
@@ -163,7 +194,7 @@ export class Game extends DurableObject {
     if (!this.qfirst[mode]) this.qfirst[mode] = Date.now();
     const delay = Math.max(1000, Math.min(QUEUE_WAIT, 2 * QUEUE_WAIT - (Date.now() - this.qfirst[mode])));
     if (this.qtimer[mode]) clearTimeout(this.qtimer[mode]);
-    this.qtimer[mode] = setTimeout(() => this.fireQueue(mode), delay);
+    this.qtimer[mode] = setTimeout(safe(() => this.fireQueue(mode)), delay);
     for (const o of q) this.send(o, { t: 'queued', mode, wait: delay / 1000, count: q.length, need });
   }
   leaveQueue(c, quiet) {
@@ -184,7 +215,7 @@ export class Game extends DurableObject {
     const take = q.splice(0, cap);
     for (const c of take) c.queued = 0;
     if (take.length) this.startMatch(mode, take.map((c, i) => ({ conn: c, slot: mode === 1 ? i : i })), false);
-    if (q.length) { this.qfirst[mode] = Date.now(); this.qtimer[mode] = setTimeout(() => this.fireQueue(mode), QUEUE_WAIT); }
+    if (q.length) { this.qfirst[mode] = Date.now(); this.qtimer[mode] = setTimeout(safe(() => this.fireQueue(mode)), QUEUE_WAIT); }
   }
 
   /* ---------- Freundesräume ---------- */
@@ -306,7 +337,8 @@ export class Game extends DurableObject {
       this.send(p.conn, p.last);
     }
     clearTimeout(m.timer);
-    m.timer = setTimeout(() => this.endPick(m), PICK_SECS * 1000 + 600);
+    m.timer = setTimeout(safe(() => this.endPick(m)), PICK_SECS * 1000 + 600);
+    this.save(m);
     this.progress(m);
   }
 
@@ -349,7 +381,8 @@ export class Game extends DurableObject {
       p.last = { t: 'reveal', round: m.round, balls, secs: DIR_SECS };
       this.send(p.conn, p.last);
     }
-    m.timer = setTimeout(() => this.endDir(m), DIR_SECS * 1000 + 600);
+    m.timer = setTimeout(safe(() => this.endDir(m)), DIR_SECS * 1000 + 600);
+    this.save(m);
     this.progress(m);
   }
   onDir(c, deg) {
@@ -399,7 +432,8 @@ export class Game extends DurableObject {
       this.send(p.conn, p.last);
     }
     m.deadline = Date.now() + res.steps * DT * 1000 + 40000;
-    m.timer = setTimeout(() => this.endFight(m), res.steps * DT * 1000 + 40000);
+    m.timer = setTimeout(safe(() => this.endFight(m)), res.steps * DT * 1000 + 40000);
+    this.save(m);
     this.progress(m);
   }
   onReady(c) {
@@ -425,7 +459,7 @@ export class Game extends DurableObject {
     if (m.ffa) { this.endFightFfa(m); return; }
     if (m.fight.over) { this.finishMatch(m, m.fight.winner); return; }
     m.phase = 'wait';
-    m.timer = setTimeout(() => this.startRound(m), 600);
+    m.timer = setTimeout(safe(() => this.startRound(m)), 600);
   }
   // Mehrspieler: wer kein Leben mehr hat, scheidet aus und bekommt sofort sein Ergebnis (Platz = Zahl der noch Aktiven vor dem Ausscheiden)
   endFightFfa(m) {
@@ -438,14 +472,14 @@ export class Game extends DurableObject {
     }
     const rest = this.livePlayers(m);
     if (rest.length <= 1) {
-      m.over = true; m.phase = 'done';
+      m.over = true; m.phase = 'done'; this.forget(m);
       this.matches.delete(m.id);
       if (rest[0]) { rest[0].out = true; this.eliminate(m, rest[0], 1); }
       return;
     }
     if (!this.humansActive(m)) { this.abort(m); return; }
     m.phase = 'wait';
-    m.timer = setTimeout(() => this.startRound(m), 600);
+    m.timer = setTimeout(safe(() => this.startRound(m)), 600);
   }
   async eliminate(m, p, place) {
     if (p.bot) return;
@@ -465,7 +499,7 @@ export class Game extends DurableObject {
   }
 
   async finishMatch(m, winnerTeam) {
-    m.over = true; m.phase = 'done';
+    m.over = true; m.phase = 'done'; this.forget(m);
     this.matches.delete(m.id);
     const results = [];
     for (const p of m.players) {
@@ -501,7 +535,7 @@ export class Game extends DurableObject {
     else this.progress(m);
   }
   abort(m) {
-    m.aborted = true; m.over = true;
+    m.aborted = true; m.over = true; this.forget(m);
     clearTimeout(m.timer); clearTimeout(m.grace);
     this.matches.delete(m.id);
     for (const p of m.players) {
