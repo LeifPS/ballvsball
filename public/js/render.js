@@ -89,6 +89,7 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
 /* ---------- Ballbox ---------- */
 // Spielfeld: oben kippt eine Kiste und schüttet die Bälle aus, unten fängt ein geschlossener Becher den Gewinner auf.
 const BOARD = {};
+export function clearBoardCache() { for (const k in BOARD) delete BOARD[k]; }   // für den Dropper-Editor: Layout hat sich geändert
 const TOP = 190;                       // Platz über dem Spielfeld für die Kiste (Weltkoordinaten -TOP..)
 export const BOX_H = BH + 186;         // sichtbare Höhe: von y = -170 bis unter den Becher
 const CUP = { x0: 96, x1: 204, y0: 376, y1: 442 };
@@ -118,9 +119,9 @@ function drawDropperDecor(x, sk, L) {
     for (let i = 1; i < 6; i++) { const t = i / 6; sk.beginPath(); sk.moveTo(g[0] + dx * t, g[1] + dy * t + 2); sk.lineTo(g[0] + dx * t, g[1] + dy * t + hgt - 1); sk.stroke(); }
     sk.beginPath(); sk.moveTo(g[0] + 2, g[1] + hgt * .5); sk.lineTo(g[2] - 2, g[3] + hgt * .5); sk.stroke();
   }
-  if (L.id === 'gefuehl') {   // schmaler Block über dem Ausgang
-    rect(138, 276, 162, 292, '#e8d9a8');
-    sk.lineWidth = 1.6; sk.beginPath(); sk.moveTo(142, 284); sk.lineTo(158, 284); sk.stroke();
+  if (L.blocks) for (const r of L.blocks) {   // feste Blöcke
+    rect(r[0], r[1], r[2], r[3], '#e8d9a8');
+    sk.lineWidth = 1.6; sk.beginPath(); sk.moveTo(r[0] + 4, (r[1] + r[3]) / 2); sk.lineTo(r[2] - 4, (r[1] + r[3]) / 2); sk.stroke();
   }
   if (L.flum) for (const f of L.flum) {   // Flummi-Bumper
     x.fillStyle = '#ff6fb0'; sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.fill(); sk.stroke();
@@ -128,7 +129,7 @@ function drawDropperDecor(x, sk, L) {
     x.fillStyle = INK; x.font = '700 9px "Patrick Hand", sans-serif'; x.textAlign = 'center'; x.fillText('flum', f[0], f[1] + 3);
   }
   if (L.cannons) for (const c of L.cannons) {   // Kanonenrohre entlang der Schrägen (Punkte von Hand gedreht)
-    const sgn = c.side === 'l' ? 1 : -1, cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2, a = sgn * -.95, ca = Math.cos(a), sa = Math.sin(a);
+    const cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2, a = Math.atan2(c.ty - cy, c.tx - cx) + Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a);   // Rohr zeigt zum Ziel
     const R = pts => pts.map(q => [cx + q[0] * ca - q[1] * sa, cy + q[0] * sa + q[1] * ca]);
     shape(R([[-11, -20], [11, -20], [11, 20], [-11, 20]]), '#7e8696', 3);
     shape(R([[-13, -24], [13, -24], [13, -17], [-13, -17]]), '#4b5160', 2.4);
@@ -209,8 +210,8 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   }
   if (L.cannons) for (const c of L.cannons) {
     if (c.fire !== undefined && s.step - c.fire < 14) {
-      const k = 1 - (s.step - c.fire) / 14, sgn = c.side === 'l' ? 1 : -1;
-      star(g, (c.x0 + c.x1) / 2 + sgn * 6, c.y0 - 4, 9 * k + 3, '#ffe14a', tm * 6);
+      const k = 1 - (s.step - c.fire) / 14, cx = (c.x0 + c.x1) / 2, cy = (c.y0 + c.y1) / 2, d = Math.hypot(c.tx - cx, c.ty - cy) || 1;
+      star(g, cx + (c.tx - cx) / d * 26, cy + (c.ty - cy) / d * 26, 9 * k + 3, '#ffe14a', tm * 6);
     }
   }
   for (const sp of L.spinners) {

@@ -35,3 +35,7 @@ Deployment: Push auf `main` (Cloudflare Worker Build). Keine weiteren Ressourcen
 - Neue Seltenheit **Mythisch** (Gewicht 0,5, Bots haben nie welche, im Kampf Auswahlgewicht 3).
 - Dropper pro Box (`LAYOUTS` in `public/js/boxsim.js`): Gitter, Fangkörbe, Kanonen, Wind, Flummi.
 - Balancing: `node tools/autotune7.js <ball>` sucht den dm-Faktor, `node tools/quick.js <ball>` zeigt die Siegquote, `node tools/boxstats.js` prüft die Dropper.
+
+## Dropper-Editor
+
+`/editor/dropper` (Datei `public/editor/dropper.html`): Am PC im Browser einen Dropper bauen. Werkzeuge für Nägel, Bumper, Flummi, Propeller, Wände, Bretter, Gitterablagen, Blöcke, Gitter, Fangkörbe, Kanonen und Wind. Die Statistik zeigt, wie oft ein Ball unten ankommt und wo Bälle hängen bleiben, die Vorschau nutzt die Spielgrafik. Export als JSON; eingebunden wird er über `DEFS_DROPPER` in `public/js/boxsim.js`.

@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dropper-Editor</title>
+<style>
+:root{--ink:#1d2742;--paper:#f6efd9;--bg:#7ac66a;--acc:#f4c942}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.35 "Patrick Hand",system-ui,sans-serif;background:var(--bg);color:var(--ink)}
+header{padding:8px 14px;background:var(--paper);border-bottom:3px solid var(--ink);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+header h1{margin:0;font-size:22px}
+main{display:flex;gap:12px;padding:12px;align-items:flex-start}
+#tools{width:170px;flex:none;display:flex;flex-direction:column;gap:5px}
+#tools button,.btn{font:inherit;padding:6px 8px;border:2px solid var(--ink);background:var(--paper);border-radius:7px;cursor:pointer;text-align:left}
+#tools button.on,.btn.on{background:var(--acc)}
+#tools h3{margin:8px 0 2px;font-size:13px;text-transform:uppercase;opacity:.7}
+#wrap{overflow:auto;max-height:calc(100vh - 80px);border:3px solid var(--ink);background:#fff;flex:none}
+canvas{display:block}
+#side{width:340px;flex:none;display:flex;flex-direction:column;gap:10px;max-height:calc(100vh - 80px);overflow:auto}
+.panel{background:var(--paper);border:3px solid var(--ink);border-radius:10px;padding:8px 10px}
+.panel h2{margin:0 0 6px;font-size:16px}
+label{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:3px 0}
+input[type=number],input[type=text]{width:90px;font:inherit;padding:2px 4px;border:2px solid var(--ink);border-radius:5px}
+input[type=text]{width:150px}
+textarea{width:100%;height:150px;font:12px/1.3 ui-monospace,monospace;border:2px solid var(--ink);border-radius:6px}
+.row{display:flex;gap:6px;flex-wrap:wrap}
+.small{font-size:13px;opacity:.8}
+#stats pre{margin:4px 0;white-space:pre-wrap;font:13px/1.35 ui-monospace,monospace}
+#preview{position:fixed;inset:0;background:rgba(20,30,50,.75);display:none;align-items:center;justify-content:center;z-index:9}
+#preview.show{display:flex}
+#preview .box{background:var(--paper);border:3px solid var(--ink);border-radius:12px;padding:10px;display:flex;gap:12px}
+#msg{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:8px 14px;border-radius:8px;display:none;z-index:10}
+</style>
+</head>
+<body>
+<header>
+  <h1>Dropper-Editor</h1>
+  <span class="small">Bauen, ausprobieren, exportieren. Die Physik ist dieselbe wie im Spiel.</span>
+  <span style="flex:1"></span>
+  <button class="btn" id="undo">Rückgängig (Strg+Z)</button><button class="btn" id="redo">Wiederholen (Strg+Y)</button>
+</header>
+<main>
+  <div id="tools"></div>
+  <div id="wrap"><canvas id="cv"></canvas></div>
+  <div id="side">
+    <div class="panel" id="props"><h2>Auswahl</h2><div class="small">Nichts ausgewählt. Wähle ein Werkzeug links oder klicke ein Teil an.</div></div>
+    <div class="panel" id="shape">
+      <h2>Grundform</h2>
+      <label>Name (für den Export)<input type="text" id="nm" value="meindropper"></label>
+      <label>Schulterhöhe der Wand<input type="number" id="sh" value="175" min="60" max="372" step="5"></label>
+      <div class="small">Ab dieser Höhe verengt sich der Trichter. 372 = gerade Wände mit Boden.</div>
+      <label>Halbe Ausgangsbreite<input type="number" id="half" value="15" min="14" max="140" step="1"></label>
+      <div class="row" style="margin-top:6px"><button class="btn" data-preset="standard">Standard laden</button><button class="btn" data-preset="klein">Kleinbox laden</button><button class="btn" data-preset="gefuehl">Gefühlsbox laden</button><button class="btn" id="clear">Leeren</button></div>
+    </div>
+    <div class="panel" id="test">
+      <h2>Testen</h2>
+      <div class="row"><button class="btn" id="runstats">Statistik (150 Läufe)</button><button class="btn" id="runprev">Vorschau wie im Spiel</button></div>
+      <div id="stats" class="small">Die Statistik zeigt, wie oft mindestens ein Ball unten ankommt, wie lange es dauert und wo Bälle hängen bleiben (rote Punkte im Bild).</div>
+    </div>
+    <div class="panel">
+      <h2>Export / Import</h2>
+      <textarea id="json" spellcheck="false"></textarea>
+      <div class="row" style="margin-top:6px"><button class="btn" id="copy">Kopieren</button><button class="btn" id="save">Als Datei speichern</button><button class="btn" id="load">Aus dem Feld laden</button></div>
+      <div class="small">Schick mir den Inhalt (oder die Datei), dann baue ich den Dropper ins Spiel ein.</div>
+    </div>
+  </div>
+</main>
+<div id="preview"><div class="box"><canvas id="pv"></canvas><div style="width:200px;display:flex;flex-direction:column;gap:6px">
+  <b>Spielansicht</b><label>Seed<input type="number" id="seed" value="1"></label>
+  <div class="row"><button class="btn" id="pnew">Neuer Seed</button><button class="btn" id="pre">Neustart</button></div>
+  <label>Tempo<select id="pspd"><option value="1">normal</option><option value=".4">langsam</option><option value="3">schnell</option></select></label>
+  <div class="small" id="pinfo"></div><button class="btn" id="pclose">Schließen</button></div></div></div>
+<div id="msg"></div>
+<script type="module" src="dropper.js"></script>
+</body>
+</html>

@@ -29,47 +29,62 @@ export const SPINNERS = [{ x: 150, y: 212, len: 34, w: 4.5, om: 2.4 }];
 
 
 /* ---------- Dropper-Formen ---------- */
-// Jede Box hat ihren eigenen Dropper. Felder: segs (Wände), shelves (Ablagen), pegs [x,y,r,art], spinners, optional:
-// flum [x,y,r] (sehr federnde Riesen-Bumper), traps [{k:'grate'|'cup',x0,y0,x1,y1}] (Gitter schlucken Bälle, Körbe fangen sie),
-// cannons [{x0,y0,x1,y1,tx,ty,pw}] (schleudern Bälle nach oben), wind [{x0,y0,x1,y1,ax,ay}], poly/outline fürs Zeichnen.
-const FUNNEL = [[0, -400, 0, 175], [BW, -400, BW, 175], [0, 175, 135, 372], [BW, 175, BW - 135, 372]];
-const FUNNEL_POLY = [[0, -400], [BW, -400], [BW, 175], [BW - 135, 372], [BW - 135, 392], [135, 392], [135, 372], [0, 175]];
-const FUNNEL_LINES = [[[0, -400], [0, 175], [135, 372], [135, 392]], [[BW, -400], [BW, 175], [BW - 135, 372], [BW - 135, 392]]];
+// Ein Dropper wird als einfache Beschreibung (def) gespeichert und mit buildLayout() zum fertigen Layout. Das macht auch der Dropper-Editor (public/editor).
+// def: shape {sh, half} (Schulterhöhe der Wand, halbe Ausgangsbreite), pegs [x,y,r,art], segs (zusätzliche Wände), shelves, spinners, flum [x,y,r],
+// grates [[x0,y0,x1,y1]] (schlucken Bälle), cups [{x0,y0,x1,y1}] (Fangkörbe), cannons [{x0,y0,x1,y1,tx,ty,pw}], wind [{x0,y0,x1,y1,ax,ay}],
+// grids [[x0,y0,x1,y1]] (Gitterablagen, Strecke mit Platte), blocks [[x0,y0,x1,y1]] (feste Rechtecke)
+export function makeShape(sh, half) {
+  const cx = BW / 2, x0 = cx - half, x1 = cx + half;
+  if (sh >= 372) {   // gerade Wände, unten Boden mit Ausgangslücke
+    return {
+      segs: [[0, -400, 0, 372], [BW, -400, BW, 372], [0, 372, x0, 372], [BW, 372, x1, 372], [x0, 372, x0, 392], [x1, 372, x1, 392]],
+      poly: [[0, -400], [BW, -400], [BW, 372], [x1, 372], [x1, 392], [x0, 392], [x0, 372], [0, 372]],
+      outline: [[[0, -400], [0, 372], [x0, 372], [x0, 392]], [[BW, -400], [BW, 372], [x1, 372], [x1, 392]]]
+    };
+  }
+  return {   // Trichter: ab der Schulter schräg zum Ausgang
+    segs: [[0, -400, 0, sh], [BW, -400, BW, sh], [0, sh, x0, 372], [BW, sh, x1, 372]],
+    poly: [[0, -400], [BW, -400], [BW, sh], [x1, 372], [x1, 392], [x0, 392], [x0, 372], [0, sh]],
+    outline: [[[0, -400], [0, sh], [x0, 372], [x0, 392]], [[BW, -400], [BW, sh], [x1, 372], [x1, 392]]]
+  };
+}
+export function buildLayout(def) {
+  const sh = def.shape || { sh: 175, half: 15 }, S = makeShape(sh.sh, sh.half), cups = def.cups || [], grates = def.grates || [], grids = def.grids || [], blocks = def.blocks || [];
+  const cupSegs = c => [[c.x0, c.y0 - 4, c.x0, c.y1], [c.x0, c.y1, c.x1, c.y1], [c.x1, c.y1, c.x1, c.y0 - 4]];
+  const rectSegs = r => [[r[0], r[1], r[2], r[1]], [r[2], r[1], r[2], r[3]], [r[2], r[3], r[0], r[3]], [r[0], r[3], r[0], r[1]]];
+  const goalX = sh.sh >= 372 ? sh.half * 2 + 6 : sh.half * 2;
+  return {
+    id: def.id || 'eigen', def,
+    segs: S.segs.concat(def.segs || [], ...grids.map(g => [g]), ...blocks.map(rectSegs), ...cups.map(cupSegs)),
+    shelves: def.shelves || [], pegs: def.pegs || [], spinners: def.spinners || [],
+    flum: def.flum || [], cannons: def.cannons || [], wind: def.wind || [],
+    traps: grates.map(r => ({ k: 'grate', x0: r[0], y0: r[1], x1: r[2], y1: r[3] })).concat(cups.map(c => ({ k: 'cup', x0: c.x0 + 6, y0: c.y0 + 6, x1: c.x1 - 6, y1: c.y1 - 3 }))),
+    cups, grates, grids, blocks,
+    poly: S.poly, outline: S.outline, goal: [BW / 2 - goalX / 2, 330, goalX, 70]
+  };
+}
 // Kleinbox: gerade Wände, unten links und rechts Gitter; rechts darüber zwei Fangkörbe; nur durch die Mitte kommt man zum Becher
 const KLEIN_PEGS = [];
 for (let r = 0; r < 7; r++) for (let i = 0; i < (r % 2 ? 6 : 7); i++) KLEIN_PEGS.push([(r % 2 ? 48 : 26) + i * 41, 34 + r * 33, 5.5, (r === 3 && (i === 1 || i === 4)) ? 1 : 0]);
-const CUPS = [{ k: 'cup', x0: 206, y0: 268, x1: 258, y1: 296 }, { k: 'cup', x0: 236, y0: 322, x1: 290, y1: 350 }];
-const cupSegs = c => [[c.x0, c.y0 - 4, c.x0, c.y1], [c.x0, c.y1, c.x1, c.y1], [c.x1, c.y1, c.x1, c.y0 - 4]];
-const KLEIN = {
-  id: 'klein',
-  segs: [[0, -400, 0, 372], [BW, -400, BW, 372], [0, 372, 108, 372], [BW, 372, BW - 108, 372], [108, 372, 108, 392], [BW - 108, 372, BW - 108, 392]].concat(...CUPS.map(cupSegs)),
-  shelves: [], pegs: KLEIN_PEGS, spinners: [],
-  traps: [{ k: 'grate', x0: 0, y0: 346, x1: 108, y1: 380 }, { k: 'grate', x0: BW - 108, y0: 346, x1: BW, y1: 380 }].concat(CUPS.map(c => ({ k: c.k, x0: c.x0 + 6, y0: c.y0 + 6, x1: c.x1 - 6, y1: c.y1 - 3 }))),
-  cups: CUPS, grates: [[0, 346, 108, 380], [BW - 108, 346, BW, 380]],
-  poly: [[0, -400], [BW, -400], [BW, 372], [BW - 108, 372], [BW - 108, 392], [108, 392], [108, 372], [0, 372]],
-  outline: [[[0, -400], [0, 372], [108, 372], [108, 392]], [[BW, -400], [BW, 372], [BW - 108, 372], [BW - 108, 392]]],
-  goal: [108, 330, 84, 70]
+const KLEIN_DEF = {
+  id: 'klein', shape: { sh: 372, half: 42 }, pegs: KLEIN_PEGS,
+  grates: [[0, 346, 108, 380], [BW - 108, 346, BW, 380]],
+  cups: [{ x0: 206, y0: 268, x1: 258, y1: 296 }, { x0: 236, y0: 322, x1: 290, y1: 350 }]
 };
 // Gefühlsbox (nach der Zeichnung von Erik und Thore): Stifte oben, zwei Gitterablagen, Propeller, Flummi, zwei Kanonen und Wind an den Seiten
 const FEEL_PEGS = [[62, 52], [100, 84], [128, 40], [172, 46], [150, 88], [212, 28], [250, 30], [214, 68], [258, 78], [62, 8], [150, 8], [96, 160], [150, 168], [206, 160], [60, 190], [240, 188]].map(p => [p[0], p[1], 5.5, 0]);
-const FEEL = {
-  id: 'gefuehl',
-  segs: FUNNEL.concat([
-    [22, 104, 118, 134],                              // linke Gitterablage (nach innen geneigt)
-    [278, 104, 182, 134],                             // rechte Gitterablage
-    [138, 276, 162, 276], [138, 276, 138, 292], [162, 276, 162, 292], [138, 292, 162, 292]   // schmaler Block über dem Ausgang
-  ]),
-  shelves: [], pegs: FEEL_PEGS, spinners: [{ x: 112, y: 232, len: 44, w: 4.5, om: 2.2 }],
+const FEEL_DEF = {
+  id: 'gefuehl', shape: { sh: 175, half: 15 }, pegs: FEEL_PEGS,
+  grids: [[22, 104, 118, 134], [278, 104, 182, 134]],
+  blocks: [[138, 276, 162, 292]],
+  spinners: [{ x: 112, y: 232, len: 44, w: 4.5, om: 2.2 }],
   flum: [[214, 214, 14]],
-  cannons: [{ x0: 78, y0: 290, x1: 114, y1: 336, tx: 165, ty: 140, pw: 290, side: 'l' }, { x0: 186, y0: 290, x1: 222, y1: 336, tx: 135, ty: 140, pw: 290, side: 'r' }],
-  wind: [{ x0: 104, y0: 338, x1: 134, y1: 384, ax: -330, ay: -40 }, { x0: 166, y0: 338, x1: 196, y1: 384, ax: 330, ay: -40 }],
-  grids: [[22, 104, 118, 134], [182, 104, 278, 134]],
-  poly: FUNNEL_POLY, outline: FUNNEL_LINES, goal: [135, 330, 30, 70]
+  cannons: [{ x0: 78, y0: 290, x1: 114, y1: 336, tx: 165, ty: 140, pw: 290 }, { x0: 186, y0: 290, x1: 222, y1: 336, tx: 135, ty: 140, pw: 290 }],
+  wind: [{ x0: 104, y0: 338, x1: 134, y1: 384, ax: -330, ay: -40 }, { x0: 166, y0: 338, x1: 196, y1: 384, ax: 330, ay: -40 }]
 };
-export const LAYOUTS = {
-  standard: { id: 'standard', segs: SEGS, shelves: SHELVES, pegs: PEGS, spinners: SPINNERS, poly: FUNNEL_POLY, outline: FUNNEL_LINES, goal: [135, 330, 30, 70] },
-  klein: KLEIN, gefuehl: FEEL
-};
+const STD_DEF = { id: 'standard', shape: { sh: 175, half: 15 }, pegs: PEGS, shelves: SHELVES, spinners: SPINNERS };
+export const DEFS_DROPPER = { standard: STD_DEF, klein: KLEIN_DEF, gefuehl: FEEL_DEF };
+export const LAYOUTS = { standard: buildLayout(STD_DEF), klein: buildLayout(KLEIN_DEF), gefuehl: buildLayout(FEEL_DEF) };
 export const layoutOf = id => LAYOUTS[id] || LAYOUTS.standard;
 
 export function createBox(seed, n, layout) {
