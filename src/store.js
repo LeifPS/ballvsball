@@ -72,6 +72,7 @@ export class Store extends DurableObject {
     this.sql.exec('CREATE TABLE IF NOT EXISTS tstars(owner INTEGER NOT NULL, type TEXT NOT NULL, stars INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(owner,type))');
     this.sql.exec('INSERT INTO tstars(owner,type,stars) SELECT owner,type,MAX(stars) FROM balls WHERE stars>0 GROUP BY owner,type ON CONFLICT(owner,type) DO UPDATE SET stars=MAX(stars,excluded.stars)');
     this.sql.exec('UPDATE balls SET stars=0 WHERE stars>0');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS transfers(code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)');
     if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
   }
 
@@ -150,6 +151,37 @@ export class Store extends DurableObject {
     this.q('DELETE FROM tstars WHERE owner=?', u.id);
     this.q('DELETE FROM users WHERE id=?', u.id);
     return { ok: true };
+  }
+  // Spielstand auf ein anderes Gerät: Das alte Gerät erzeugt einen Code (10 Minuten gültig, einmalig). Das neue Gerät löst ihn ein und übernimmt das Konto, das alte Gerät wird dabei abgemeldet.
+  transferCreate(tk) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789', now = Date.now();
+    this.q('DELETE FROM transfers WHERE user_id=? OR expires<?', u.id, now);
+    let code;
+    do { code = ''; const r = crypto.getRandomValues(new Uint8Array(8)); for (const x of r) code += A[x % A.length]; } while (this.q('SELECT 1 FROM transfers WHERE code=?', code).length);
+    this.q('INSERT INTO transfers(code,user_id,expires) VALUES(?,?,?)', code, u.id, now + 10 * 60 * 1000);
+    return { ok: true, code, secs: 600 };
+  }
+  transferRedeem(tk, code) {
+    code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const t = this.q('SELECT * FROM transfers WHERE code=?', code)[0];
+    if (!t || t.expires < Date.now()) return { err: 'code_bad' };
+    const a = this.userById(t.user_id);
+    if (!a) return { err: 'code_bad' };
+    const b = this.userBy(tk);
+    if (b && b.id === a.id) { this.q('DELETE FROM transfers WHERE code=?', code); return { ok: true, me: this.profile(a) }; }
+    // Hat dieses Gerät schon ein Konto mit Fortschritt, wird es nicht überschrieben
+    if (b) {
+      if (b.wins + b.losses + b.boxes > 0) return { err: 'has_progress' };
+      for (const x of this.q("SELECT * FROM trades WHERE status='pending' AND (from_id=? OR to_id=?)", b.id, b.id)) this.closeTrade(x, 'cancelled');
+      this.q('DELETE FROM balls WHERE owner=?', b.id);
+      this.q('DELETE FROM tstars WHERE owner=?', b.id);
+      this.q('DELETE FROM users WHERE id=?', b.id);
+    }
+    this.q('UPDATE users SET token=? WHERE id=?', tk, a.id);
+    this.q('DELETE FROM transfers WHERE user_id=?', a.id);
+    return { ok: true, me: this.profile(this.userBy(tk)) };
   }
   daily(tk) {
     const u = this.userBy(tk);

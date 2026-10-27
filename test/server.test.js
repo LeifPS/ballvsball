@@ -196,4 +196,18 @@ if (end) {
   ok(okF, 'Mehrspieler: Client-Simulation stimmt mit Server überein');
   if (endF) { const aF = (await api('/api/me', t1)).me.coins; ok(aF - bF === endF.coins && endF.coins > 0, 'Mehrspieler-Belohnung gebucht: ' + endF.coins); }
 }
+// Spielstand übertragen
+{
+  const ta = tok(), tb = tok(), tc = tok();
+  const na = 'Xfa' + Math.floor(Math.random() * 1e6);
+  await start(ta, na);
+  const c = await api('/api/transfer/create', ta);
+  ok(c.ok && c.code.length === 8, 'Übertragungscode erzeugt: ' + c.code);
+  ok((await api('/api/transfer/redeem', tb, { code: 'ZZZZZZZZ' })).err === 'code_bad', 'Falscher Code abgelehnt');
+  await api('/api/login', tb, { name: 'Xfb' + Math.floor(Math.random() * 1e6) });
+  const r2 = await api('/api/transfer/redeem', tb, { code: c.code.toLowerCase() });
+  ok(r2.ok && r2.me.name === na && r2.me.balls.length === 3, 'Neues Gerät (leeres Konto) übernimmt den Spielstand');
+  ok((await api('/api/me', ta)).err === 'auth', 'Altes Gerät ist abgemeldet');
+  ok((await api('/api/transfer/redeem', tc, { code: c.code })).err === 'code_bad', 'Code nur einmal benutzbar');
+}
 process.exit(process.exitCode || 0);

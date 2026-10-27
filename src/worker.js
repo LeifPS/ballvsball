@@ -28,6 +28,8 @@ export default {
     switch (url.pathname) {
       case '/api/login': r = await store.login(tk, b.name); break;
       case '/api/me': r = await store.me(tk); break;
+      case '/api/transfer/create': r = await store.transferCreate(tk); break;
+      case '/api/transfer/redeem': r = await store.transferRedeem(tk, b.code); break;
       case '/api/delete': r = await store.deleteAccount(tk, b.name); break;
       case '/api/rename': r = await store.rename(tk, b.name); break;
       case '/api/testcoins': r = b.key === 'leif-test' ? await store.testCoins(tk) : { err: 'bad' }; break;

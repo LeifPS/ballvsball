@@ -27,6 +27,7 @@ const lset = (k, v) => { try { if (store) store.setItem(k, v); else mem[k] = v; 
 const ERR = {
   net: 'Keine Verbindung zum Server.', auth: 'Anmeldung fehlgeschlagen.', need_name: 'Bitte wähle einen Namen.',
   name_invalid: 'Name: 3 bis 16 Zeichen, nur Buchstaben, Zahlen, Leerzeichen, - und _.', name_taken: 'Dieser Name ist schon vergeben.',
+  code_bad: 'Der Code stimmt nicht oder ist abgelaufen.', has_progress: 'Dieses Gerät hat schon einen Spielstand mit Kämpfen. Lösche zuerst dort das Konto.',
   daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
   price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
   not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 verschiedene freie Bälle behalten.',
@@ -195,7 +196,7 @@ function netError(c) {
 function nameScreen(err) {
   show('<div class="col" style="margin-top:6vh"><h1 class="jit">Ball gegen Ball</h1><div class="hero bounce">' + ball('stachel', 150, .62) + '</div><div class="panel center"><p>Sammle Bälle und kämpfe gegen andere. Wie willst du heißen?</p></div>' +
     '<div class="inp"><input id="nm" maxlength="16" placeholder="Dein Name" autocomplete="off"></div><div class="err center" id="err">' + esc(err) + '</div>' +
-    btn('Los geht\'s', 'register', '', 'pri big') + '<p class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dein Gerät merkt sich dein Konto. 3 bis 16 Zeichen.</p></div>');
+    btn('Los geht\'s', 'register', '', 'pri big') + btn('Ich habe schon einen Spielstand', 'xferin') + '<p class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dein Gerät merkt sich dein Konto. 3 bis 16 Zeichen.</p></div>');
 }
 
 /* ================= Verbindung ================= */
@@ -869,7 +870,25 @@ const ACT = {
     overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Einstellungen</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
       '<div class="panel"><p><b>Name:</b> ' + esc(S.me.name) + '</p>' + btn('Name ändern', 'rename') + '</div>' +
       '<div class="panel"><p><b>Ton:</b> ' + (m === 2 ? 'Ton und Musik an' : m === 1 ? 'Nur Effekte' : 'Stumm') + '</p>' + btn('Ton umschalten', 'sndcycle') + '</div>' +
+      '<div class="panel"><p><b>Spielstand übertragen</b></p><p class="small mute">Nimm dein Konto auf ein anderes Gerät mit. Das alte Gerät wird danach abgemeldet.</p>' + btn('Auf anderes Gerät übertragen', 'xferout') + btn('Spielstand von anderem Gerät laden', 'xferin') + '</div>' +
       '<div class="panel"><p><b>Konto löschen</b></p><p class="small mute">Löscht dein Konto mit allen Bällen, Münzen und Siegen. Das kann nicht rückgängig gemacht werden.</p>' + btn('Konto löschen', 'delask', '', 'red') + '</div></div>');
+  },
+  async xferout() {
+    const r = await api('/api/transfer/create', {});
+    if (r.err) { toast(errText(r.err)); return; }
+    overlay('<div class="col"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Dein Übertragungscode</h2><div class="panel center"><div class="codebig jit" style="font-size:42px;letter-spacing:4px">' + esc(r.code) + '</div><p class="small mute">10 Minuten gültig, nur einmal benutzbar.</p></div>' +
+      '<div class="panel"><p>Öffne das Spiel auf dem neuen Gerät und tippe auf "Ich habe schon einen Spielstand". Gib dort diesen Code ein. Danach ist dein Konto auf dem neuen Gerät, und dieses Gerät wird abgemeldet.</p></div>' + btn('Schließen', 'closeov') + '</div>');
+  },
+  xferin() {
+    overlay('<div class="col"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Spielstand laden</h2><div class="panel"><p>Erzeuge auf dem alten Gerät unter Einstellungen einen Übertragungscode und gib ihn hier ein.</p></div>' +
+      '<div class="inp"><input id="xc" maxlength="12" placeholder="CODE" autocomplete="off" style="text-transform:uppercase;text-align:center;font:400 30px var(--f-display)"></div><div class="err" id="err" style="color:#ffd0c8"></div>' + btn('Laden', 'xfergo', '', 'pri') + btn('Abbrechen', 'closeov') + '</div>');
+  },
+  async xfergo() {
+    const r = await api('/api/transfer/redeem', { code: $('#xc').value });
+    if (r.err) { $('#err').textContent = errText(r.err); return; }
+    closeOverlay(); toast('Spielstand übernommen.');
+    if (S.ws) { try { S.ws.close(); } catch (e) { } }
+    connectWS(); home();
   },
   sndcycle() { unlock(); const m = (getMode() + 2) % 3; setMode(m); sndIcon(); if (m) sfx('click'); ACT.settings(); },
   delask() {
