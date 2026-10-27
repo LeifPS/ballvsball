@@ -200,6 +200,7 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   // Wind: gestrichelte Streifen laufen nach außen; Kanonen blitzen beim Abschuss
   if (L.wind) for (const w of L.wind) {   // Wind: Schwünge laufen über die ganze Fläche in Windrichtung
     g.save(); g.beginPath(); g.rect(w.x0, w.y0, w.x1 - w.x0, w.y1 - w.y0); g.clip();
+    g.beginPath(); L.poly.forEach((q, i) => i ? g.lineTo(q[0], q[1]) : g.moveTo(q[0], q[1])); g.closePath(); g.clip();   // nur im Dropper-Inneren
     g.strokeStyle = 'rgba(80,150,220,.8)'; g.lineWidth = 2.2; g.lineCap = g.lineJoin = 'round';
     const wl = Math.hypot(w.ax, w.ay) || 1, ux = w.ax / wl, uy = w.ay / wl, sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22); sk.lineWidth = 2.2;
     const wd = w.x1 - w.x0, ht = w.y1 - w.y0, span = Math.max(wd, ht) + 40, rows = Math.max(1, Math.floor(ht / 11)), cols = Math.max(1, Math.round(wd / 34));
