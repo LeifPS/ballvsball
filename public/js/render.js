@@ -204,12 +204,12 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
     g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#5a9ee0';
     const wd = w.x1 - w.x0, ht = w.y1 - w.y0, horiz = Math.abs(w.ax) >= Math.abs(w.ay), sgn = (horiz ? w.ax : w.ay) < 0 ? -1 : 1;
     const sk = sketchCtx(g, 3.9 + (tf % 3) * 1.713, 22), span = horiz ? wd : ht, thick = horiz ? ht : wd;
-    const lanes = Math.max(1, Math.round(thick / 28)), per = Math.max(1, Math.round(span / 80));   // gleichmäßige Bahnen, auf jeder Bahn gleichmäßig verteilte Schwünge
+    const lanes = Math.max(1, Math.round(thick / 16)), per = Math.max(1, Math.round(span / 46));   // gleichmäßige Bahnen, auf jeder Bahn gleichmäßig verteilte Schwünge
     g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#6aa6e4'; g.lineWidth = 1.8; sk.lineWidth = 1.8;
     for (let l = 0; l < lanes; l++) for (let k = 0; k < per; k++) {
-      const t = (tm * .22 + (k + (l % 2) * .5 + l * .17) / per) % 1, fade = Math.sin(t * Math.PI);
+      const t = (tm * .65 + (k + (l % 2) * .5 + l * .17) / per) % 1, fade = Math.sin(t * Math.PI);
       const along = sgn > 0 ? t * span : span - t * span, lane = (l + .5) / lanes * thick;
-      const px = horiz ? w.x0 + along : w.x0 + lane, py = horiz ? w.y0 + lane : w.y0 + along, dx = horiz ? sgn * 10 : 0, dy = horiz ? 0 : sgn * 10;
+      const px = horiz ? w.x0 + along : w.x0 + lane, py = horiz ? w.y0 + lane : w.y0 + along, dx = horiz ? sgn * 5 : 0, dy = horiz ? 0 : sgn * 5;
       g.globalAlpha = .75 * fade;
       sk.beginPath(); sk.moveTo(px - dx, py - dy); sk.quadraticCurveTo(px - dy * .5, py + dx * .5, px + dx, py + dy); sk.stroke();
     }
