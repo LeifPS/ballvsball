@@ -331,8 +331,8 @@ N.liebend = Object.assign({}, DEFS.vampir, {
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
 const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1, allesherr: 1.15, rallaxa: 1.55, frallas: 1.65, blauast: 0.49, kobra: 0.73, bladro: 1.4 };
 const BOX_OF = {
-  alles: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
-  klein: ['allesherr', 'rallaxa', 'frallas', 'blauast', 'kobra', 'bladro'],
+  klein: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
+  alles: ['allesherr', 'rallaxa', 'frallas', 'blauast', 'kobra', 'bladro'],
   gefuehl: ['froh', 'wuet', 'gelassen', 'verlegen', 'aengstlich', 'neugierig', 'stolz', 'neid', 'liebend', 'gefuehl', 'herrscher']
 };
 for (const box in BOX_OF) for (const id of BOX_OF[box]) {
