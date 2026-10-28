@@ -162,15 +162,25 @@ const N = {
     }
   },
   gefuehl: {
-    name: 'Gefühlsball', rarity: 'legendaer', hp: 130, speed: 145, r: 18, dmg: 'Hoch',
-    desc: 'Wechselt alle paar Sekunden zwischen Fröhlich, Wütend und Ängstlich, in einer geheimnisvollen Rauchwolke, und hat jeweils dessen Fähigkeit.',
-    strong: 'Wechselnde Lagen', weak: 'Flächenschaden',
+    name: 'Gefühlsball', rarity: 'legendaer', hp: 80, speed: 145, r: 18, dmg: 'Hoch',
+    desc: 'Drei Gefühle nacheinander, in einer geheimnisvollen Rauchwolke: erst Fröhlich, nach der Niederlage Wütend, dann Ängstlich. Jedes hat die Fähigkeit des gleichnamigen Balls und ein eigenes Leben.',
+    strong: 'Lange Kämpfe', weak: 'Flächenschaden',
     contact: (b, sim) => (b.st.mode === 0 ? FEEL.froh : b.st.mode === 1 ? FEEL.wuet : FEEL.angst).contact(b, sim), contactCd: .5,
-    init(b) { b.st.mode = 0; b.st.t = 4; },
+    takes: (b, sim) => (b.st.inv > 0 ? 0 : 1),   // kurze Schutzzeit nach dem Wechsel des Gefühls
+    init(b) { b.st.mode = 0; b.st.inv = 0; },
     update(b, sim) {
-      b.st.t -= DT;
-      if (b.st.t <= 0) { b.st.t = 4; b.st.mode = (b.st.mode + 1) % 3; fx(sim, 'mood', b.x, b.y, b.st.mode); }
+      if (b.st.inv > 0) b.st.inv -= DT;
       if (b.st.mode === 2) FEEL.angst.tick(b); else { b.r = b.def.r; FEEL.froh.tick(b, sim); }
+    },
+    // Wird ein Gefühl besiegt, folgt das nächste mit vollen Lebenspunkten (Fröhlich 80, Wütend 80, Ängstlich 200)
+    onDeath(b, sim) {
+      if (b.st.mode >= 2) return false;
+      b.st.mode++;
+      const hp = (b.st.mode === 1 ? 80 : 200) * b.pm;
+      sim.teamMax[b.team] += hp - b.maxHp;
+      b.hp = b.maxHp = hp; b.r = b.def.r; b.st.inv = .7; b.stun = 0; b.burn = 0;
+      fx(sim, 'mood', b.x, b.y, b.st.mode);
+      return true;
     }
   },
   herrscher: {
@@ -204,7 +214,7 @@ N.liebend = Object.assign({}, DEFS.vampir, {
 });
 
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
-const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 2.15, herrscher: 1 };
+const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1 };
 const BOX_OF = {
   klein: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
   gefuehl: ['froh', 'wuet', 'gelassen', 'verlegen', 'aengstlich', 'neugierig', 'stolz', 'neid', 'liebend', 'gefuehl', 'herrscher']
