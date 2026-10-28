@@ -11,7 +11,7 @@ export const BOX_LIST = [
   { id: 'dino', name: 'Dino-Box', price: 200, cur: 'coins', col: '#6aa84f', desc: 'Raptoren, Panzerechsen und der T-Rex.' },
   { id: 'alles', name: 'Allesbox', price: 350, cur: 'coins', col: '#5fc27a', desc: 'Magnete, Fragezeichen und eine mythische Kobra.' },
   { id: 'klein', name: 'Kleinbox', price: 450, cur: 'coins', col: '#3a3a48', desc: 'Winzige Bälle mit großer Wirkung, dazu ein mythischer Riese.' },
-  { id: 'brainrot', name: 'Brainrot-Box', price: 300, cur: 'coins', col: '#ff4fd8', desc: 'Italienische Meme-Monster: Tralalero, Tung Tung Sahur und eine mythische Kuh.' },
+  { id: 'brainrot', name: 'Brainrot-Box', price: 300, cur: 'coins', col: '#ff4fd8', desc: 'Italienische Meme-Monster: Tralalero, Tung Tung Sahur und eine mythische Kuh.', off: true },
   { id: 'gefuehl', name: 'Gefühlsbox', price: 450, cur: 'coins', col: '#e86aa8', desc: 'Fröhlich, wütend, ängstlich ...: elf Gefühle und der Gefühlsherrscher.' },
   { id: 'halloween', name: 'Halloween-Box', price: 10, cur: 'tokens', col: '#e8761d', desc: 'Nur bis Ende Oktober! Kostet Halloween-Marken.', until: Date.UTC(2026, 9, 31, 23, 0, 0) }
 ];
@@ -20,7 +20,7 @@ export const BOX_RARITY = { alles: { selten: 89.5, episch: 10, mythisch: .5 }, b
 export const BOX_BY_ID = Object.fromEntries(BOX_LIST.map(b => [b.id, b]));
 // 1. November 2026, 00:00 Uhr deutscher Zeit
 export const EVENT_END = BOX_BY_ID.halloween.until;
-export function boxActive(id, now) { const b = BOX_BY_ID[id]; return !!b && (!b.until || now < b.until); }
+export function boxActive(id, now) { const b = BOX_BY_ID[id]; return !!b && !b.off && (!b.until || now < b.until); }   // off: vorübergehend aus dem Shop genommen (Code bleibt)
 export function eventActive(now) { return now < EVENT_END; }
 
 // Sterne: Duplikate verbessern einen Ball (je Stern +8 % Leben und Schaden, höchstens 5 Sterne).

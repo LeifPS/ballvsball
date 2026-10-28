@@ -122,7 +122,7 @@ ok(r.err === 'min_balls', 'mindestens 3 freie Bälle bleiben');
   await api('/api/testcoins', t, { key: 'leif-test' });
   let dups = 0;
   const { simBox, layoutOf } = await import('../public/js/boxsim.js');
-  for (let i = 0; i < 48; i++) { x = await api('/api/box', t, { box: ['standard', 'weltraum', 'kueche', 'sport', 'elemente', 'ozean', 'suess', 'familie', 'dino', 'klein', 'alles', 'gefuehl', 'brainrot'][i % 13] }); if (x.box === 'standard' && new Set(x.cands).size !== 10) dups++; if (x.cands.some(c => !ballsInBox(x.box).includes(c))) dups++; if (x.cands[x.win] !== x.ball.type) dups++; const sb = simBox(x.seed, 10, layoutOf(x.box)); if (sb.reached < 1 || sb.order[0] !== x.win) dups++; }
+  for (let i = 0; i < 48; i++) { x = await api('/api/box', t, { box: ['standard', 'weltraum', 'kueche', 'sport', 'elemente', 'ozean', 'suess', 'familie', 'dino', 'klein', 'alles', 'gefuehl'][i % 12] }); if (x.box === 'standard' && new Set(x.cands).size !== 10) dups++; if (x.cands.some(c => !ballsInBox(x.box).includes(c))) dups++; if (x.cands[x.win] !== x.ball.type) dups++; const sb = simBox(x.seed, 10, layoutOf(x.box)); if (sb.reached < 1 || sb.order[0] !== x.win) dups++; }
   ok(dups === 0, 'Ballbox: 10 verschiedene Bälle, Gewinner stimmt (Fehler: ' + dups + ')');
 }
 // Konto löschen
