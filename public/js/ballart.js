@@ -823,3 +823,64 @@ Object.assign(BALLS, {
 PARTS.magnet = [12, c => { horseshoe(c, 6.5, '#e8453c', '#dfe3ea'); }];
 OB.magnet = [6, c => { c.save(); c.rotate(PI / 2); horseshoe(c, 4.2, '#e8453c', '#dfe3ea'); c.restore(); }, 5];
 OB.blatt = [6, c => { c.beginPath(); c.moveTo(-8, 0); c.quadraticCurveTo(-2, -7, 8, 0); c.quadraticCurveTo(-2, 7, -8, 0); FS(c, '#58b848'); ln(c, -8, 0, 6, 0, 1.2, '#2d7a2a'); }, 5];
+
+/* ---------- Brainrot-Box ---------- */
+Object.assign(BALLS, {
+  tungtung(c, s) {   // Holzklotz mit Keule
+    const r = s * .36; body(c, s, '#c98a4a');
+    c.lineWidth = s * .03; c.strokeStyle = '#8a5a2a'; [-.3, 0, .3].forEach(y => { c.beginPath(); c.moveTo(-r * .85, y * r); c.quadraticCurveTo(0, y * r + 2, r * .85, y * r); c.stroke(); }); c.strokeStyle = INK;
+    face(c, s, { mouth: 'flat', er: .17, blush: 0 });
+    c.save(); c.translate(r * .95, r * .1); c.rotate(.35); pl(c, [[-3, -r * .9], [3, -r * .9], [5, r * .5], [-5, r * .5]], '#9a6a35'); c.restore();
+  },
+  tralalero(c, s) {   // blauer Hai mit Schuhen
+    const r = s * .36; body(c, s, '#6aa8d8');
+    pl(c, [[-r * .2, -r * .9], [r * .2, -r * 1.55], [r * .45, -r * .8]], '#4f86b8');
+    face(c, s, { mouth: 'grin', er: .17, blush: 0 });
+    [-1, 1].forEach(d => { c.beginPath(); c.ellipse(d * r * .45, r * .98, r * .36, r * .2, 0, 0, 7); FS(c, '#fff'); ln(c, d * r * .25, r * .92, d * r * .65, r * .92, s * .025, '#e8453c'); });
+  },
+  bombardiro(c, s) {   // grünes Krokodil mit Flügeln
+    const r = s * .36; body(c, s, '#5aa84a');
+    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .8, -r * .1); c.lineTo(d * r * 1.8, -r * .5); c.lineTo(d * r * 1.5, r * .3); c.closePath(); FS(c, '#8a8f9a'); });
+    pl(c, [[-r * .7, r * .15], [r * .7, r * .15], [r * .6, r * .7], [-r * .6, r * .7]], '#78c060');
+    [-1, 0, 1].forEach(d => pl(c, [[d * r * .3 - 2.5, r * .15], [d * r * .3 + 2.5, r * .15], [d * r * .3, r * .38]], '#fff'));
+    [-1, 1].forEach(d => cEye(c, d * r * .38, -r * .35, r * .17, 1, s));
+    c.save(); c.translate(0, -r * .85); pl(c, [[-r * .55, 0], [r * .55, 0], [r * .45, -r * .3], [-r * .45, -r * .3]], '#4a5a3a'); c.restore();
+  },
+  cappuccino(c, s) {   // Kaffeetasse mit Ninja-Binde und Schwertern
+    const r = s * .36; body(c, s, '#f4ecdc');
+    c.beginPath(); c.ellipse(0, -r * .5, r * .78, r * .22, 0, 0, 7); FS(c, '#8a5a38');
+    pl(c, [[-r * .9, -r * .02], [r * .9, -r * .02], [r * .9, r * .22], [-r * .9, r * .22]], '#2a2a36');
+    [-1, 1].forEach(d => cEye(c, d * r * .36, r * .08, r * .13, .55, s));
+    c.save(); c.rotate(.9); ln(c, -r * 1.1, r * .55, r * 1.2, r * .55, s * .05, '#e5e8ee'); c.restore();
+  },
+  ballerina(c, s) {   // Cappuccino-Kopf mit Tutu
+    const r = s * .36; body(c, s, '#f4ecdc');
+    c.beginPath(); c.ellipse(0, -r * .55, r * .72, r * .3, 0, 0, 7); FS(c, '#8a5a38');
+    c.beginPath(); c.ellipse(0, r * .92, r * 1.15, r * .28, 0, 0, 7); FS(c, '#ffb6d8');
+    [-1, 1].forEach(d => { c.beginPath(); c.arc(d * r * .55, -r * .98, r * .22, 0, 7); FS(c, '#ffb6d8'); });
+    face(c, s, { mouth: 'smile', er: .15, dy: .12 });
+  },
+  brr(c, s) {   // Baumstamm mit Krone
+    const r = s * .36; body(c, s, '#8a5a38');
+    [[-.55, -.85, .5], [.1, -1.15, .6], [.7, -.8, .45]].forEach(q => { c.beginPath(); c.arc(q[0] * r, q[1] * r, q[2] * r, 0, 7); FS(c, '#4f9a3a'); });
+    face(c, s, { mouth: 'o', er: .2, blush: 0 });
+    c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .7, r * .2); c.quadraticCurveTo(-r * .4, r * .5, -r * .6, r * .8); c.stroke();
+  },
+  lirili(c, s) {   // Kaktus-Elefant mit Uhr
+    const r = s * .36; body(c, s, '#78b24a');
+    [-1, 1].forEach(d => { c.beginPath(); c.ellipse(d * r * .95, -r * .1, r * .45, r * .6, d * .2, 0, 7); FS(c, '#5e9638'); });
+    c.beginPath(); c.moveTo(-r * .12, r * .1); c.quadraticCurveTo(-r * .2, r * .95, r * .1, r * 1.1); c.lineTo(r * .3, r * 1.0); c.quadraticCurveTo(r * .14, r * .6, r * .16, r * .1); c.closePath(); FS(c, '#78b24a');
+    [-1, 1].forEach(d => cEye(c, d * r * .38, -r * .3, r * .15, 1, s));
+    c.beginPath(); c.arc(0, -r * 1.0, r * .32, 0, 7); FS(c, '#fff0b0'); ln(c, 0, -r * 1.0, 0, -r * 1.2, s * .025); ln(c, 0, -r * 1.0, r * .14, -r * .96, s * .025);
+  },
+  saturno(c, s) {   // Kuh mit Saturnring
+    const r = s * .36; body(c, s, '#f6f2ea');
+    [[-.5, -.35, .3], [.45, .1, .34], [-.2, .5, .22]].forEach(q => { c.beginPath(); c.ellipse(q[0] * r, q[1] * r, q[2] * r, q[2] * r * .8, .4, 0, 7); FS(c, '#2a2a36'); });
+    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .5, -r * .85); c.lineTo(d * r * .7, -r * 1.35); c.lineTo(d * r * .85, -r * .8); c.closePath(); FS(c, '#e8e0cc'); });
+    c.beginPath(); c.ellipse(0, r * .45, r * .5, r * .3, 0, 0, 7); FS(c, '#ffb6c0');
+    [-1, 1].forEach(d => cEye(c, d * r * .38, -r * .22, r * .15, 1, s));
+    c.save(); c.rotate(-.35); c.lineWidth = s * .05; c.strokeStyle = INK; c.beginPath(); c.ellipse(0, 0, r * 1.45, r * .42, 0, 0, 7); c.stroke(); c.lineWidth = s * .025; c.strokeStyle = '#ffd45a'; c.beginPath(); c.ellipse(0, 0, r * 1.45, r * .42, 0, 0, 7); c.stroke(); c.strokeStyle = INK; c.restore();
+  }
+});
+OB.stock = [7, c => { c.beginPath(); c.moveTo(-8, -2.5); c.lineTo(8, -4); c.lineTo(8, 4); c.lineTo(-8, 2.5); c.closePath(); FS(c, '#c98a4a'); ln(c, -4, -2, -4, 2, 1.2, '#8a5a2a'); ln(c, 1, -2.5, 1, 2.5, 1.2, '#8a5a2a'); }, 5];
+OB.ring = [9, c => { c.lineWidth = 4.6; c.strokeStyle = INK; c.beginPath(); c.ellipse(0, 0, 9, 5, .5, 0, 7); c.stroke(); c.lineWidth = 2.4; c.strokeStyle = '#ffd45a'; c.beginPath(); c.ellipse(0, 0, 9, 5, .5, 0, 7); c.stroke(); c.strokeStyle = INK; }, 4];

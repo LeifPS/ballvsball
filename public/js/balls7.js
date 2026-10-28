@@ -1,7 +1,8 @@
 // Kleinbox und Gefühlsbox (Ideen von Erik und Thore). Deterministisch wie balls2.js.
-import { DT, hurt, fx, rand, nearestEnemy, steer, addBall, len, stun, segDist } from './core.js';
+import { DT, hurt, fx, rand, nearestEnemy, steer, addBall, len, stun, segDist, heal } from './core.js';
 import { DEFS, BALL_IDS, RARITY, OBJS, newObj, clampPt } from './balls.js';
-import { shot, tick } from './balls2.js';
+import { shot, tick, wave } from './balls2.js';
+import { sprint, sprintEnd } from './balls5.js';
 
 export const TUNE = { expR: 48, expFuse: .9, expCd: .7, expT0: 3, expProt: .6, helpCap: 3, helpStep: 3, helpHp: .5 };   // Stellschrauben (werden beim Balancing verändert)
 const weaker = (b, sim) => { const e = nearestEnemy(sim, b); return !!e && b.hp < e.hp; };
@@ -319,6 +320,98 @@ Object.assign(N, {
       const e = nearestEnemy(sim, b);
       if (e) { shot(sim, b, e, { speed: 190, r: 5, dmg: 7 + sim.t * .08, vis: 'blatt', turn: 1.3, life: 3.4, lead: 0 }); shot(sim, b, e, { speed: 170, r: 5, dmg: 7 + sim.t * .08, vis: 'blatt', turn: 1.3, life: 3.4, lead: 0 }, .5); }
     }
+  },
+  /* ================= Brainrot-Box ================= */
+  tungtung: {
+    name: 'Tung Tung Sahur', rarity: 'gewoehnlich', hp: 100, speed: 140, r: 16, dmg: 'Mittel',
+    desc: 'Schlägt im Takt auf seine Holzkeule und schleudert Knüppel, die durch mehrere Gegner schlagen.',
+    strong: 'Gegner in Reihe', weak: 'Schnelle Gegner',
+    contact: (b, sim) => 7 + sim.t * .07, contactCd: .5,
+    init(b) { b.st.cd = 1.2; },
+    update(b, sim) {
+      if (!tick(b, 1.5)) return;
+      const e = nearestEnemy(sim, b);
+      if (e) shot(sim, b, e, { speed: 230, r: 5, dmg: 7 + sim.t * .08, vis: 'stock', pierce: 1, pcd: .5, life: 2.4, lead: .4 });
+    }
+  },
+  tralalero: {
+    name: 'Tralalero Tralala', rarity: 'gewoehnlich', hp: 85, speed: 135, r: 15, dmg: 'Mittel',
+    desc: 'Ein Hai in Turnschuhen. Sprintet in Schüben auf den Gegner zu und rammt ihn dabei kräftig.',
+    strong: 'Fernkämpfer', weak: 'Schildball',
+    contact: (b, sim) => (b.st.dash > 0 ? 15 : 5) + sim.t * .08, contactCd: .5,
+    init(b) { b.st.cd = 1.4; b.st.dash = 0; },
+    update(b, sim) {
+      if (sprintEnd(b, 'tralalero')) return;
+      if (tick(b, 2.8)) sprint(b, sim, 'tralalero', .7, 300);
+    }
+  },
+  bombardiro: {
+    name: 'Bombardiro Crocodilo', rarity: 'selten', hp: 90, speed: 125, r: 17, dmg: 'Hoch',
+    desc: 'Ein fliegendes Krokodil, das Bomben in Zweierreihe auf den Gegner wirft.',
+    strong: 'Langsame Gegner', weak: 'Schnelle Gegner',
+    contact: (b, sim) => 6 + sim.t * .06, contactCd: .5,
+    init(b) { b.st.cd = 1.6; },
+    update(b, sim) {
+      if (!tick(b, 2.2)) return;
+      const e = nearestEnemy(sim, b);
+      if (e) { const sp = { speed: 150, r: 7, dmg: 14 + sim.t * .15, vis: 'bomb', life: 3, lead: .3 }; shot(sim, b, e, sp, -.22); shot(sim, b, e, sp, .22); }
+    }
+  },
+  cappuccino: {
+    name: 'Cappuccino Assassino', rarity: 'selten', hp: 80, speed: 130, r: 15, dmg: 'Sehr hoch',
+    desc: 'Eine Kaffeetasse mit Ninja-Schwertern. Nur im Sturzflug macht er Schaden, dafür richtig.',
+    strong: 'Träge Gegner', weak: 'Schildball, Eisball',
+    contact: (b, sim) => b.st.dash > 0 ? 22 + sim.t * .25 : 3, contactCd: .5,
+    init(b) { b.st.cd = 1.4; b.st.dash = 0; },
+    update(b, sim) {
+      if (sprintEnd(b, 'cappuccino')) return;
+      if (tick(b, 2.4)) sprint(b, sim, 'cappuccino', .6, 340);
+    }
+  },
+  ballerina: {
+    name: 'Ballerina Cappuccina', rarity: 'episch', hp: 110, speed: 130, r: 17, dmg: 'Hoch',
+    desc: 'Tänzerin mit Cappuccino-Kopf. Wirbelt in Pirouetten, die alles um sie herum wegstoßen.',
+    strong: 'Nahkämpfer', weak: 'Fernkämpfer',
+    contact: (b, sim) => 9 + sim.t * .1, contactCd: .5,
+    init(b) { b.st.cd = 2; },
+    update(b, sim) {
+      if (tick(b, 3.5)) wave(sim, b, b.x, b.y, { sp: 170, maxR: 80, dmg: 14 + sim.t * .15, push: 1, vis: 'shock' });
+    }
+  },
+  brr: {
+    name: 'Brr Brr Patapim', rarity: 'episch', hp: 150, speed: 115, r: 20, dmg: 'Mittel',
+    desc: 'Ein Baum auf Beinen. Schlägt Wurzeln: Gegner in der Nähe sind kurz festgehalten, er selbst erholt sich.',
+    strong: 'Rammbälle', weak: 'Fernkämpfer, Feuerbälle',
+    contact: (b, sim) => 9 + sim.t * .1, contactCd: .5,
+    init(b) { b.st.cd = 3; },
+    update(b, sim) {
+      if (!tick(b, 5)) return;
+      const e = nearestEnemy(sim, b);
+      if (e && Math.hypot(e.x - b.x, e.y - b.y) < 170) { stun(sim, e, 1); heal(sim, b, 10); }
+    }
+  },
+  lirili: {
+    name: 'Lirili Larila', rarity: 'legendaer', hp: 240, speed: 120, r: 21, dmg: 'Hoch',
+    desc: 'Ein Kaktus-Elefant mit Wüstenuhr. Hält die Zeit an: Der Gegner ist lange gelähmt und wird weggeschleudert.',
+    strong: 'Rammbälle, Nahkämpfer', weak: 'Fernkämpfer',
+    contact: (b, sim) => 12 + sim.t * .15, contactCd: .5,
+    init(b) { b.st.cd = 4; },
+    update(b, sim) {
+      if (!tick(b, 6.5)) return;
+      wave(sim, b, b.x, b.y, { sp: 240, maxR: 130, dmg: 12 + sim.t * .15, push: 1, stun: 1.6, vis: 'nova' });
+    }
+  },
+  saturno: {
+    name: 'La Vaca Saturno', rarity: 'mythisch', hp: 270, speed: 135, r: 23, dmg: 'Extrem',
+    desc: 'Eine Kuh mit Saturn-Ringen. Schleudert dreimal drei Ringe, die durch alles hindurchschneiden.',
+    strong: 'Fast alles', weak: 'Bomben',
+    contact: (b, sim) => 26 + sim.t * .3, contactCd: .5,
+    init(b) { b.st.cd = 2.5; },
+    update(b, sim) {
+      if (!tick(b, 4.5)) return;
+      const e = nearestEnemy(sim, b);
+      if (e) for (const an of [-.4, 0, .4]) shot(sim, b, e, { speed: 220, r: 8, dmg: 16 + sim.t * .2, vis: 'ring', pierce: 1, pcd: .6, life: 3, lead: .3 }, an);
+    }
   }
 });
 // Liebender Ball: wie der Vampirball (klammert sich fest und saugt), heilt aber zusätzlich um den ausgeteilten Schaden
@@ -329,10 +422,11 @@ N.liebend = Object.assign({}, DEFS.vampir, {
 });
 
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
-const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1, allesherr: 1.15, rallaxa: 1.55, frallas: 1.65, blauast: 0.49, kobra: 0.73, bladro: 1.4 };
+const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1, allesherr: 1.15, rallaxa: 1.55, frallas: 1.65, blauast: 0.49, kobra: 0.73, bladro: 1.4, tungtung: 1.25, tralalero: 2.5, bombardiro: 0.9, cappuccino: 2, ballerina: 2.15, brr: 1.9, lirili: 1, saturno: 0.8 };
 const BOX_OF = {
   klein: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
   alles: ['allesherr', 'rallaxa', 'frallas', 'blauast', 'kobra', 'bladro'],
+  brainrot: ['tungtung', 'tralalero', 'bombardiro', 'cappuccino', 'ballerina', 'brr', 'lirili', 'saturno'],
   gefuehl: ['froh', 'wuet', 'gelassen', 'verlegen', 'aengstlich', 'neugierig', 'stolz', 'neid', 'liebend', 'gefuehl', 'herrscher']
 };
 for (const box in BOX_OF) for (const id of BOX_OF[box]) {

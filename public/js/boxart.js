@@ -15,6 +15,7 @@ const THEMES = {
   klein: { body: '#3b3b4c', lid: '#25252f', glow: '#d9c8ff' },
   alles: { body: '#7bd36a', lid: '#ffd45a', glow: '#fff2a0' },
   gefuehl: { body: '#8fd16a', lid: '#ffe14a', glow: '#ffd0f0' },
+  brainrot: { body: '#ff4fd8', lid: '#3ee0ff', glow: '#ffee55' },
   halloween: { body: '#f58a1f', lid: '#d96e0c', glow: '#ffe14a' }
 };
 const hashId = id => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
@@ -91,6 +92,10 @@ const BODY = {
     c.lineWidth = 2; c.strokeStyle = '#6a6a80'; c.beginPath(); c.moveTo(27, 62); c.quadraticCurveTo(50, 67, 73, 62); c.moveTo(27, 74); c.quadraticCurveTo(50, 79, 73, 74); c.stroke(); c.strokeStyle = INK;
     c.lineWidth = 3; [[40, 66], [60, 66]].forEach((p, i) => { c.beginPath(); c.arc(p[0], p[1], 3.4, 0, 7); FS(c, '#fff'); c.fillStyle = INK; c.beginPath(); c.arc(p[0] + .6, p[1] + .4, 1.5, 0, 7); c.fill(); });
     c.globalAlpha = .55 + .4 * Math.abs(Math.sin(t * 3)); star4(c, 66, 56, 3, '#ffe36a'); c.globalAlpha = 1;
+  },
+  brainrot(c, t) {   // Neon-Zickzack und glubschende Spiralaugen
+    c.lineWidth = 3; c.strokeStyle = '#ffee55'; c.beginPath(); c.moveTo(22, 58); for (let i = 0; i < 6; i++) c.lineTo(22 + (i + 1) * 9.5, i % 2 ? 58 : 66); c.stroke(); c.strokeStyle = INK;
+    [[38, 74], [62, 74]].forEach((p, i) => { c.beginPath(); c.arc(p[0], p[1], 7, 0, 7); FS(c, '#fff'); c.lineWidth = 2; c.beginPath(); for (let k = 0; k < 16; k++) { const a = k * .8 + t * 5 * (i ? -1 : 1), rr = k * .38; k ? c.lineTo(p[0] + Math.cos(a) * rr, p[1] + Math.sin(a) * rr) : c.moveTo(p[0], p[1]); } c.stroke(); c.lineWidth = 3; });
   },
   alles(c, t) {   // bunte Streifen in allen Farben
     c.lineWidth = 0;
@@ -181,6 +186,10 @@ const LID = {
   klein(c, t) {
     c.lineWidth = 3; c.beginPath(); c.arc(35, -19, 4.5, 0, 7); FS(c, '#6a6a80');
     c.globalAlpha = .6 + .3 * Math.sin(t * 4); star4(c, 50, -10, 3, '#d9c8ff'); c.globalAlpha = 1;
+  },
+  brainrot(c, t) {   // wackelnde Antenne mit Stern
+    const sw = Math.sin(t * 6) * 3; c.lineWidth = 3; c.beginPath(); c.moveTo(35, -16); c.quadraticCurveTo(35 + sw, -26, 35 + sw * 1.6, -34); c.stroke();
+    c.beginPath(); c.arc(35 + sw * 1.6, -36, 4, 0, 7); FS(c, '#ffee55');
   },
   alles(c, t) {   // drei Stängel mit Blättern
     const sw = Math.sin(t * 2.4) * 1.5;
