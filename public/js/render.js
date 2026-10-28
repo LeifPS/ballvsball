@@ -122,12 +122,13 @@ function tombstone(x, sk, p) {
 }
 // Handgezeichnete Besonderheiten der Dropper (Gitter, Körbe, Gitterablagen, Block, Flummi, Kanonen)
 function wob(sk, pts, close) { sk.beginPath(); pts.forEach((q, i) => i ? sk.lineTo(q[0], q[1]) : sk.moveTo(q[0], q[1])); if (close) sk.closePath(); }
-function drawDropperDecor(x, sk, L) {
+function drawDropperDecor(x, sk, L, skin) {
   x.lineJoin = x.lineCap = 'round';
   // alles mit wackeliger Kontur und versetzter Füllung (sk.fill / sk.stroke), nie mit geraden Canvas-Füllungen
   const shape = (pts, col, lw) => { sk.lineWidth = lw || 3.2; sk.strokeStyle = INK; x.strokeStyle = INK; x.fillStyle = col; wob(sk, pts, true); sk.fill(); sk.stroke(); };
   const rect = (x0, y0, x1, y1, col, lw) => shape([[x0, y0], [x1, y0], [x1, y1], [x0, y1]], col, lw);
   if (L.grates) for (const r of L.grates) {   // Gitter: dunkler Schacht mit Stäben
+    if (skin && skin.grate) { skin.grate(x, sk, r, rect); continue; }
     rect(r[0], r[1], r[2], r[3], '#3b3a46');
     sk.lineWidth = 2.4; sk.strokeStyle = '#9a98a8';
     for (let gx = r[0] + 7; gx < r[2] - 3; gx += 12) { sk.beginPath(); sk.moveTo(gx, r[1] + 3); sk.lineTo(gx, r[3] - 3); sk.stroke(); }
@@ -146,6 +147,7 @@ function drawDropperDecor(x, sk, L) {
     sk.strokeStyle = INK;
   }
   if (L.grids) for (const g of L.grids) {   // Gitterablagen: dicke Platte mit Gitter darunter
+    if (skin && skin.grid) { skin.grid(x, sk, g, shape); continue; }
     const dx = g[2] - g[0], dy = g[3] - g[1], hgt = 30;
     shape([[g[0], g[1]], [g[2], g[3]], [g[2], g[3] + hgt], [g[0], g[1] + hgt]], 'rgba(255,255,255,.55)', 3.4);
     sk.lineWidth = 2; sk.strokeStyle = INK;
@@ -169,6 +171,7 @@ function drawDropperDecor(x, sk, L) {
     sk.beginPath(); sk.moveTo(f[0] - f[2] * .5, f[1] + f[2] * .35); sk.lineTo(f[0] - f[2] * .25, f[1] + f[2] * .55); sk.lineTo(f[0], f[1] + f[2] * .35); sk.lineTo(f[0] + f[2] * .25, f[1] + f[2] * .55); sk.lineTo(f[0] + f[2] * .5, f[1] + f[2] * .35); sk.stroke();
     x.fillStyle = '#5cae4a'; sk.lineWidth = 2; sk.beginPath(); sk.moveTo(f[0] - 2, f[1] - f[2]); sk.lineTo(f[0] - 1, f[1] - f[2] - 6); sk.lineTo(f[0] + 4, f[1] - f[2] - 5); sk.lineTo(f[0] + 3, f[1] - f[2]); sk.closePath(); sk.fill(); sk.stroke();
   }
+  else if (L.flum && skin && skin.flum) for (const f of L.flum) skin.flum(x, sk, f);
   else if (L.flum) for (const f of L.flum) {   // Flummi-Bumper
     x.fillStyle = '#ff6fb0'; sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.fill(); sk.stroke();
     x.fillStyle = '#fff'; sk.lineWidth = 2; sk.beginPath(); sk.arc(f[0], f[1], f[2] * .55, 0, 7); sk.fill(); sk.stroke();
@@ -206,6 +209,7 @@ function boardSprite(col, L, boxId) {
     for (const ln of L.outline) { sk.beginPath(); ln.forEach((q, i) => i ? sk.lineTo(q[0], Math.max(q[1], -TOP)) : sk.moveTo(q[0], Math.max(q[1], -TOP))); sk.stroke(); }
     // Ablagen: Holzbretter, handgezeichnet (wacklige Kontur, versetzte Füllung, Maserung)
     for (const sh of L.shelves) {
+      if (skin && skin.shelf) { skin.shelf(x, sk, sh); x.strokeStyle = INK; continue; }
       const dx = sh[2] - sh[0], dy = sh[3] - sh[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, nx = -uy * 5, ny = ux * 5;
       x.lineJoin = 'round'; x.lineWidth = 3; x.strokeStyle = INK;
       sk.lineWidth = 3; sk.beginPath(); sk.moveTo(sh[0] + nx, sh[1] + ny); sk.lineTo(sh[2] + nx, sh[3] + ny); sk.lineTo(sh[2] - nx, sh[3] - ny); sk.lineTo(sh[0] - nx, sh[1] - ny); sk.closePath();
@@ -222,12 +226,15 @@ function boardSprite(col, L, boxId) {
       sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke();
       if (p[3]) { sk.beginPath(); sk.arc(p[0], p[1], p[2] + 4.5, 0, 7); sk.lineWidth = 1.6; sk.strokeStyle = 'rgba(224,83,58,.7)'; sk.stroke(); sk.strokeStyle = INK; x.fillStyle = '#fff'; x.beginPath(); x.arc(p[0], p[1], p[2] * .38, 0, 7); x.fill(); }
     });
-    drawDropperDecor(x, sk, L, col);
+    drawDropperDecor(x, sk, L, skin);
+    if (skin && skin.cup) skin.cup(x, sk, CUP, col);
+    else {
     // Auffangbecher unten: geschlossen, mit Boden
     x.beginPath(); x.moveTo(CUP.x0, CUP.y0); x.lineTo(CUP.x0 + 8, CUP.y1); x.lineTo(CUP.x1 - 8, CUP.y1); x.lineTo(CUP.x1, CUP.y0); x.closePath();
     x.fillStyle = '#fff9e0'; x.fill();
     x.save(); x.clip(); x.globalAlpha = .3; x.fillStyle = col; x.fillRect(CUP.x0, CUP.y0, CUP.x1 - CUP.x0, 70); x.restore();
     sk.lineWidth = 3.6; sk.beginPath(); sk.moveTo(CUP.x0 - 6, CUP.y0 - 2); sk.lineTo(CUP.x0, CUP.y0); sk.lineTo(CUP.x0 + 8, CUP.y1); sk.lineTo(CUP.x1 - 8, CUP.y1); sk.lineTo(CUP.x1, CUP.y0); sk.lineTo(CUP.x1 + 6, CUP.y0 - 2); sk.stroke();
+    }
     fr.push(cv);
   }
   return (BOARD[key] = { fr, W, H });
@@ -299,6 +306,13 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
       }
       const sk0 = sketchCtx(g, 6.9 + (tf % 3) * 1.9, 20); g.lineWidth = 3; sk0.lineWidth = 3; g.strokeStyle = INK; g.fillStyle = '#2a1f45'; sk0.beginPath(); sk0.arc(0, 0, 8, 0, 7); sk0.fill(); sk0.stroke();
       g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(-3, -1, 1.7, 0, 7); g.arc(3, -1, 1.7, 0, 7); g.fill();
+      g.restore(); continue;
+    }
+    const skin = SKIN[boxId];
+    if (skin && !L.theme) {   // Themen-Boxen: eigene Flügel und Nabe
+      g.save(); g.translate(sp.x, sp.y); g.lineCap = g.lineJoin = 'round';
+      for (let i = 0; i < 2; i++) { g.save(); g.rotate(a + i * Math.PI); const sk = sketchCtx(g, strSeed('sp' + boxId) + ((tf + i) % 3) * 1.9, 40); g.lineWidth = 3; sk.lineWidth = 3; g.strokeStyle = INK; skin.spinBlade(g, sk, sp, i); g.restore(); }
+      const skh = sketchCtx(g, strSeed('hb' + boxId) + (tf % 3) * 1.9, 20); g.lineWidth = 3; skh.lineWidth = 3; g.strokeStyle = INK; g.fillStyle = skin.hubCol; skh.beginPath(); skh.arc(0, 0, 7.5, 0, 7); skh.fill(); skh.stroke();
       g.restore(); continue;
     }
     g.save(); g.translate(sp.x, sp.y); g.lineCap = 'round'; g.lineJoin = 'round';

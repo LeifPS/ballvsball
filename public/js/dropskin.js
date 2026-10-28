@@ -116,3 +116,60 @@ export const SKIN = {
     bump(x, sk, p) { x.fillStyle = '#f6efd0'; sk.lineWidth = 2.4; sk.strokeStyle = INK; sk.beginPath(); sk.ellipse(p[0], p[1], p[2] * .9, p[2] * 1.15, 0, 0, 7); sk.fill(); sk.stroke(); dots(x, [[p[0] - p[2] * .3, p[1] - p[2] * .3, p[2] * .2], [p[0] + p[2] * .3, p[1] + p[2] * .1, p[2] * .24], [p[0] - p[2] * .1, p[1] + p[2] * .55, p[2] * .16]], '#6aa84f'); }
   }
 };
+
+/* ---------- Eigene Modelle je Thema: Brett, Kreisel, Auffangbecher (und beim Gefühls-Dropper Flummi, Gitter, Gitterablage) ---------- */
+const slab = (x, sk, sh, col, th) => {   // Brett als wackeliges Viereck; liefert Punktfunktion P(t, o) entlang des Bretts
+  const dx = sh[2] - sh[0], dy = sh[3] - sh[1], len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len, nx = -uy * (th || 5), ny = ux * (th || 5);
+  const P = (t, o) => [sh[0] + dx * t + nx * (o || 0) / (th || 5), sh[1] + dy * t + ny * (o || 0) / (th || 5)];
+  x.lineJoin = 'round'; x.fillStyle = col; sk.lineWidth = 3; sk.strokeStyle = INK;
+  sk.beginPath(); sk.moveTo(sh[0] + nx, sh[1] + ny); sk.lineTo(sh[2] + nx, sh[3] + ny); sk.lineTo(sh[2] - nx, sh[3] - ny); sk.lineTo(sh[0] - nx, sh[1] - ny); sk.closePath(); sk.fill(); sk.stroke();
+  return { P, len, ux, uy, nx, ny };
+};
+const seg = (sk, a, b, col, lw) => { sk.lineWidth = lw || 1.6; sk.strokeStyle = col; sk.beginPath(); sk.moveTo(a[0], a[1]); sk.lineTo(b[0], b[1]); sk.stroke(); sk.strokeStyle = INK; };
+const hub = (g, sk, col, r) => { g.fillStyle = col; sk.lineWidth = 3; sk.beginPath(); sk.arc(0, 0, r || 7.5, 0, 7); sk.fill(); sk.stroke(); };
+const blade = (g, sk, sp, col, tip) => { sk.lineWidth = 3; sk.beginPath(); sk.moveTo(0, -sp.w - 1); sk.lineTo(sp.len, -sp.w - 1); sk.lineTo(sp.len + (tip || 3), 0); sk.lineTo(sp.len, sp.w + 1); sk.lineTo(0, sp.w + 1); sk.closePath(); g.fillStyle = col; sk.fill(); sk.stroke(); };
+
+const SHELF = {
+  weltraum(x, sk, sh) { const m = slab(x, sk, sh, '#8f9bb8'); seg(sk, m.P(.08, 0), m.P(.92, 0), '#6fe0ff', 2.2); for (const t of [.06, .94]) { x.fillStyle = '#dfe6f5'; sk.beginPath(); sk.arc(...m.P(t, 0), 1.6, 0, 7); sk.fill(); } },
+  kueche(x, sk, sh) { const m = slab(x, sk, sh, '#f1d9a0'); seg(sk, m.P(.1, -.4), m.P(.8, -.4), '#c9a45a', 1.4); x.fillStyle = '#e4c98a'; sk.lineWidth = 1.8; sk.beginPath(); sk.arc(...m.P(.92, 0), 2.4, 0, 7); sk.fill(); sk.stroke(); },
+  sport(x, sk, sh) { const m = slab(x, sk, sh, '#ffffff'); for (let t = .12; t < .95; t += .2) seg(sk, m.P(t, 1), m.P(t + .08, -1), '#e0453a', 3.2); },
+  elemente(x, sk, sh) { const m = slab(x, sk, sh, '#a9a49a'); sk.lineWidth = 1.8; sk.strokeStyle = '#ff8a2a'; sk.beginPath(); const a = m.P(.1, .3), b = m.P(.35, -.5), c = m.P(.55, .4), d = m.P(.85, -.3); sk.moveTo(...a); sk.lineTo(...b); sk.lineTo(...c); sk.lineTo(...d); sk.stroke(); sk.strokeStyle = INK; },
+  ozean(x, sk, sh) { const m = slab(x, sk, sh, '#ff8f7a'); for (let t = .1; t < .95; t += .16) { x.fillStyle = '#ffc2b0'; sk.lineWidth = 1.6; sk.beginPath(); sk.arc(...m.P(t, -1.2), 2.2, 0, 7); sk.fill(); sk.stroke(); } },
+  suess(x, sk, sh) { const m = slab(x, sk, sh, '#7a4a2e'); for (let t = .15; t < .95; t += .17) seg(sk, m.P(t, 1.2), m.P(t, -1.2), '#4e2d1a', 1.8); seg(sk, m.P(.05, .1), m.P(.95, .1), '#4e2d1a', 1.4); },
+  familie(x, sk, sh) { const m = slab(x, sk, sh, '#c98b5a'); seg(sk, m.P(.06, -.5), m.P(.94, -.5), '#9a6a3c', 1.4); x.fillStyle = '#e0453a'; sk.lineWidth = 1.4; heart(sk, ...m.P(.5, 0), 2.6); sk.fill(); sk.stroke(); },
+  gefuehl(x, sk, sh) { const m = slab(x, sk, sh, '#ffffff'); ['#ff7a9a', '#ffd45a', '#7bd36a', '#5fb6ff'].forEach((c, i) => seg(sk, m.P(.06, -1.6 + i * 1.05), m.P(.94, -1.6 + i * 1.05), c, 2.1)); },
+  dino(x, sk, sh) { const m = slab(x, sk, sh, '#f2ead0'); for (const t of [0, 1]) for (const o of [-1.8, 1.8]) { x.fillStyle = '#f2ead0'; sk.lineWidth = 2.6; sk.beginPath(); sk.arc(...m.P(t, o), 3.4, 0, 7); sk.fill(); sk.stroke(); } seg(sk, m.P(.2, 0), m.P(.7, 0), '#cdbf98', 1.2); }
+};
+const SPIN = {
+  weltraum(g, sk, sp, i) { blade(g, sk, sp, i ? '#6fe0ff' : '#c4cbe0', 8); g.fillStyle = '#ff6a6a'; sk.lineWidth = 1.6; sk.beginPath(); sk.moveTo(sp.len - 10, -sp.w - 1); sk.lineTo(sp.len - 4, -sp.w - 8); sk.lineTo(sp.len - 4, -sp.w - 1); sk.closePath(); sk.fill(); sk.stroke(); },
+  kueche(g, sk, sp, i) { sk.lineWidth = 4.4; g.strokeStyle = '#7a5a2a'; sk.beginPath(); sk.moveTo(4, 0); sk.lineTo(sp.len - 10, 0); sk.stroke(); g.fillStyle = i ? '#d9b46a' : '#cfd6de'; sk.lineWidth = 3; g.strokeStyle = INK; sk.beginPath(); sk.ellipse(sp.len - 6, 0, 10, sp.w + 3, 0, 0, 7); sk.fill(); sk.stroke(); },
+  sport(g, sk, sp, i) { blade(g, sk, sp, i ? '#ffffff' : '#e0453a', 3); g.strokeStyle = i ? '#e0453a' : '#fff'; sk.lineWidth = 2; for (let k = 8; k < sp.len - 4; k += 9) { sk.beginPath(); sk.moveTo(k, -sp.w); sk.lineTo(k + 3, sp.w); sk.stroke(); } g.strokeStyle = INK; },
+  elemente(g, sk, sp, i) { g.fillStyle = i ? '#4aa8ff' : '#ff7a2a'; sk.lineWidth = 3; sk.beginPath(); sk.moveTo(0, -sp.w - 1); sk.quadraticCurveTo(sp.len * .5, -sp.w * 2.4, sp.len, -sp.w * .4); sk.quadraticCurveTo(sp.len + 6, 0, sp.len, sp.w + 1); sk.lineTo(0, sp.w + 1); sk.closePath(); sk.fill(); sk.stroke(); },
+  ozean(g, sk, sp, i) { g.fillStyle = i ? '#2f9a5a' : '#46b86a'; sk.lineWidth = 3; sk.beginPath(); sk.moveTo(0, -sp.w); sk.quadraticCurveTo(sp.len * .3, -sp.w * 2.6, sp.len * .55, -sp.w * .4); sk.quadraticCurveTo(sp.len * .8, sp.w * 1.8, sp.len + 4, 0); sk.quadraticCurveTo(sp.len * .75, sp.w * 2.2, sp.len * .5, sp.w * .8); sk.quadraticCurveTo(sp.len * .25, -sp.w * .5, 0, sp.w); sk.closePath(); sk.fill(); sk.stroke(); },
+  suess(g, sk, sp, i) { blade(g, sk, sp, '#ffffff', 3); g.strokeStyle = i ? '#4fa3e8' : '#e0453a'; sk.lineWidth = 3; for (let k = 6; k < sp.len; k += 8) { sk.beginPath(); sk.moveTo(k, sp.w); sk.lineTo(k + 4, -sp.w); sk.stroke(); } g.strokeStyle = INK; },
+  familie(g, sk, sp, i) { sk.lineWidth = 3.4; g.strokeStyle = '#9a6a3c'; sk.beginPath(); sk.moveTo(4, 0); sk.lineTo(sp.len - 6, 0); sk.stroke(); g.fillStyle = i ? '#ff7a9a' : '#e0453a'; sk.lineWidth = 2.6; g.strokeStyle = INK; heart(sk, sp.len, 0, 8); sk.fill(); sk.stroke(); },
+  gefuehl(g, sk, sp, i) { sk.lineWidth = 3; g.fillStyle = i ? '#ffd45a' : '#ff9ac4'; sk.beginPath(); sk.moveTo(0, -sp.w); sk.bezierCurveTo(sp.len * .3, -sp.w * 3, sp.len * .6, sp.w * 2.4, sp.len + 4, 0); sk.bezierCurveTo(sp.len * .6, sp.w * 3.4, sp.len * .3, sp.w * 0, 0, sp.w); sk.closePath(); sk.fill(); sk.stroke(); },
+  dino(g, sk, sp, i) { g.fillStyle = '#f2ead0'; sk.lineWidth = 3; sk.beginPath(); sk.moveTo(0, -sp.w * .6); sk.lineTo(sp.len - 4, -sp.w * .6); sk.arc(sp.len - 2, -sp.w * 1.5, sp.w * 1.1, 1.6, 5.2, true); sk.lineTo(sp.len + 4, sp.w * 1.4); sk.arc(sp.len - 2, sp.w * 1.5, sp.w * 1.1, 1.0, 4.7, true); sk.lineTo(0, sp.w * .6); sk.closePath(); sk.fill(); sk.stroke(); }
+};
+const HUB = { weltraum: '#ffb24a', kueche: '#b8862e', sport: '#fbfbf5', elemente: '#fff', ozean: '#f6e4cc', suess: '#ff6aa0', familie: '#f1e2c0', gefuehl: '#fff3a0', dino: '#9aa088' };
+const CUPS = {
+  weltraum: { col: '#aab3d0', rim: '#6fe0ff' }, kueche: { col: '#cfd6de', rim: '#e0453a' }, sport: { col: '#ffffff', rim: '#e0453a', net: 1 }, elemente: { col: '#c8c0b0', rim: '#ff8a2a' },
+  ozean: { col: '#ffd9a8', rim: '#ff8f7a' }, suess: { col: '#fff0f6', rim: '#ff6aa0' }, familie: { col: '#f4d2a0', rim: '#e0453a' }, gefuehl: { col: '#fff9e0', rim: '#ff9ac4' }, dino: { col: '#e6dcb8', rim: '#6aa84f' }
+};
+// Zeichnet die Teile; geben true zurück, wenn sie das Standardmodell ersetzen
+for (const id of Object.keys(SKIN)) {
+  SKIN[id].shelf = SHELF[id];
+  SKIN[id].spinner = (g, sk, sp, a, tf) => { SPIN[id](g, sk, sp, 0); };
+  SKIN[id].spinBlade = SPIN[id]; SKIN[id].hubCol = HUB[id];
+  SKIN[id].cup = (x, sk, C, col) => {
+    const c = CUPS[id];
+    x.beginPath(); x.moveTo(C.x0, C.y0); x.lineTo(C.x0 + 8, C.y1); x.lineTo(C.x1 - 8, C.y1); x.lineTo(C.x1, C.y0); x.closePath(); x.fillStyle = c.col; x.fill();
+    if (c.net) { x.strokeStyle = 'rgba(29,39,66,.35)'; x.lineWidth = 1.2; for (let k = 1; k < 6; k++) { x.beginPath(); x.moveTo(C.x0 + k * (C.x1 - C.x0) / 6, C.y0); x.lineTo(C.x0 + 8 + k * (C.x1 - C.x0 - 16) / 6, C.y1); x.stroke(); } for (let k = 1; k < 3; k++) { x.beginPath(); x.moveTo(C.x0 + k * 3, C.y0 + k * (C.y1 - C.y0) / 3); x.lineTo(C.x1 - k * 3, C.y0 + k * (C.y1 - C.y0) / 3); x.stroke(); } x.strokeStyle = INK; }
+    sk.lineWidth = 3.6; sk.strokeStyle = INK; sk.beginPath(); sk.moveTo(C.x0 - 6, C.y0 - 2); sk.lineTo(C.x0, C.y0); sk.lineTo(C.x0 + 8, C.y1); sk.lineTo(C.x1 - 8, C.y1); sk.lineTo(C.x1, C.y0); sk.lineTo(C.x1 + 6, C.y0 - 2); sk.stroke();
+    sk.lineWidth = 3; sk.strokeStyle = c.rim; sk.beginPath(); sk.moveTo(C.x0 + 1, C.y0 + 5); sk.lineTo(C.x1 - 1, C.y0 + 5); sk.stroke(); sk.strokeStyle = INK;
+  };
+}
+// Gefühls-Dropper: Flummi als großes Lächeln-Gesicht, Gitter als Regenbogen-Zaun, Gitterablage als Wolkenbank
+SKIN.gefuehl.flum = (x, sk, f) => { x.fillStyle = '#ffd45a'; sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.fill(); sk.stroke(); x.fillStyle = INK; x.beginPath(); x.arc(f[0] - f[2] * .35, f[1] - f[2] * .2, f[2] * .12, 0, 7); x.arc(f[0] + f[2] * .35, f[1] - f[2] * .2, f[2] * .12, 0, 7); x.fill(); sk.lineWidth = 2; sk.beginPath(); sk.arc(f[0], f[1] + f[2] * .05, f[2] * .5, .25, 2.9); sk.stroke(); };
+SKIN.gefuehl.grate = (x, sk, r, rect) => { rect(r[0], r[1], r[2], r[3], '#ffe6f0'); const cols = ['#ff7a9a', '#ffd45a', '#7bd36a', '#5fb6ff']; let i = 0; sk.lineWidth = 2.6; for (let gx = r[0] + 7; gx < r[2] - 3; gx += 12) { sk.strokeStyle = cols[i++ % 4]; sk.beginPath(); sk.moveTo(gx, r[1] + 3); sk.lineTo(gx, r[3] - 3); sk.stroke(); } sk.strokeStyle = INK; };
+SKIN.gefuehl.grid = (x, sk, g, shape) => { const dx = g[2] - g[0], dy = g[3] - g[1], hgt = 30; shape([[g[0], g[1]], [g[2], g[3]], [g[2], g[3] + hgt], [g[0], g[1] + hgt]], 'rgba(255,255,255,.75)', 3.4); const cols = ['#ff7a9a', '#ffd45a', '#7bd36a', '#5fb6ff']; sk.lineWidth = 2.4; for (let i = 1; i < 6; i++) { const t = i / 6; sk.strokeStyle = cols[i % 4]; sk.beginPath(); sk.moveTo(g[0] + dx * t, g[1] + dy * t + 2); sk.lineTo(g[0] + dx * t, g[1] + dy * t + hgt - 1); sk.stroke(); } sk.strokeStyle = INK; };
