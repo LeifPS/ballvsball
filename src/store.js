@@ -1,7 +1,8 @@
 // Datenhaltung: Konten, Bälle, Ballboxen, Markt, Handel (SQLite im Durable Object).
 // Alle Methoden sind synchron und damit atomar. Fehler werden als { err: 'code' } zurückgegeben.
 import { DurableObject } from 'cloudflare:workers';
-import { DEFS, BALL_IDS, RARITY, ballsInBox, MAX_STARS } from '../public/js/engine.js';
+import { DEFS, BALL_IDS, RARITY, ballsInBox, MAX_STARS, runFight } from '../public/js/engine.js';
+import { mulberry } from '../public/js/core.js';
 import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
 import { simBox, layoutOf } from '../public/js/boxsim.js';
 
@@ -76,6 +77,8 @@ export class Store extends DurableObject {
     this.sql.exec('CREATE TABLE IF NOT EXISTS transfers(code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)');
     this.sql.exec(`CREATE TABLE IF NOT EXISTS battles(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, ts INTEGER NOT NULL, sum TEXT NOT NULL, rec TEXT NOT NULL, share TEXT)`);
     this.sql.exec('CREATE INDEX IF NOT EXISTS battles_user ON battles(user_id, id)');
+    if (!cols.includes('free_boxes')) this.sql.exec('ALTER TABLE users ADD COLUMN free_boxes INTEGER NOT NULL DEFAULT 0');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS solo(user_id INTEGER NOT NULL, kind TEXT NOT NULL, day INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY(user_id,kind))');
     if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
   }
 
@@ -108,7 +111,7 @@ export class Store extends DurableObject {
     if (!live && u.tokens) this.q('UPDATE users SET tokens=0 WHERE id=?', u.id);
     return {
       id: u.id, name: u.name, coins: u.coins, tokens: live ? u.tokens : 0, wins: u.wins, losses: u.losses, boxes: u.boxes, streak: u.streak,
-      dailyReady: u.last_daily < today, balls, now, eventEnd: EVENT_END
+      dailyReady: u.last_daily < today, freeBoxes: u.free_boxes || 0, balls, now, eventEnd: EVENT_END
     };
   }
 
@@ -196,6 +199,66 @@ export class Store extends DurableObject {
     const tk5 = eventActive(Date.now()) ? 5 : 0;
     this.q('UPDATE users SET coins=coins+?, tokens=tokens+?, last_daily=?, streak=? WHERE id=?', gain, tk5, today, streak, u.id);
     return { ok: true, gain, tokens: tk5, streak, me: this.profile(this.userBy(tk)) };
+  }
+  /* ---------- Einzelspieler: Tägliche Herausforderung und Bossrennen ---------- */
+  soloDefs(day) {
+    const r = mulberry((day * 2654435761) >>> 0), pool = BALL_IDS.filter(id => DEFS[id].rarity !== 'mythisch' && !DEFS[id].noSolo);
+    const w = { gewoehnlich: 3, selten: 3, episch: 2, legendaer: 1 }, wp = pool.map(id => w[DEFS[id].rarity] || 1), tot = wp.reduce((a, b) => a + b, 0);
+    let x = r() * tot, opp = pool[0]; for (let i = 0; i < pool.length; i++) { x -= wp[i]; if (x <= 0) { opp = pool[i]; break; } }
+    const rules = [{ id: 'any', text: 'Beliebiger Ball' }, { id: 'low', text: 'Nur gewöhnliche und seltene Bälle' }, { id: 'nostar', text: 'Nur Bälle ohne Sterne' }];
+    const bpool = BALL_IDS.filter(id => ['legendaer', 'mythisch'].includes(DEFS[id].rarity)), boss = bpool[Math.floor(r() * bpool.length)];
+    return { daily: { opp, oppStars: day % 3, rule: rules[day % 3] }, boss: { type: boss, hpMul: DEFS[boss].rarity === 'mythisch' ? 2.4 : 3.6, stars: 2 } };
+  }
+  soloGet(userId, kind, day) {
+    const r = this.q('SELECT day,data FROM solo WHERE user_id=? AND kind=?', userId, kind)[0];
+    return r && r.day === day ? JSON.parse(r.data) : null;
+  }
+  soloPut(userId, kind, day, data) { this.q('INSERT INTO solo(user_id,kind,day,data) VALUES(?,?,?,?) ON CONFLICT(user_id,kind) DO UPDATE SET day=excluded.day, data=excluded.data', userId, kind, day, JSON.stringify(data)); }
+  soloState(tk) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const day = Math.floor(Date.now() / DAY), d = this.soloDefs(day);
+    const dd = this.soloGet(u.id, 'daily', day) || { claimed: false, tries: 0 }, bb = this.soloGet(u.id, 'boss', day) || { claimed: false, frac: 1, used: [], runs: 0 };
+    return { ok: true, day, daily: Object.assign({}, d.daily, dd), boss: Object.assign({}, d.boss, bb) };
+  }
+  soloBall(u, uid) {
+    const b = this.q('SELECT * FROM balls WHERE uid=?', Number(uid))[0];
+    if (!b || b.owner !== u.id) return { err: 'not_yours' };
+    if (b.lock !== 0) return { err: 'locked' };
+    return { ball: b, stars: this.levels(u.id)[b.type] || 0 };
+  }
+  soloDaily(tk, uid) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const day = Math.floor(Date.now() / DAY), d = this.soloDefs(day).daily, st = this.soloGet(u.id, 'daily', day) || { claimed: false, tries: 0 };
+    const sb = this.soloBall(u, uid); if (sb.err) return sb;
+    const rar = DEFS[sb.ball.type].rarity;
+    if (d.rule.id === 'low' && !['gewoehnlich', 'selten'].includes(rar)) return { err: 'rule' };
+    if (d.rule.id === 'nostar' && sb.stars > 0) return { err: 'rule' };
+    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars }, { slot: 1, type: d.opp, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.oppStars }] };
+    const res = runFight(cfg), win = res.winner === 0;
+    st.tries++;
+    let reward = null;
+    if (win && !st.claimed) { st.claimed = true; reward = { coins: 100, freeBox: 1 }; this.q('UPDATE users SET coins=coins+?, free_boxes=free_boxes+? WHERE id=?', 100, 1, u.id); }
+    this.soloPut(u.id, 'daily', day, st);
+    return { ok: true, cfg, steps: res.steps, winner: res.winner, reward, state: this.soloState(tk) , me: this.profile(this.userBy(tk)) };
+  }
+  soloBoss(tk, uid, reset) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const day = Math.floor(Date.now() / DAY), d = this.soloDefs(day).boss;
+    let st = this.soloGet(u.id, 'boss', day) || { claimed: false, frac: 1, used: [], runs: 0 };
+    if (reset) { st.frac = 1; st.used = []; st.runs++; this.soloPut(u.id, 'boss', day, st); return { ok: true, state: this.soloState(tk) }; }
+    if (st.used.length >= 3 || st.frac <= 0) return { err: 'boss_done' };
+    const sb = this.soloBall(u, uid); if (sb.err) return sb;
+    if (st.used.includes(Number(uid)) || st.used.some(x => { const o = this.q('SELECT type FROM balls WHERE uid=?', x)[0]; return o && o.type === sb.ball.type; })) return { err: 'boss_used' };
+    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars }, { slot: 1, type: d.type, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.stars, hpMul: d.hpMul, hpFrac: st.frac }] };
+    const res = runFight(cfg), win = res.winner === 0;
+    st.used.push(Number(uid)); st.frac = win ? 0 : Math.max(.02, res.frac[1] || .02);
+    let reward = null;
+    if (win && !st.claimed) { st.claimed = true; reward = { coins: 150, freeBox: 1 }; this.q('UPDATE users SET coins=coins+?, free_boxes=free_boxes+? WHERE id=?', 150, 1, u.id); }
+    this.soloPut(u.id, 'boss', day, st);
+    return { ok: true, cfg, steps: res.steps, winner: res.winner, reward, state: this.soloState(tk), me: this.profile(this.userBy(tk)) };
   }
   /* ---------- Kampflog: alle vergangenen Spiele, Wiederholung und Teilen ---------- */
   logBattle(userId, rec) {
@@ -304,8 +367,9 @@ export class Store extends DurableObject {
     const cfg = BOX_BY_ID[boxId];
     if (!cfg) return { err: 'box_unknown' };
     if (!boxActive(boxId, Date.now())) return { err: 'box_over' };
+    const useFree = boxId === 'standard' && u.free_boxes > 0;   // kostenlose Standard-Box (Belohnung der Einzelspieler-Modi)
     const have = cfg.cur === 'tokens' ? u.tokens : u.coins;
-    if (have < cfg.price) return { err: cfg.cur === 'tokens' ? 'no_tokens' : 'no_coins' };
+    if (!useFree && have < cfg.price) return { err: cfg.cur === 'tokens' ? 'no_tokens' : 'no_coins' };
     // Tutorial: wer noch keine drei Bälle hat, öffnet nur Standard-Boxen und bekommt nacheinander Stachel, Feuer und Bumerang
     const owned = new Set(this.q('SELECT type FROM balls WHERE owner=?', u.id).map(x => x.type));
     const tutorial = owned.size < MIN_FREE;
@@ -360,7 +424,8 @@ export class Store extends DurableObject {
         if (r2.reached > 0 && r2.order[0] === winIdx) seed = s;
       }
     }
-    if (cfg.cur === 'tokens') this.q('UPDATE users SET tokens=tokens-?, boxes=boxes+1 WHERE id=?', cfg.price, u.id);
+    if (useFree) this.q('UPDATE users SET free_boxes=free_boxes-1, boxes=boxes+1 WHERE id=?', u.id);
+    else if (cfg.cur === 'tokens') this.q('UPDATE users SET tokens=tokens-?, boxes=boxes+1 WHERE id=?', cfg.price, u.id);
     else this.q('UPDATE users SET coins=coins-?, boxes=boxes+1 WHERE id=?', cfg.price, u.id);
     const ball = this.giveBall(u.id, reward);
     return { ok: true, box: boxId, seed, cands, win: winIdx, ball, rarity: DEFS[reward].rarity, me: this.profile(this.userBy(tk)) };

@@ -186,6 +186,19 @@ if (end) {
   ok(pub.ok && pub.rec.rounds.length === rounds, 'Geteilte Wiederholung öffentlich abrufbar');
   const bad = await fetch(B + '/api/replay?t=nichtda12345'); ok(bad.status === 404, 'Unbekannter Link: 404');
 }
+// Einzelspieler: Tagesaufgabe und Bossrennen
+{
+  const me0 = (await api('/api/me', t1)).me, uid = me0.balls[0].uid;
+  const st = await api('/api/solo', t1);
+  ok(st.ok && st.daily.opp && st.boss.type && st.boss.frac === 1, 'Einzelspieler: Tagesaufgabe und Boss vorhanden');
+  const dp = await api('/api/solo/daily', t1, { uid });
+  ok((dp.ok || dp.err === 'rule') && (dp.err || runFight(dp.cfg).winner === dp.winner), 'Tagesaufgabe: Kampf stimmt mit der Simulation überein');
+  if (dp.ok) { const c0 = me0.coins; ok(!dp.reward || dp.me.coins === c0 + 100, 'Tagesaufgabe: Belohnung nur bei Sieg'); }
+  const bp = await api('/api/solo/boss', t1, { uid });
+  ok(bp.ok && bp.cfg.balls[1].hpMul > 1 && runFight(bp.cfg).winner === bp.winner, 'Bossrennen: Kampf stimmt mit der Simulation überein');
+  const again = await api('/api/solo/boss', t1, { uid });
+  ok(again.err === 'boss_used' || again.err === 'boss_done', 'Bossrennen: derselbe Ball nicht zweimal');
+}
 // Mehrspieler ist wegen Wartung gesperrt
 {
   const wsF = await connect(t1); let err = null;

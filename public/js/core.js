@@ -52,7 +52,10 @@ export function makeSim(cfg, DEFS, OBJS) {
   sim.elim = [];   // Reihenfolge, in der Teams komplett besiegt wurden: { team, step }
   cfg.balls.forEach((c, i) => {
     const slot = c.slot != null ? c.slot : i, p = POS[slot];
-    addBall(sim, c.type, c.team, slot, p[0] * BOX, p[1] * BOX, c.deg || 0, { stars: Math.max(0, Math.min(MAX_STARS, c.stars | 0)) });
+    const nb = addBall(sim, c.type, c.team, slot, p[0] * BOX, p[1] * BOX, c.deg || 0, { stars: Math.max(0, Math.min(MAX_STARS, c.stars | 0)) });
+    // Einzelspieler-Bosse: mehr Leben (hpMul) und mitgebrachter Lebensanteil (hpFrac)
+    if (c.hpMul > 0) { nb.maxHp *= c.hpMul; nb.hp = nb.maxHp; }
+    if (c.hpFrac > 0 && c.hpFrac < 1) nb.hp = Math.max(1, nb.maxHp * c.hpFrac);
   });
   for (const b of sim.balls) sim.teamMax[b.team] = (sim.teamMax[b.team] || 0) + b.maxHp;
   return sim;

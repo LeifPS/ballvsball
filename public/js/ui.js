@@ -28,7 +28,7 @@ const ERR = {
   net: 'Keine Verbindung zum Server.', auth: 'Anmeldung fehlgeschlagen.', need_name: 'Bitte wähle einen Namen.',
   name_invalid: 'Name: 3 bis 16 Zeichen, nur Buchstaben, Zahlen, Leerzeichen, - und _.', name_taken: 'Dieser Name ist schon vergeben.',
   code_bad: 'Der Code stimmt nicht oder ist abgelaufen.', has_progress: 'Dieses Gerät hat schon einen Spielstand mit Kämpfen. Lösche zuerst dort das Konto.',
-  maintenance: 'Mehrspieler ist wegen Wartungsarbeiten gerade gesperrt.', daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
+  maintenance: 'Mehrspieler ist wegen Wartungsarbeiten gerade gesperrt.', boss_done: 'Starte einen neuen Versuch.', boss_used: 'Diesen Ball hast du schon benutzt.', rule: 'Dieser Ball erfüllt die Regel nicht.', daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
   price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
   not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 verschiedene freie Bälle behalten.',
   gone: 'Das gibt es nicht mehr.', own: 'Das ist dein eigener Ball.', no_player: 'Spieler nicht gefunden.', self: 'Das bist du selbst.',
@@ -273,11 +273,61 @@ function home() {
     btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'multi', '', 'fight') +
     '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + BALL_IDS.length + ' Bällen</span></button>' +
     '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
-    '<div class="row gap6"><button class="htile" style="--tc:#e3dcf7" data-act="log"><span class="hv">' + gi('sword', 36) + '</span><b>Kampflog</b><span class="small">Wiederholen und teilen</span></button></div>' +
+    '<div class="row gap6"><button class="htile" style="--tc:#ffd9d0" data-act="solo"><span class="hv">' + gi('star', 36, '#ff9a5a') + '</span><b>Einzelspieler</b><span class="small">Tagesaufgabe und Boss' + (me.freeBoxes ? ' - ' + me.freeBoxes + ' Gratis-Box' : '') + '</span></button>'+
+      '<button class="htile" style="--tc:#e3dcf7" data-act="log"><span class="hv">' + gi('sword', 36) + '</span><b>Kampflog</b><span class="small">Wiederholen und teilen</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="market"><span class="hv">' + gi('coin', 40) + gi('coin', 30) + '</span><b>Markt</b><span class="small">Kaufen und verkaufen</span></button>' +
     '<button class="htile" style="--tc:#f3d6f0" data-act="trades"><span class="hv">' + gi('arrow', 34) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 34) + '</span></span><b>Tauschen</b><span class="small">Mit anderen Spielern</span></button></div>' +
     (me.dailyReady ? '<button class="htile daily" data-act="daily"><span class="hv">' + gi('star', 44, '#ffd45a') + '</span><span class="grow"><b>Tagesbelohnung abholen</b><span class="small">' + (ev ? 'Münzen und +5 Marken' : 'Münzen für heute') + '</span></span></button>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
     (/[?&]test=1/.test(location.search) ? btn('TEST: unendlich Münzen und Marken', 'testcoins', '', 'red') : '') + '</div>');
+}
+
+/* ================= Einzelspieler ================= */
+async function soloScreen() {
+  S.screen = 'solo'; setView(null); closeOverlay(); setScene('menu');
+  show('<div class="col">' + backBar('Einzelspieler') + '<p class="center" style="color:#fff">Lade ...</p></div>');
+  const r = await api('/api/solo'); if (r.err) { toast(errText(r.err)); return home(); }
+  S.solo = r;
+  const d = r.daily, b = r.boss, pct = Math.round(b.frac * 100);
+  const dailyBtn = d.claimed ? '<p class="center small mute">Heute geschafft! Du kannst trotzdem weiter üben.</p>' : '';
+  show('<div class="col">' + backBar('Einzelspieler') +
+    '<div class="panel"><h3>Tägliche Herausforderung</h3><div class="row gap6" style="align-items:center;margin:6px 0">' + ball(d.opp, 80, .7) + '<div class="grow"><b>' + esc(ballName(d.opp)) + '</b> ' + starsHTML(d.oppStars, 14) + '<div class="small mute">Regel: ' + esc(d.rule.text) + '</div></div></div>' +
+    '<p class="small">Belohnung: ' + coinHTML(100) + ' und 1 Gratis-Standard-Box (einmal pro Tag)</p>' + dailyBtn + btn(d.claimed ? 'Nochmal kämpfen' : 'Kämpfen', 'solopick', 'data-k="daily"', 'pri') + '</div>' +
+    '<div class="panel"><h3>Bossrennen</h3><div class="row gap6" style="align-items:center;margin:6px 0">' + ball(b.type, 90, .7) + '<div class="grow"><b>' + esc(ballName(b.type)) + '</b> (Boss)<div class="small mute">Du hast 3 verschiedene Bälle. Das Leben des Bosses bleibt zwischen den Kämpfen.</div>' +
+    '<div style="height:12px;border:2px solid var(--ink);border-radius:8px;background:#fff;overflow:hidden;margin-top:6px"><i style="display:block;height:100%;width:' + pct + '%;background:#d9534f"></i></div><div class="small">Boss-Leben: ' + pct + ' % - Bälle benutzt: ' + b.used.length + ' von 3</div></div></div>' +
+    '<p class="small">Belohnung: ' + coinHTML(150) + ' und 1 Gratis-Standard-Box (einmal pro Tag)</p>' + (b.claimed ? '<p class="center small mute">Heute besiegt! Du kannst weiter üben.</p>' : '') +
+    (b.used.length >= 3 || b.frac <= 0 ? btn('Neuer Versuch', 'bossreset', '', 'pri') : btn(b.used.length ? 'Nächster Ball' : 'Kämpfen', 'solopick', 'data-k="boss"', 'pri')) + '</div>' +
+    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Die Aufgaben wechseln jeden Tag um Mitternacht (UTC).</p></div>');
+}
+function soloPick(kind) {
+  const r = S.solo, usedTypes = new Set((r.boss.used || []).map(u => { const bb = S.me.balls.find(x => x.uid === u); return bb && bb.type; }));
+  const seen = new Set(), list = [];
+  for (const b of S.me.balls) {
+    if (b.lock || seen.has(b.type)) continue;
+    const rar = DEFS[b.type].rarity;
+    if (kind === 'daily' && r.daily.rule.id === 'low' && !['gewoehnlich', 'selten'].includes(rar)) continue;
+    if (kind === 'daily' && r.daily.rule.id === 'nostar' && b.stars > 0) continue;
+    if (kind === 'boss' && (r.boss.used.includes(b.uid) || usedTypes.has(b.type))) continue;
+    seen.add(b.type); list.push(b);
+  }
+  list.sort((a, z) => RARITY[DEFS[z.type].rarity].order - RARITY[DEFS[a.type].rarity].order);
+  overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Wähle deinen Ball</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
+    (list.length ? '<div class="grid3" style="grid-template-columns:repeat(3,1fr);gap:6px">' + list.map(b => '<button class="card cell" style="min-height:0;padding:8px 4px" data-act="solofight" data-k="' + kind + '" data-uid="' + b.uid + '">' + ball(b.type, 70, .66) + '<div class="small">' + esc(ballName(b.type)) + '</div>' + starsHTML(b.stars, 12) + '</button>').join('') + '</div>' : '<div class="panel center"><p>Du hast keinen passenden Ball.</p></div>') + '</div>');
+}
+async function soloFight(kind, uid) {
+  const r = await api(kind === 'daily' ? '/api/solo/daily' : '/api/solo/boss', { uid: Number(uid) });
+  if (r.err) { toast(r.err === 'rule' ? 'Dieser Ball erfüllt die Regel nicht.' : errText(r.err)); return; }
+  closeOverlay();
+  const title = kind === 'boss' ? 'Bossrennen' : 'Tägliche Herausforderung', oppName = kind === 'boss' ? 'Boss' : 'Herausforderer';
+  S.match = { replay: true, solo: true, title, rec: { rounds: [1] }, idx: 0, players: [{ slot: 0, team: 0, name: 'Du' }, { slot: 1, team: 1, name: oppName }], you: 0, n: 2, ffa: false, lives: [0, 0], friendly: true, round: 1, back: () => soloResult(r, kind) };
+  fightScreen({ t: 'fight', cfg: r.cfg, steps: r.steps, winner: r.winner, losers: [], lives: [0, 0], over: false, round: 1, replay: true });
+}
+function soloResult(r, kind) {
+  S.screen = 'soloend'; setView(null); setScene('menu'); S.match = null; clearFx();
+  const win = r.winner === 0, st = r.state;
+  show('<div class="col center res"><h1 class="jit pop" style="color:' + (win ? '#fff' : '#ffd0c8') + ';text-shadow:3px 4px 0 var(--ink)">' + (win ? 'Geschafft!' : 'Verloren') + '</h1>' +
+    (r.reward ? '<div class="panel pop"><p>Belohnung</p><div class="big">' + coinHTML('+' + r.reward.coins) + '</div><p>und 1 Gratis-Standard-Box</p></div>' : win ? '<div class="panel"><p>Die Belohnung für heute hast du schon bekommen.</p></div>' : '<div class="panel"><p>' + (kind === 'boss' ? 'Das Leben des Bosses bleibt für den nächsten Ball erhalten.' : 'Versuche es mit einem anderen Ball.') + '</p></div>') +
+    btn('Weiter', 'solo', '', 'pri') + btn('Zur Startseite', 'home') + '</div>');
+  if (win) { confetti(50); sfx('win'); } else sfx('lose');
 }
 
 /* ================= Kampflog ================= */
@@ -441,17 +491,17 @@ function boxDetail(id) {
   const b = BOX_BY_ID[id];
   if (!b || !boxActive(id, now())) { toast('Diese Box gibt es nicht mehr.'); return boxScreen(); }
   S.screen = 'boxdetail'; setView(null); S.curBox = id;
-  const st = boxStats(id), c = typeCounts(), have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price;
+  const free = id === 'standard' && S.me.freeBoxes > 0, st = boxStats(id), c = typeCounts(), have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = free || have >= b.price;
   const byR = SORT.map(r => [r, st.ids.filter(t => DEFS[t].rarity === r).length]).filter(x => x[1]);
   show('<div class="col">' + backBar(b.name, 'box') +
     '<div class="hero bounce" style="margin-top:6px">' + boxArt(b.id, 170) + '</div>' +
     '<div class="panel"><h3>' + esc(b.name) + '</h3><p class="mt">' + esc(b.desc) + '</p><div class="row sb wrap mt"><span>Kosten: ' + priceHTML(b) + '</span><span>' + st.own + ' von ' + st.n + ' gesammelt</span></div><div class="progress thin"><i style="width:' + Math.round(st.own / st.n * 100) + '%;background:' + b.col + '"></i></div></div>' +
-    (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am 1. November. ' + timeLeft(b.until - now()) + '.<div class="small mt">Halloween-Marken bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Marken verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
+    (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am ' + new Date(b.until - 1).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + '. ' + timeLeft(b.until - now()) + '.<div class="small mt">Kürbisse bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Marken verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
     '<div class="panel"><h3>Das kann drin sein</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
     st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name.replace('ball', '')) : '???') + '</div></button>').join('') +
     '</div></div>' +
     '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + r[1] + ' Bälle)</span></span><span>' + ((BOX_RARITY[id] || {})[r[0]] ?? RARITY[r[0]].weight) + ' %</span></div>').join('') + '</div>' +
-    btn('Öffnen für ' + priceHTML(b), 'openbox', (ok ? '' : 'disabled') + ' data-id="' + id + '"', 'pri big') +
+    btn(free ? 'Gratis öffnen (' + S.me.freeBoxes + ' übrig)' : 'Öffnen für ' + priceHTML(b), 'openbox', (ok ? '' : 'disabled') + ' data-id="' + id + '"', 'pri big') +
     (ok ? '' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (b.cur === 'tokens' ? 'Dir fehlen Marken. Gewinne Kämpfe oder hole die Tagesbelohnung.' : 'Dir fehlen Münzen. Gewinne Kämpfe oder hole die Tagesbelohnung.') + '</p>') + '</div>');
 }
 async function openBox(id) {
@@ -489,7 +539,7 @@ function boxResult(r, s, before, b) {
   S.screen = 'boxres'; setView(null); SCREEN.onpointerdown = null;
   const d = DEFS[r.ball.type], isNew = !before.has(r.ball.type), rar = d.rarity;
   const near = s.order.slice(1, 3).map(i => r.cands[i]).filter(t => RARITY[DEFS[t].rarity].order > RARITY[rar].order);
-  const have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = have >= b.price && boxActive(b.id, now());
+  const have = b.cur === 'tokens' ? S.me.tokens : S.me.coins, ok = (b.id === 'standard' && S.me.freeBoxes > 0 || have >= b.price) && boxActive(b.id, now());
   const big = rar === 'episch' || rar === 'legendaer' || rar === 'mythisch';
   show('<div class="col res"><h1 class="jit pop" style="color:#fff;text-shadow:3px 4px 0 var(--ink)">' + esc(d.name) + '!</h1><div>' + '<span class="rarpill">' + rarHTML(rar) + '</span>' + '</div>' +
     '<div class="hero sheet-ball" style="min-height:250px;align-items:center">' + (big ? '<div class="rays"></div>' : '') + '<div class="pop" style="position:relative">' + ball(r.ball.type, 240, .66) + '</div></div>' +
@@ -648,6 +698,7 @@ function queueUpdate(m) { const e = $('#qc'); if (e) e.textContent = m.count + (
 function livesHTML(count, max) { let h = ''; for (let i = 0; i < (max || 3); i++) h += gi(i < count ? 'heart' : 'heart0', 26); return '<span class="lives">' + h + '</span>'; }
 function matchHeader() {
   const m0 = S.match;
+  if (m0.solo) return '<div id="mh" class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);padding-right:52px">' + esc(m0.title) + '</div>';
   if (m0.ffa) {
     const cell = p => { const l = m0.lives[p.team], out = l <= 0; return '<div style="text-align:center;opacity:' + (out ? .45 : 1) + '"><div class="small" style="color:' + PLAYER_COL[p.team] + ';font-weight:700;text-shadow:1px 1px 0 var(--ink);max-width:' + Math.floor(250 / m0.n) + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.slot === m0.you ? 'Du' : esc(p.name)) + '</div>' + livesHTML(l, m0.n === 3 ? 3 : 2) + '</div>'; };
     return '<div id="mh"><div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);padding-right:52px">' + (m0.replay ? 'Wiederholung - Runde ' + m0.round : m0.friendly ? 'Freundschaftsspiel' : 'Runde ' + m0.round) + '</div><div class="row sb gap6" style="padding-right:4px">' + m0.players.map(cell).join('') + '</div></div>';
@@ -753,7 +804,7 @@ function fightScreen(m) {
   for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.type].name;
   let acc = 0, phase = 'count', t0 = 0, koT = 0, sentReady = false, cdN = 4, tPhase = 0, resShown = false;
   const cdw = $('#cdwrap');
-  const NB = () => m.replay ? (M.idx + 1 < M.rec.rounds.length ? btn('Nächste Runde', 'replaynext', '', 'pri') : '') + btn('Zurück', 'replayback') : btn('Weiter', 'fightnext', '', 'pri');
+  const NB = () => m.replay ? (M.idx + 1 < M.rec.rounds.length ? btn('Nächste Runde', 'replaynext', '', 'pri') : '') + btn(M.solo ? 'Weiter' : 'Zurück', 'replayback', '', M.solo ? 'pri' : '') : btn('Weiter', 'fightnext', '', 'pri');
   const finish = () => {
     resShown = true;
     const win = m.winner === myTeam, draw = m.winner < 0;
@@ -877,6 +928,10 @@ const ACT = {
   roomslot(d) { wsSend({ t: 'room_slot', slot: +d.s }); },
   roomstart() { wsSend({ t: 'room_start' }); },
   roomleave() { wsSend({ t: 'room_leave' }); },
+  solo() { soloScreen(); },
+  solopick(d) { soloPick(d.k); },
+  solofight(d) { return soloFight(d.k, d.uid); },
+  async bossreset() { const r = await api('/api/solo/boss', { reset: true }); if (r.err) { toast(errText(r.err)); return; } soloScreen(); },
   log() { S.logItems = null; logScreen('list'); },
   logtab(d) { logScreen(d.t); },
   logopen(d) { logDetail(Number(d.id)); },
