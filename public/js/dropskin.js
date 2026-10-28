@@ -88,6 +88,21 @@ export const SKIN = {
     peg(x, sk, p) { disc(x, sk, p[0], p[1], p[2], '#f1e2c0'); dots(x, [[p[0] - p[2] * .3, p[1] - p[2] * .3, p[2] * .13], [p[0] + p[2] * .3, p[1] - p[2] * .3, p[2] * .13], [p[0] - p[2] * .3, p[1] + p[2] * .3, p[2] * .13], [p[0] + p[2] * .3, p[1] + p[2] * .3, p[2] * .13]], '#7a5a3a'); },
     bump(x, sk, p) { x.fillStyle = '#e0453a'; sk.lineWidth = 2.4; sk.strokeStyle = INK; heart(sk, p[0], p[1] - p[2] * .1, p[2] * 1.15); sk.fill(); sk.stroke(); dots(x, [[p[0] - p[2] * .4, p[1] - p[2] * .4, p[2] * .16]], 'rgba(255,255,255,.7)'); }
   },
+  gefuehl: {
+    bg(x, sk, f) {
+      fillBg(x, ['#ffd6e8', '#fff1c4', '#d4f5dc', '#cfe6ff']);
+      const faces = [[60, -100, 26, 0], [236, -60, 22, 1], [40, 150, 20, 2], [258, 250, 22, 3], [150, 30, 18, 1]];
+      for (const [fx, fy, r, k] of faces) {
+        x.fillStyle = ['#fff3a0', '#ffb0b0', '#b8d8ff', '#ffd0f0'][k]; sk.lineWidth = 2.2; sk.strokeStyle = 'rgba(29,39,66,.55)'; sk.beginPath(); sk.arc(fx, fy, r, 0, 7); sk.fill(); sk.stroke();
+        x.fillStyle = 'rgba(29,39,66,.6)'; x.beginPath(); x.arc(fx - r * .35, fy - r * .15, r * .1, 0, 7); x.arc(fx + r * .35, fy - r * .15, r * .1, 0, 7); x.fill();
+        sk.lineWidth = 2; sk.beginPath(); if (k === 0 || k === 3) sk.arc(fx, fy + r * .05, r * .45, .25, 2.9); else if (k === 1) sk.arc(fx, fy + r * .7, r * .4, 3.5, 5.9); else { sk.moveTo(fx - r * .3, fy + r * .35); sk.lineTo(fx + r * .3, fy + r * .35); } sk.stroke();
+      }
+      x.fillStyle = 'rgba(232,90,140,.4)'; [[110, -150], [200, 40], [30, 300], [270, 120], [100, 250]].forEach(c => { heart(x, c[0], c[1], 8); x.fill(); });
+      sk.strokeStyle = INK;
+    },
+    peg(x, sk, p, i) { disc(x, sk, p[0], p[1], p[2], ['#fff3a0', '#ffc9d6', '#c8e4ff', '#d8f5c8'][(i || 0) % 4]); dots(x, [[p[0] - p[2] * .32, p[1] - p[2] * .15, p[2] * .13], [p[0] + p[2] * .32, p[1] - p[2] * .15, p[2] * .13]], INK); sk.lineWidth = 1.6; sk.strokeStyle = INK; sk.beginPath(); sk.arc(p[0], p[1] + p[2] * .05, p[2] * .45, .3, 2.84); sk.stroke(); },
+    bump(x, sk, p) { x.fillStyle = '#ff6a8a'; sk.lineWidth = 2.4; sk.strokeStyle = INK; heart(sk, p[0], p[1] - p[2] * .1, p[2] * 1.15); sk.fill(); sk.stroke(); dots(x, [[p[0] - p[2] * .4, p[1] - p[2] * .4, p[2] * .16]], 'rgba(255,255,255,.75)'); }
+  },
   dino: {
     bg(x, sk, f) {
       fillBg(x, ['#cfe9a0', '#8fc45a', '#5f9a40']);

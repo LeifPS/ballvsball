@@ -402,16 +402,16 @@ async function openBox(id) {
       let near = false;
       for (const x of s.balls) if (!x.done && x.y > 300) near = true;
       const rate = s.order.length ? 1 : near ? .45 : 1;
-      if (skip && !shown) { let g = 20000; while (!s.done && s.order.length < 3 && g-- > 0) stepBox(s); }
+      if (skip && !shown) { let g = 20000; while (!s.done && s.order.length < 1 && g-- > 0) stepBox(s); }
       acc += dt * 120 * rate;
-      while (acc >= 1 && !s.done && s.order.length < 3) { stepBox(s); acc--; }
+      while (acc >= 1 && !s.done && s.order.length < 3 && !(fin && tm - fin > .8)) { stepBox(s); acc--; }   // nach dem ersten Ball nur noch kurz weiterlaufen
       if (skip) s.ev.length = 0; else while (s.ev.length) sfx(s.ev.shift(), .8);
       if (s.order.length > lastN) { if (lastN === 0) { flash = 1; sfx('pop'); } lastN = s.order.length; }
       flash = Math.max(0, flash - dt * 2.5);
-      if (s.order.length >= 3 || s.done) { if (!fin) fin = tm; }
+      if (s.order.length >= 1 || s.done) { if (!fin) fin = tm; }
       drawBox(ctx, W, s, r.cands, tm, tf, s.order.length ? s.order[0] : -1, b.col, b.id);
       if (flash > 0) { ctx.fillStyle = 'rgba(255,250,200,' + flash * .5 + ')'; ctx.fillRect(0, 0, W, H); }
-      if (fin && (tm - fin > 1.4 || skip) && !shown) { shown = true; boxResult(r, s, before, b); }
+      if (fin && (tm - fin > 1.5 || skip) && !shown) { shown = true; boxResult(r, s, before, b); }
     }
   });
 }
