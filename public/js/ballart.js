@@ -884,3 +884,79 @@ Object.assign(BALLS, {
 });
 OB.stock = [7, c => { c.beginPath(); c.moveTo(-8, -2.5); c.lineTo(8, -4); c.lineTo(8, 4); c.lineTo(-8, 2.5); c.closePath(); FS(c, '#c98a4a'); ln(c, -4, -2, -4, 2, 1.2, '#8a5a2a'); ln(c, 1, -2.5, 1, 2.5, 1.2, '#8a5a2a'); }, 5];
 OB.ring = [9, c => { c.lineWidth = 4.6; c.strokeStyle = INK; c.beginPath(); c.ellipse(0, 0, 9, 5, .5, 0, 7); c.stroke(); c.lineWidth = 2.4; c.strokeStyle = '#ffd45a'; c.beginPath(); c.ellipse(0, 0, 9, 5, .5, 0, 7); c.stroke(); c.strokeStyle = INK; }, 4];
+
+/* ---------- Herbstbox und Sturmbox ---------- */
+Object.assign(BALLS, {
+  laub(c, s) {
+    const r = s * .36; body(c, s, '#e8923a');
+    [['#d9452a', -.7, -.55, .5], ['#f2c13a', .6, -.6, -.4], ['#9a5a2a', 0, .55, .1]].forEach(q => { c.save(); c.translate(q[1] * r, q[2] * r); c.rotate(q[3]); c.beginPath(); c.moveTo(0, -r * .38); c.quadraticCurveTo(r * .3, 0, 0, r * .38); c.quadraticCurveTo(-r * .3, 0, 0, -r * .38); FS(c, q[0]); c.restore(); });
+    face(c, s, { mouth: 'smile', er: .17 });
+  },
+  pilz(c, s) {
+    const r = s * .36; body(c, s, '#f6ead0');
+    c.beginPath(); c.ellipse(0, -r * .55, r * 1.12, r * .72, 0, PI, PI * 2); c.closePath(); FS(c, '#d9452a');
+    [[-.55, -.85, .17], [.1, -1.05, .2], [.6, -.78, .15]].forEach(q => dot(c, q[0] * r, q[1] * r, q[2] * r, '#fff'));
+    face(c, s, { mouth: 'smile', er: .16, dy: .2 });
+  },
+  igel(c, s) {
+    const r = s * .36;
+    for (let i = 0; i < 9; i++) { const a = -PI + (i + .5) * PI / 9; spike(c, Math.cos(a) * r * .88, Math.sin(a) * r * .88, a + PI / 2, r * .55, r * .17, '#6a4a2e'); }
+    body(c, s, '#a98258');
+    c.beginPath(); c.ellipse(0, r * .3, r * .62, r * .5, 0, 0, 7); FS(c, '#f2d9b0');
+    [-1, 1].forEach(d => cEye(c, d * r * .32, r * .08, r * .13, 1, s)); ci(c, 0, r * .3, r * .1, INK);
+  },
+  eichhoernchen(c, s) {
+    const r = s * .36;
+    c.beginPath(); c.moveTo(r * .7, r * .3); c.quadraticCurveTo(r * 1.9, r * .6, r * 1.3, -r * 1.2); c.quadraticCurveTo(r * .95, -r * .3, r * .6, -r * .1); c.closePath(); FS(c, '#d4742e');
+    body(c, s, '#e0883a'); [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .45, -r * .8); c.lineTo(d * r * .6, -r * 1.3); c.lineTo(d * r * .85, -r * .65); c.closePath(); FS(c, '#c9722e'); });
+    c.beginPath(); c.ellipse(0, r * .38, r * .45, r * .32, 0, 0, 7); FS(c, '#f7e3c0'); [-1, 1].forEach(d => cEye(c, d * r * .34, -r * .12, r * .14, 1, s)); ci(c, 0, r * .25, r * .09, INK);
+  },
+  drachen(c, s) {
+    const r = s * .36; c.save(); c.rotate(.4);
+    c.beginPath(); c.moveTo(0, -r * 1.25); c.lineTo(r * 1.0, 0); c.lineTo(0, r * 1.25); c.lineTo(-r * 1.0, 0); c.closePath(); FS(c, '#f2c13a');
+    c.beginPath(); c.moveTo(0, -r * 1.25); c.lineTo(r * 1.0, 0); c.lineTo(0, 0); c.closePath(); FS(c, '#d9452a'); c.beginPath(); c.moveTo(0, r * 1.25); c.lineTo(-r * 1.0, 0); c.lineTo(0, 0); c.closePath(); FS(c, '#4fa3e8'); c.restore();
+    c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .5, r * 1.0); c.quadraticCurveTo(-r * 1.1, r * 1.5, -r * .6, r * 1.8); c.stroke();
+    [-1, 1].forEach(d => cEye(c, d * r * .3, -r * .05, r * .13, 1, s));
+  },
+  vogelscheuche(c, s) {
+    const r = s * .36; body(c, s, '#e8c47a');
+    c.beginPath(); c.ellipse(0, -r * .62, r * 1.3, r * .2, 0, 0, 7); FS(c, '#7a5a3a'); c.beginPath(); c.moveTo(-r * .6, -r * .65); c.quadraticCurveTo(0, -r * 1.7, r * .6, -r * .65); c.closePath(); FS(c, '#7a5a3a');
+    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .3, -r * .05); c.lineTo(d * r * .55, r * .2); c.lineTo(d * r * .12, r * .18); c.closePath(); FS(c, '#2a2a36'); });
+    c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .4, r * .55); c.lineTo(r * .4, r * .55); [-.3, -.1, .1, .3].forEach(x => { c.moveTo(x * r * 1.2, r * .45); c.lineTo(x * r * 1.2, r * .65); }); c.stroke();
+    c.beginPath(); c.moveTo(r * .75, r * .35); c.lineTo(r * 1.15, r * .75); c.lineTo(r * .55, r * .72); c.closePath(); FS(c, '#e8c47a');
+  },
+  wind(c, s) {
+    const r = s * .36; body(c, s, '#d6ecff');
+    c.lineWidth = s * .035; [[-.6, -.45, .4], [-.5, .5, .5]].forEach(q => { c.beginPath(); c.moveTo(q[0] * r, q[1] * r); c.quadraticCurveTo((q[0] + .5) * r, (q[1] - .4) * r, (q[0] + 1.1) * r, q[1] * r); c.quadraticCurveTo((q[0] + 1.3) * r, (q[1] + .2) * r, (q[0] + 1.0) * r, (q[1] + .25) * r); c.stroke(); });
+    face(c, s, { mouth: 'o', er: .16, blush: 0 });
+  },
+  nebel(c, s) {
+    const r = s * .36; body(c, s, '#c4ccd6');
+    [[-.7, .5, .45], [0, .75, .5], [.7, .5, .4]].forEach(q => { c.beginPath(); c.arc(q[0] * r, q[1] * r, q[2] * r, 0, 7); FS(c, 'rgba(235,240,248,.9)'); });
+    [-1, 1].forEach(d => cEye(c, d * r * .34, -r * .2, r * .14, .6, s));
+  },
+  gewitter(c, s) {
+    const r = s * .36; body(c, s, '#6a7288');
+    [[-.55, -.45, .45], [.25, -.65, .5], [.7, -.25, .35]].forEach(q => { c.beginPath(); c.arc(q[0] * r, q[1] * r, q[2] * r, 0, 7); FS(c, '#8a92a8'); });
+    pl(c, [[-r * .1, r * .1], [r * .35, r * .1], [r * .08, r * .55], [r * .38, r * .55], [-r * .25, r * 1.2], [-r * .05, r * .7], [-r * .35, r * .7]], '#ffe14a');
+    [-1, 1].forEach(d => cEye(c, d * r * .4, -r * .1, r * .13, 1, s));
+  },
+  schirm(c, s) {
+    const r = s * .36; body(c, s, '#4f7fd0');
+    c.beginPath(); c.moveTo(-r * 1.25, -r * .15); c.quadraticCurveTo(0, -r * 1.9, r * 1.25, -r * .15); c.quadraticCurveTo(r * .62, -r * .45, 0, -r * .15); c.quadraticCurveTo(-r * .62, -r * .45, -r * 1.25, -r * .15); c.closePath(); FS(c, '#e0453a');
+    c.lineWidth = s * .035; c.beginPath(); c.moveTo(0, -r * .15); c.lineTo(0, r * .6); c.quadraticCurveTo(0, r * .9, r * .25, r * .8); c.stroke();
+    [-1, 1].forEach(d => cEye(c, d * r * .38, r * .15, r * .13, 1, s));
+  },
+  leuchtturm(c, s) {
+    const r = s * .36; c.beginPath(); c.moveTo(-r * .55, r * .9); c.lineTo(-r * .35, -r * .7); c.lineTo(r * .35, -r * .7); c.lineTo(r * .55, r * .9); c.closePath(); FS(c, '#f6f2ea');
+    [-.3, .2].forEach((y, i) => { c.beginPath(); c.moveTo(-r * .5 + i * 0, y * r - r * .1); c.lineTo(r * .5, y * r - r * .1); c.lineTo(r * .46, y * r + r * .2); c.lineTo(-r * .46, y * r + r * .2); c.closePath(); FS(c, '#e0453a'); });
+    c.beginPath(); c.rect(-r * .38, -r * 1.15, r * .76, r * .45); FS(c, '#ffe14a'); c.beginPath(); c.moveTo(-r * .5, -r * 1.15); c.lineTo(0, -r * 1.5); c.lineTo(r * .5, -r * 1.15); c.closePath(); FS(c, '#7a5a3a');
+    [-1, 1].forEach(d => cEye(c, d * r * .22, r * .5, r * .1, 1, s));
+  },
+  kapitaen(c, s) {
+    const r = s * .36; body(c, s, '#4f7fd0');
+    c.beginPath(); c.ellipse(0, -r * .7, r * 1.15, r * .26, 0, 0, 7); FS(c, '#2a3a5a'); c.beginPath(); c.moveTo(-r * .7, -r * .72); c.quadraticCurveTo(0, -r * 1.7, r * .7, -r * .72); c.closePath(); FS(c, '#1d2742'); dot(c, 0, -r * 1.0, r * .12, '#ffd45a');
+    c.beginPath(); c.moveTo(-r * .55, r * .45); c.quadraticCurveTo(0, r * 1.2, r * .55, r * .45); c.quadraticCurveTo(0, r * .65, -r * .55, r * .45); FS(c, '#f2f2f2');
+    face(c, s, { mouth: 'grin', angry: 1, er: .15, blush: 0, dy: -.02 });
+  }
+});

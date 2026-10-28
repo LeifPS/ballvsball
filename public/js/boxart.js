@@ -16,6 +16,8 @@ const THEMES = {
   alles: { body: '#7bd36a', lid: '#ffd45a', glow: '#fff2a0' },
   gefuehl: { body: '#8fd16a', lid: '#ffe14a', glow: '#ffd0f0' },
   brainrot: { body: '#ff4fd8', lid: '#3ee0ff', glow: '#ffee55' },
+  herbst: { body: '#d9822b', lid: '#8a4a1e', glow: '#ffe6a0' },
+  sturm: { body: '#5f7fa8', lid: '#3a4a68', glow: '#dfeaff' },
   halloween: { body: '#f58a1f', lid: '#d96e0c', glow: '#ffe14a' }
 };
 const hashId = id => [...id].reduce((a, ch) => a + ch.charCodeAt(0), 0);
@@ -96,6 +98,14 @@ const BODY = {
   brainrot(c, t) {   // Neon-Zickzack und glubschende Spiralaugen
     c.lineWidth = 3; c.strokeStyle = '#ffee55'; c.beginPath(); c.moveTo(22, 58); for (let i = 0; i < 6; i++) c.lineTo(22 + (i + 1) * 9.5, i % 2 ? 58 : 66); c.stroke(); c.strokeStyle = INK;
     [[38, 74], [62, 74]].forEach((p, i) => { c.beginPath(); c.arc(p[0], p[1], 7, 0, 7); FS(c, '#fff'); c.lineWidth = 2; c.beginPath(); for (let k = 0; k < 16; k++) { const a = k * .8 + t * 5 * (i ? -1 : 1), rr = k * .38; k ? c.lineTo(p[0] + Math.cos(a) * rr, p[1] + Math.sin(a) * rr) : c.moveTo(p[0], p[1]); } c.stroke(); c.lineWidth = 3; });
+  },
+  herbst(c, t) {   // fallende Blätter auf Holz
+    c.lineWidth = 2; c.strokeStyle = '#a85a1e'; for (const y of [60, 72, 84]) { c.beginPath(); c.moveTo(22, y); c.quadraticCurveTo(50, y + 3, 78, y); c.stroke(); } c.strokeStyle = INK; c.lineWidth = 3;
+    [[34, 70, '#d9452a', 0], [52, 62, '#f2c13a', 1], [64, 78, '#9a5a2a', 2]].forEach(([x, y, col, i]) => { c.save(); c.translate(x, y + Math.sin(t * 2 + i) * 1.2); c.rotate(.5 + i); c.beginPath(); c.moveTo(0, -7); c.quadraticCurveTo(6, 0, 0, 7); c.quadraticCurveTo(-6, 0, 0, -7); FS(c, col); c.restore(); });
+  },
+  sturm(c, t) {   // Regenwolke und Blitz
+    c.lineWidth = 3; [[36, 64, 9], [50, 60, 11], [63, 66, 8]].forEach(q => { c.beginPath(); c.arc(q[0], q[1], q[2], 0, 7); FS(c, '#9aa4bc'); });
+    c.globalAlpha = .6 + .4 * Math.abs(Math.sin(t * 5)); c.beginPath(); c.moveTo(48, 70); c.lineTo(56, 70); c.lineTo(51, 79); c.lineTo(58, 79); c.lineTo(44, 90); c.lineTo(48, 82); c.lineTo(42, 82); c.closePath(); FS(c, '#ffe14a'); c.globalAlpha = 1;
   },
   alles(c, t) {   // bunte Streifen in allen Farben
     c.lineWidth = 0;
@@ -190,6 +200,12 @@ const LID = {
   brainrot(c, t) {   // wackelnde Antenne mit Stern
     const sw = Math.sin(t * 6) * 3; c.lineWidth = 3; c.beginPath(); c.moveTo(35, -16); c.quadraticCurveTo(35 + sw, -26, 35 + sw * 1.6, -34); c.stroke();
     c.beginPath(); c.arc(35 + sw * 1.6, -36, 4, 0, 7); FS(c, '#ffee55');
+  },
+  herbst(c, t) {   // Eichel obenauf
+    c.lineWidth = 3; c.beginPath(); c.ellipse(35, -22, 7, 9, 0, 0, 7); FS(c, '#c9923a'); c.beginPath(); c.ellipse(35, -29, 9, 5, 0, 0, 7); FS(c, '#8a5a2a');
+  },
+  sturm(c, t) {   // Regentropfen
+    c.lineWidth = 2.4; for (let i = 0; i < 4; i++) { const ph = (t * 1.4 + i * .27) % 1, x = 16 + i * 14; c.globalAlpha = 1 - ph; c.strokeStyle = '#bfe0ff'; c.beginPath(); c.moveTo(x, -24 + ph * 22); c.lineTo(x - 2, -18 + ph * 22); c.stroke(); } c.globalAlpha = 1; c.strokeStyle = INK;
   },
   alles(c, t) {   // drei Stängel mit Blättern
     const sw = Math.sin(t * 2.4) * 1.5;

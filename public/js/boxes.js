@@ -13,13 +13,15 @@ export const BOX_LIST = [
   { id: 'klein', name: 'Kleinbox', price: 450, cur: 'coins', col: '#3a3a48', desc: 'Winzige Bälle mit großer Wirkung, dazu ein mythischer Riese.' },
   { id: 'brainrot', name: 'Brainrot-Box', price: 300, cur: 'coins', col: '#ff4fd8', desc: 'Italienische Meme-Monster: Tralalero, Tung Tung Sahur und eine mythische Kuh.', off: true },
   { id: 'gefuehl', name: 'Gefühlsbox', price: 450, cur: 'coins', col: '#e86aa8', desc: 'Fröhlich, wütend, ängstlich ...: elf Gefühle und der Gefühlsherrscher.' },
+  { id: 'herbst', name: 'Herbst-Box', price: 10, cur: 'tokens', col: '#d9822b', desc: 'Nur bis Sonntag! Laub, Pilze, ein Igel und die Vogelscheuche.', until: Date.UTC(2026, 10, 1, 23, 0, 0) },
+  { id: 'sturm', name: 'Sturm-Box', price: 12, cur: 'tokens', col: '#5f7fa8', desc: 'Nur sieben Tage! Wind, Nebel, Gewitter und der Sturmkapitän.', until: Date.UTC(2026, 10, 4, 23, 0, 0) },
   { id: 'halloween', name: 'Halloween-Box', price: 10, cur: 'tokens', col: '#e8761d', desc: 'Nur bis Ende Oktober! Kostet Halloween-Marken.', until: Date.UTC(2026, 9, 31, 23, 0, 0) }
 ];
 // Eigene Chancen (in %) für Boxen, denen Seltenheiten fehlen: Allesbox hat nur Selten, Episch und Mythisch; Episch und Mythisch behalten ihre Werte, Selten bekommt den Rest
 export const BOX_RARITY = { alles: { selten: 89.5, episch: 10, mythisch: .5 }, brainrot: { gewoehnlich: 45, selten: 30, episch: 17, legendaer: 7.5, mythisch: .5 } };
 export const BOX_BY_ID = Object.fromEntries(BOX_LIST.map(b => [b.id, b]));
 // 1. November 2026, 00:00 Uhr deutscher Zeit
-export const EVENT_END = BOX_BY_ID.halloween.until;
+export const EVENT_END = Math.max(...BOX_LIST.filter(b => b.until).map(b => b.until));   // Kürbis-Marken gibt es, solange irgendeine Ereignisbox läuft
 export function boxActive(id, now) { const b = BOX_BY_ID[id]; return !!b && !b.off && (!b.until || now < b.until); }   // off: vorübergehend aus dem Shop genommen (Code bleibt)
 export function eventActive(now) { return now < EVENT_END; }
 

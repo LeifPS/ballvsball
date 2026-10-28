@@ -108,7 +108,7 @@ function topType() {
   return best || 'stachel';
 }
 function wallet() {
-  return '<div class="row gap6">' + (eventLive() ? '<div class="pill" title="Halloween-Marken">' + tokHTML(S.me.tokens) + '</div>' : '') + '<div class="pill">' + coinHTML(S.me.coins) + '</div></div>';
+  return '<div class="row gap6">' + (eventLive() ? '<div class="pill" title="Kürbisse">' + tokHTML(S.me.tokens) + '</div>' : '') + '<div class="pill">' + coinHTML(S.me.coins) + '</div></div>';
 }
 function backBar(title, to) {
   return '<div class="row" style="padding-right:50px"><button class="btn sm" style="min-height:44px;padding:2px 14px" data-act="' + (to || 'home') + '">' + gi('arrow', 26) + '</button><h2 class="grow jit">' + esc(title) + '</h2></div><div class="row" style="justify-content:flex-end;margin-top:-4px">' + wallet() + '</div>';
