@@ -39,17 +39,19 @@ const N = {
   },
   kleinerhelfer: {
     name: 'Kleiner Helfer', rarity: 'episch', hp: 50, speed: 130, r: 14, dmg: 'Keiner',
-    desc: 'Macht selbst keinen Schaden. Prallt er gegen die Wand, zaubert er einen kleinen grünen Minihelfer.',
+    desc: 'Macht selbst keinen Schaden. Prallt er gegen die Wand, zaubert er einen kleinen grünen Minihelfer. Ist er selbst besiegt, ist der Kampf verloren.',
     strong: 'Lange Kämpfe', weak: 'Flächenschaden, Bomben',
     contact: () => 0,
     onWall(b, sim) {
+      if (sim.t < (b.st.wc || 0)) return;   // pro Wandberührung nur ein Helfer (Ecken lösen sonst zwei Treffer aus)
+      b.st.wc = sim.t + .4;
       let n = 0; for (const x of sim.balls) if (!x.dead && x.st.boss === b.id) n++;
       if (n >= 6) return;
       addHelper(sim, b, 'minihelfer');
     }
   },
   minihelfer: {
-    name: 'Minihelfer', rarity: 'selten', hp: 14, speed: 150, r: 8, dmg: 'Niedrig', dm: 1.23,
+    name: 'Minihelfer', minion: true, rarity: 'selten', hp: 14, speed: 150, r: 8, dmg: 'Niedrig', dm: 2.22,
     desc: 'Ein kleiner grüner Helfer.', strong: '-', weak: '-',
     contact: (b, sim) => 7 + sim.t * .1, contactCd: .5
   },

@@ -256,10 +256,15 @@ export function stepSim(sim) {
     const b = balls[i];
     if (!b.dead && b.hp <= 0) kill(sim, b);
   }
+  // Minihelfer zählen nicht als Team-Mitglied: ist ihr Herr besiegt, verschwinden sie
+  for (let i = 0; i < balls.length; i++) {
+    const b = balls[i];
+    if (!b.dead && b.def.minion) { const o = sim.byId[b.st.boss]; if (!o || o.dead) { b.dead = true; b.hp = 0; fx(sim, 'die', b.x, b.y, b.r, b.type); } }
+  }
   // Sieger?
   const alive = {};
   let teams = 0;
-  for (const b of balls) if (!b.dead && !alive[b.team]) { alive[b.team] = 1; teams++; }
+  for (const b of balls) if (!b.dead && !b.def.minion && !alive[b.team]) { alive[b.team] = 1; teams++; }
   for (const tm of Object.keys(sim.teamMax)) if (!alive[tm] && !sim.elim.some(e => e.team === Number(tm))) sim.elim.push({ team: Number(tm), step: sim.step });
   if (teams <= 1) {
     sim.over = true;
