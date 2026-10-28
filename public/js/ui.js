@@ -1,7 +1,7 @@
 // Oberfläche: Anmeldung, Startseite, Sammlung, Ballboxen, Markt, Handel, Freunde und Kampfablauf.
 import { DEFS, BALL_IDS, RARITY, DT, BOX, MAX_STARS, STAR_BONUS, createSim, stepSim, ballsInBox } from './engine.js';
 import { createBox, stepBox, BW, layoutOf } from './boxsim.js';
-import { BOX_LIST, BOX_BY_ID, boxActive, UP_COST } from './boxes.js';
+import { BOX_LIST, BOX_BY_ID, BOX_RARITY, boxActive, UP_COST } from './boxes.js';
 import { DPR, INK, gi, mkSprite, spr } from './sk.js';
 import { boxArt } from './boxart.js';
 import { drawBallIn, clearFx, fxState, burst, star } from './art.js';
@@ -380,7 +380,7 @@ function boxDetail(id) {
     '<div class="panel"><h3>Das kann drin sein</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
     st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name.replace('ball', '')) : '???') + '</div></button>').join('') +
     '</div></div>' +
-    '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + r[1] + ' Bälle)</span></span><span>' + RARITY[r[0]].weight + ' %</span></div>').join('') + '</div>' +
+    '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + r[1] + ' Bälle)</span></span><span>' + ((BOX_RARITY[id] || {})[r[0]] ?? RARITY[r[0]].weight) + ' %</span></div>').join('') + '</div>' +
     btn('Öffnen für ' + priceHTML(b), 'openbox', (ok ? '' : 'disabled') + ' data-id="' + id + '"', 'pri big') +
     (ok ? '' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (b.cur === 'tokens' ? 'Dir fehlen Marken. Gewinne Kämpfe oder hole die Tagesbelohnung.' : 'Dir fehlen Münzen. Gewinne Kämpfe oder hole die Tagesbelohnung.') + '</p>') + '</div>');
 }

@@ -2,7 +2,7 @@
 // Alle Methoden sind synchron und damit atomar. Fehler werden als { err: 'code' } zurückgegeben.
 import { DurableObject } from 'cloudflare:workers';
 import { DEFS, BALL_IDS, RARITY, ballsInBox, MAX_STARS } from '../public/js/engine.js';
-import { BOX_BY_ID, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
+import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
 import { simBox, layoutOf } from '../public/js/boxsim.js';
 
 const START_COINS = 300;     // genau drei Standard-Boxen für das Tutorial
@@ -264,7 +264,7 @@ export class Store extends DurableObject {
     const tutorial = owned.size < MIN_FREE;
     if (tutorial && boxId !== 'standard') return { err: 'tutorial_box' };
     const present = RAR_KEYS.map(k => ballsInBox(boxId).some(id => DEFS[id].rarity === k));   // nur Seltenheiten, die diese Box wirklich hat
-    let rIdx = pickWeighted(RAR_KEYS.map((k, i) => present[i] ? RARITY[k].weight : 0)), reward;
+    let rIdx = pickWeighted(RAR_KEYS.map((k, i) => present[i] ? ((BOX_RARITY[boxId] || {})[k] ?? RARITY[k].weight) : 0)), reward;
     if (tutorial) {
       rIdx = 0;
       reward = TUTORIAL_BALLS.find(t => !owned.has(t));
