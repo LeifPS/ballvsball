@@ -287,7 +287,8 @@ export function drawBoxArt(g, id, t, size, opts) {
 let running = false;
 export function boxArt(id, size) {
   if (!running) { running = true; requestAnimationFrame(tick); }
-  return '<canvas class="boxart" data-box="' + id + '" data-size="' + size + '" style="width:' + size + 'px;height:' + size + 'px"></canvas>';
+  // Fester Rahmen in Pixeln: Flex/Grid (Safari, iPad) darf die Zeichenfläche nicht zusammenquetschen
+  return '<span class="bxw" style="width:' + size + 'px;height:' + size + 'px"><canvas class="boxart" data-box="' + id + '" data-size="' + size + '" width="' + Math.round(size * DPR) + '" height="' + Math.round(size * DPR) + '" style="width:' + size + 'px;height:' + size + 'px;min-width:' + size + 'px;min-height:' + size + 'px"></canvas></span>';
 }
 function tick(ms) {
   requestAnimationFrame(tick);

@@ -104,7 +104,8 @@ canvas.view{display:block;touch-action:none;margin:0 auto;max-width:100%}
 .boxcard.poor .pricepill{opacity:.7}
 .pricepill{display:inline-block;padding:1px 10px;font-size:21px;background:var(--paper2);border:2px solid var(--ink);border-radius:var(--wob2);box-shadow:1px 2px 0 var(--ink)}
 .progress.thin{height:10px;border-width:2px;margin-top:3px}
-canvas.boxart{display:block;flex:none;flex-shrink:0;max-width:none}
+canvas.boxart{display:block;position:absolute;left:0;top:0;flex:none;flex-shrink:0;max-width:none;max-height:none}
+.bxw{display:block;position:relative;flex:none;flex-shrink:0;margin:0 auto;min-width:0;min-height:0}
 .boxcard.event{background:#ffd9a0}
 .mini{width:26px;height:26px}
 .tag{display:inline-block;font:400 15px var(--f-display);background:#ff7a1a;color:#fff;border:2px solid var(--ink);border-radius:8px;padding:0 7px;transform:rotate(-3deg)}
