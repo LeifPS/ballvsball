@@ -62,12 +62,14 @@ export function makeSim(cfg, DEFS, OBJS) {
 }
 
 export function addBall(sim, type, team, slot, x, y, deg, opt) {
+  // Skins verhalten sich wie ihr Grundball; nur das Aussehen (b.skin) bleibt erhalten
+  let skin = null; const d0 = sim.DEFS[type]; if (d0 && d0.base) { skin = type; type = d0.base; }
   const def = sim.DEFS[type];
   const d = dirOf(deg);
   const b = {
     id: sim.nextId++, type, def, team, slot, x, y, vx: 0, vy: 0, speed: def.speed, r: def.r,
     hp: def.hp, maxHp: def.hp, dead: false, stun: 0, stunImm: 0, flash: 0, hitCd: {}, st: {}, age: 0,
-    lvl: 0, noMove: false, burn: 0, burnDps: 0, burnSrc: 0, stars: 0, pm: 1
+    lvl: 0, noMove: false, burn: 0, burnDps: 0, burnSrc: 0, stars: 0, pm: 1, skin
   };
   const stars = (opt && opt.stars) || 0;
   if (stars) { b.stars = stars; const k = 1 + STAR_BONUS * stars; b.hp *= k; b.maxHp *= k; b.pm = k; }
@@ -133,7 +135,7 @@ export function hurt(sim, t, amt, src, kind) {
   t.hp -= amt;
   if (kind !== 'dot') t.flash = .12;
   if (src) sim.dealt[src.team] = (sim.dealt[src.team] || 0) + amt;
-  if (kind !== 'dot') fx(sim, 'hit', t.x, t.y, amt);
+  if (kind !== 'dot') { fx(sim, 'hit', t.x, t.y, amt); if (src && src.skin) fx(sim, 'skinhit', t.x, t.y, 0, src.skin); }
   else {   // Dauerschaden (Feuerspur, Regen, Brennen ...): Ball blinkt rot und zeigt alle paar Zehntelsekunden die Summe
     t.dotT = .2; t.dotAcc = (t.dotAcc || 0) + amt;
     if (sim.t >= (t.dotNext || 0)) { fx(sim, 'tick', t.x, t.y, t.dotAcc); t.dotAcc = 0; t.dotNext = sim.t + .5; }

@@ -3,6 +3,7 @@ import { DEFS } from './engine.js';
 import { INK, DPR, mkSprite, spr, sketchCtx } from './sk.js';
 import { BALLS, VARIANTS, OB, PARTS, S0, R0, setNoHeld } from './ballart.js';
 import { nearestEnemy } from './core.js';
+import { SKIN_BY_ID } from './skins.js';
 
 const SC = DPR > 1.5 ? 1.35 : 1;
 const SIDE = 200;
@@ -92,7 +93,34 @@ function badge(g, x, y, txt, col, tf) {
   sk.beginPath(); sk.moveTo(x - w / 2, y - 9); sk.lineTo(x + w / 2, y - 9); sk.lineTo(x + w / 2, y + 9); sk.lineTo(x - w / 2, y + 9); sk.closePath(); sk.fill(); sk.stroke();
   g.fillStyle = '#fff'; g.strokeStyle = INK; g.lineWidth = 2.4; g.strokeText(txt, x, y + 1); g.fillText(txt, x, y + 1); g.restore();
 }
+
+/* ---------- Skins: Partikel an Geschossen und Leuchten am Ball (erst ab Selten bzw. Episch) ---------- */
+const RB = ['#ff5a5a', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#a77ae8'];
+function skinPart(g, kind, x, y, col, sz, rot) {
+  g.save(); g.translate(x, y); g.rotate(rot || 0); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); g.lineJoin = 'round';
+  if (kind === 'star') { g.restore(); star(g, x, y, sz, col, rot); return; }
+  g.beginPath();
+  if (kind === 'heart') { g.moveTo(0, sz * .9); g.bezierCurveTo(-sz * 1.5, -sz * .1, -sz * .9, -sz * 1.2, 0, -sz * .4); g.bezierCurveTo(sz * .9, -sz * 1.2, sz * 1.5, -sz * .1, 0, sz * .9); }
+  else if (kind === 'shard') { g.moveTo(0, -sz * 1.3); g.lineTo(sz * .6, 0); g.lineTo(0, sz * 1.3); g.lineTo(-sz * .6, 0); }
+  else if (kind === 'flower') { for (let i = 0; i < 5; i++) { const a = i * 1.2566; g.moveTo(0, 0); g.ellipse(Math.cos(a) * sz * .7, Math.sin(a) * sz * .7, sz * .55, sz * .38, a, 0, 7); } }
+  else g.arc(0, 0, kind === 'ember' ? sz * .7 : sz * .6, 0, 7);
+  g.closePath(); g.fill(); g.stroke(); g.restore();
+}
+const skinCol = (col, i) => col === 'rainbow' ? RB[((i % RB.length) + RB.length) % RB.length] : col;
+function skinTrail(g, o, tm) {
+  const b = sim0 && sim0.byId ? sim0.byId[o.owner] : null, sk = b && b.skin && SKIN_BY_ID[b.skin];
+  if (!sk || !sk.trail) return;
+  const sp = Math.hypot(o.vx, o.vy) || 1, ux = o.vx / sp, uy = o.vy / sp;
+  for (let i = 1; i <= 3; i++) { const k = i * 7, jx = Math.sin(tm * 9 + i * 2 + o.x * .1) * 3, jy = Math.cos(tm * 8 + i * 3 + o.y * .1) * 3; g.globalAlpha = .85 - i * .22; skinPart(g, sk.trail.kind, o.x - ux * k + jx, o.y - uy * k + jy, skinCol(sk.trail.col, i + (o.owner | 0)), 5 - i * .8, tm * 3 + i); }
+  g.globalAlpha = 1;
+}
+function skinAura(g, b, sk, tm) {
+  const n = sk.aura.n || 4;
+  for (let i = 0; i < n; i++) { const a = tm * 1.7 + i * 6.2832 / n, rr = b.r * 1.45 + Math.sin(tm * 3 + i) * 2.5; skinPart(g, sk.aura.kind, Math.cos(a) * rr, Math.sin(a) * rr * .9, skinCol(sk.aura.col, i), 3.6 + (i % 2) * 1.2, tm * 2 + i); }
+}
+let sim0 = null;
 export function drawBall(g, b, sim, tf, tm, tint) {
+  sim0 = sim;
   const d = b.def, st = b.st || {}, v = vstate(b), f = tf + b.id, type = b.type;
   const k = b.r / R0 * (KS[type] || 1), x = b.x, y = b.y;
   if (b.vx * v.pvx < 0 || b.vy * v.pvy < 0) { v.sq = .16; v.ax = (b.vx * v.pvx < 0) ? 0 : 1; }
@@ -128,7 +156,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
     g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R0, 0, 7); g.fill();
     g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.ellipse(-R0 * .42, -R0 * .5, R0 * .16, R0 * .09, -.7, 0, 7); g.fill();
   }
-  const sp = bodySprite(type === 'erik' && st.emo != null ? 'erik_' + 'wfta'[st.emo] : type === 'gefuehl' && st.mode != null ? 'gefuehl_' + 'fwa'[st.mode] : type, !b.preview);
+  const sp = bodySprite(b.skin ? b.skin : type === 'erik' && st.emo != null ? 'erik_' + 'wfta'[st.emo] : type === 'gefuehl' && st.mode != null ? 'gefuehl_' + 'fwa'[st.mode] : type, !b.preview);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
   // Fröhlich/Wütend/Gefühlsball: liegt der Ball hinten, läuft ein Farbverlauf über den Ball (blau und gedämpft = halber Schaden, rot und lodernd = doppelter Schaden)
   if (!b.preview && st.weak && (type === 'froh' || type === 'wuet' || (type === 'gefuehl' && st.mode < 2))) moodOverlay(g, sp.fr[((f % 3) + 3) % 3], sp.side, tm, type === 'wuet' || (type === 'gefuehl' && st.mode === 1));
@@ -141,6 +169,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   }
   g.restore();
   g.globalAlpha = ghost ? .45 : 1;
+  if (b.skin && SKIN_BY_ID[b.skin] && SKIN_BY_ID[b.skin].aura) skinAura(g, b, SKIN_BY_ID[b.skin], tm);
   /* vorne */
   if (type === 'schwert') {
     const n = st.n || 1, ang = st.ang || 0, p = partSprite('dagger');
@@ -229,6 +258,7 @@ const ZONE = { rain: 'rainZone', lava: 'lavaZone', dust: 'dustZone', egg: 'eggZo
 export const GROUND = { puddle: 1, fire: 1, spike: 1, bomb: 1, meteor: 1, mine: 1, wave: 1 };
 export function drawObj(g, o, sim, tf, tm) {
   const f = tf + (o.owner || 0) * 3;
+  sim0 = sim; if (o.proj && o.vx !== undefined) skinTrail(g, o, tm);
   switch (o.k) {
     case 'mauer': {   // Ziegelmauer, handgezeichnet
       const dx = o.x2 - o.x1, dy = o.y2 - o.y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L * 5, ny = dx / L * 5, grow = Math.min(1, (8 - o.life) * 5 + .2), fade = Math.min(1, o.life * 1.5);
@@ -343,6 +373,7 @@ export function addFx(e) {
   else if (k === 'mood') { const cols = ['#a8e68c', '#e8453c', '#6aa8ff']; pt({ k: 'ring', x, y, age: 0, life: .55, r: 34, col: cols[e.a | 0] }); sparks(x, y, 8, cols[e.a | 0], 100, .6, 3); snd('mood'); }
   else if (k === 'mute') { pt({ k: 'ring', x, y, age: 0, life: .4, r: e.a * 2.2, col: '#b8b4a8' }); sparks(x, y, 6, '#d8d4c8', 70, .45, 2.8); snd('mute'); }
   else if (k === 'bombdrop') { snd('bombdrop', .8); }
+  else if (k === 'skincast' || k === 'skinhit') { const sk = SKIN_BY_ID[e.e]; if (sk && sk.snd) snd(k === 'skincast' ? sk.snd.cast : sk.snd.hit, .8); }
   else if (k === 'shield') { pt({ k: 'ring', x, y, age: 0, life: .5, r: e.a * 3, col: '#bfe4ff' }); sparks(x, y, 10, '#ffffff', 110, .5, 2.8); snd('shield'); }
 }
 export function burst(x, y, n, cols) {   // Konfetti für Sieg

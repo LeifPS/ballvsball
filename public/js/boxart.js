@@ -16,6 +16,8 @@ const THEMES = {
   alles: { body: '#7bd36a', lid: '#ffd45a', glow: '#fff2a0' },
   gefuehl: { body: '#8fd16a', lid: '#ffe14a', glow: '#ffd0f0' },
   brainrot: { body: '#ff4fd8', lid: '#3ee0ff', glow: '#ffee55' },
+  skin1: { body: '#ff9ac4', lid: '#7ad3ff', glow: '#fff2a0' },
+  skin2: { body: '#b8862e', lid: '#e0b030', glow: '#fff2a0' },
   herbst: { body: '#d9822b', lid: '#8a4a1e', glow: '#ffe6a0' },
   sturm: { body: '#5f7fa8', lid: '#3a4a68', glow: '#dfeaff' },
   halloween: { body: '#f58a1f', lid: '#d96e0c', glow: '#ffe14a' }
@@ -98,6 +100,13 @@ const BODY = {
   brainrot(c, t) {   // Neon-Zickzack und glubschende Spiralaugen
     c.lineWidth = 3; c.strokeStyle = '#ffee55'; c.beginPath(); c.moveTo(22, 58); for (let i = 0; i < 6; i++) c.lineTo(22 + (i + 1) * 9.5, i % 2 ? 58 : 66); c.stroke(); c.strokeStyle = INK;
     [[38, 74], [62, 74]].forEach((p, i) => { c.beginPath(); c.arc(p[0], p[1], 7, 0, 7); FS(c, '#fff'); c.lineWidth = 2; c.beginPath(); for (let k = 0; k < 16; k++) { const a = k * .8 + t * 5 * (i ? -1 : 1), rr = k * .38; k ? c.lineTo(p[0] + Math.cos(a) * rr, p[1] + Math.sin(a) * rr) : c.moveTo(p[0], p[1]); } c.stroke(); c.lineWidth = 3; });
+  },
+  skin1(c, t) {   // Farbkleckse
+    [[34, 62, '#ff5a5a'], [52, 70, '#ffe83b'], [66, 60, '#4fa3e8'], [44, 80, '#7bd36a']].forEach(([x, y, col], i) => { c.lineWidth = 2.6; c.beginPath(); c.ellipse(x, y + Math.sin(t * 2 + i) * 1.2, 8, 6, i, 0, 7); FS(c, col); });
+  },
+  skin2(c, t) {   // goldene Beschläge und Schloss
+    c.lineWidth = 3; c.beginPath(); c.rect(20, 60, 60, 6); FS(c, '#e0b030'); c.beginPath(); c.rect(44, 62, 12, 16); FS(c, '#ffd45a'); c.beginPath(); c.arc(50, 70, 2.4, 0, 7); c.fillStyle = INK; c.fill();
+    c.globalAlpha = .6 + .4 * Math.abs(Math.sin(t * 3)); star4(c, 28, 78, 3, '#fff2a0'); star4(c, 72, 56, 2.4, '#fff2a0'); c.globalAlpha = 1;
   },
   herbst(c, t) {   // fallende Blätter auf Holz
     c.lineWidth = 2; c.strokeStyle = '#a85a1e'; for (const y of [60, 72, 84]) { c.beginPath(); c.moveTo(22, y); c.quadraticCurveTo(50, y + 3, 78, y); c.stroke(); } c.strokeStyle = INK; c.lineWidth = 3;
@@ -201,6 +210,8 @@ const LID = {
     const sw = Math.sin(t * 6) * 3; c.lineWidth = 3; c.beginPath(); c.moveTo(35, -16); c.quadraticCurveTo(35 + sw, -26, 35 + sw * 1.6, -34); c.stroke();
     c.beginPath(); c.arc(35 + sw * 1.6, -36, 4, 0, 7); FS(c, '#ffee55');
   },
+  skin1(c, t) { c.lineWidth = 3; c.beginPath(); c.arc(35, -20, 6, 0, 7); FS(c, '#ffe83b'); star4(c, 50, -12, 3, '#fff'); },
+  skin2(c, t) { c.lineWidth = 3; c.beginPath(); c.rect(28, -20, 14, 8); FS(c, '#ffd45a'); c.globalAlpha = .6 + .4 * Math.sin(t * 4); star4(c, 52, -10, 3, '#fff2a0'); c.globalAlpha = 1; },
   herbst(c, t) {   // Eichel obenauf
     c.lineWidth = 3; c.beginPath(); c.ellipse(35, -22, 7, 9, 0, 0, 7); FS(c, '#c9923a'); c.beginPath(); c.ellipse(35, -29, 9, 5, 0, 0, 7); FS(c, '#8a5a2a');
   },

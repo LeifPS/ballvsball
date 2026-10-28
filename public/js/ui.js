@@ -424,7 +424,7 @@ function upAllPlan() {
   const c = typeCounts();
   for (const type in c) {
     const free = c[type].list.filter(b => !b.lock).length;
-    if (!free) continue;
+    if (!free || DEFS[type].base) continue;
     let stars = Math.max(...c[type].list.map(b => b.stars)), avail = free - 1;
     while (stars < MAX_STARS && avail >= UP_COST[DEFS[type].rarity][stars]) { const k = UP_COST[DEFS[type].rarity][stars]; avail -= k; used += k; stars++; steps++; }
   }
@@ -452,7 +452,8 @@ function detail(type) {
   if (c) {
     const lvl = Math.max(...c.list.map(x => x.stars)), free = c.list.filter(x => !x.lock);
     let up = '';
-    if (free.length) {
+    if (free.length && d.base) up = '<div class="small center">Skin von ' + esc(DEFS[d.base].name) + ' - hat dessen Sterne.</div>';
+    else if (free.length) {
       if (lvl >= MAX_STARS) up = '<div class="small center">Höchste Stufe erreicht!</div>';
       else {
         const cost = UP_COST[d.rarity][lvl], have = free.length - 1, ok = have >= cost;
@@ -801,7 +802,7 @@ function fightScreen(m) {
     '<div id="fbtn" class="row gap6"></div></div>');
   const cv = $('#fc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const hp = {}; SCREEN.querySelectorAll('.hp').forEach(el => { hp[el.dataset.slot] = { bar: el.querySelector('i'), bn: el.querySelector('.bn') }; });
-  for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.type].name;
+  for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.skin || b.type].name;
   let acc = 0, phase = 'count', t0 = 0, koT = 0, sentReady = false, cdN = 4, tPhase = 0, resShown = false;
   const cdw = $('#cdwrap');
   const NB = () => m.replay ? (M.idx + 1 < M.rec.rounds.length ? btn('Nächste Runde', 'replaynext', '', 'pri') : '') + btn(M.solo ? 'Weiter' : 'Zurück', 'replayback', '', M.solo ? 'pri' : '') : btn('Weiter', 'fightnext', '', 'pri');

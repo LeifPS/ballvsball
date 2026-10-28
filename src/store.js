@@ -96,6 +96,8 @@ export class Store extends DurableObject {
   levels(owner) {
     const lv = {};
     for (const r of this.q('SELECT type,stars FROM tstars WHERE owner=?', owner)) lv[r.type] = r.stars;
+    // Skins haben die Sterne ihres Grundballs
+    for (const r of this.q('SELECT DISTINCT type FROM balls WHERE owner=?', owner)) { const d = DEFS[r.type]; if (d && d.base) lv[r.type] = lv[d.base] || 0; }
     return lv;
   }
   freeCount(id) { return this.q('SELECT COUNT(*) c FROM balls WHERE owner=? AND lock=0', id)[0].c; }
@@ -317,6 +319,7 @@ export class Store extends DurableObject {
     const b = this.q('SELECT * FROM balls WHERE uid=?', Number(uid))[0];
     if (!b || b.owner !== u.id) return { err: 'not_yours' };
     if (b.lock !== 0) return { err: 'locked' };
+    if (DEFS[b.type] && DEFS[b.type].base) return { err: 'skin_noup' };   // Skins haben die Sterne ihres Grundballs
     const stars = this.levels(u.id)[b.type] || 0;
     if (stars >= MAX_STARS) return { err: 'max_stars' };
     const cost = UP_COST[DEFS[b.type].rarity][stars];
@@ -335,6 +338,7 @@ export class Store extends DurableObject {
     let steps = 0, used = 0;
     const types = [...new Set(this.q('SELECT type FROM balls WHERE owner=? AND lock=0', u.id).map(b => b.type))];
     for (const type of types) {
+      if (DEFS[type].base) continue;   // Skins haben die Sterne ihres Grundballs
       let stars = lv[type] || 0;
       const free = this.q('SELECT uid FROM balls WHERE owner=? AND type=? AND lock=0 ORDER BY uid', u.id, type).map(b => b.uid);
       let avail = free.length - 1;   // das erste Exemplar bleibt

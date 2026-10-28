@@ -1,5 +1,6 @@
 // Zeichenfunktionen aller Bälle (reine Canvas-Befehle, ohne DOM). Mittelpunkt (0,0), Größe s, Körperradius r = 0.36 s.
 import { INK, FS, cEye, cBlush, hexA } from './sk.js';
+import { SKINS } from './skins.js';
 
 export const S0 = 76;                // Bezugsgröße der Sprites
 export const R0 = S0 * .36;          // Körperradius im Sprite
@@ -960,3 +961,50 @@ Object.assign(BALLS, {
     face(c, s, { mouth: 'grin', angry: 1, er: .15, blush: 0, dy: -.02 });
   }
 });
+
+/* ---------- Skins: Farbe über den Grundball, bei Legendär und Mythisch ein eigenes Modell ---------- */
+const RAINBOW = ['#ff5a5a', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#a77ae8'];
+const tinted = sk => (c, s) => {
+  BALLS[sk.base](c, s);
+  c.save(); c.globalCompositeOperation = 'source-atop'; c.globalAlpha = sk.a || .5;
+  if (sk.tint === 'rainbow') { const g = c.createLinearGradient(-s * .4, -s * .4, s * .4, s * .4); RAINBOW.forEach((col, i) => g.addColorStop(i / (RAINBOW.length - 1), col)); c.fillStyle = g; } else c.fillStyle = sk.tint;
+  c.fillRect(-s, -s, s * 2, s * 2); c.restore();
+};
+const MODEL = {
+  drachenstachel(c, s) {
+    const r = s * .36;
+    [-1, 1].forEach(d => wing(c, d, r, '#3a8a3a', { k: .8 }));
+    for (let i = 0; i < 5; i++) { const a = -PI + (i + .5) * PI / 5; spike(c, Math.cos(a) * r * .9, Math.sin(a) * r * .9, a + PI / 2, r * .42, r * .16, '#ff9a2a'); }
+    body(c, s, '#4fb04a');
+    c.beginPath(); c.ellipse(0, r * .35, r * .62, r * .5, 0, 0, 7); FS(c, '#e8e08a');
+    [-1, 1].forEach(d => { pl(c, [[d * r * .5, -r * .8], [d * r * .78, -r * 1.35], [d * r * .88, -r * .6]], '#f4ecd0'); cEye(c, d * r * .34, -r * .12, r * .15, 1, s); });
+    c.lineWidth = s * .04; c.beginPath(); c.arc(0, r * .3, r * .26, .2, PI - .2); c.stroke(); [-1, 1].forEach(d => pl(c, [[d * r * .15, r * .38], [d * r * .24, r * .38], [d * r * .19, r * .5]], '#fff')); ci(c, -r * .15, r * .1, r * .04, INK); ci(c, r * .15, r * .1, r * .04, INK);
+  },
+  phoenixfeuer(c, s) {
+    const r = s * .36;
+    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .7, -r * .1); c.quadraticCurveTo(d * r * 1.7, -r * 1.2, d * r * 1.75, r * .3); c.quadraticCurveTo(d * r * 1.3, r * .1, d * r * 1.1, r * .55); c.quadraticCurveTo(d * r * .95, r * .3, d * r * .75, r * .35); c.closePath(); FS(c, '#ff7a1a'); });
+    flame(c, 0, -r * .6, r * 1.1, r * 1.1, '#ff6a2a', '#ffd24a'); flame(c, -r * .5, -r * .6, r * .55, r * .8, '#ff9a2a', '#ffe27a'); flame(c, r * .5, -r * .6, r * .55, r * .8, '#ff9a2a', '#ffe27a');
+    body(c, s, '#ff8a2a');
+    c.beginPath(); c.ellipse(0, r * .45, r * .6, r * .4, 0, 0, 7); FS(c, '#ffd86a');
+    [-1, 1].forEach(d => cEye(c, d * r * .34, -r * .1, r * .15, 1, s)); pl(c, [[-r * .14, r * .1], [r * .14, r * .1], [0, r * .38]], '#ffe14a');
+  },
+  piratenbumerang(c, s) {
+    const r = s * .36; body(c, s, '#f0c24a');
+    c.beginPath(); c.moveTo(-r * 1.1, -r * .5); c.quadraticCurveTo(0, -r * 1.95, r * 1.1, -r * .5); c.quadraticCurveTo(0, -r * .75, -r * 1.1, -r * .5); c.closePath(); FS(c, '#1d2742');
+    ci(c, 0, -r * 1.05, r * .17, '#f4ecd0'); c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .5, -r * .62); c.lineTo(r * .5, -r * .62); c.stroke();
+    cEye(c, r * .36, -r * .05, r * .15, 1, s); c.beginPath(); c.ellipse(-r * .36, -r * .05, r * .2, r * .17, 0, 0, 7); FS(c, '#1d2742'); c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .9, -r * .5); c.lineTo(-r * .2, r * .15); c.stroke();
+    c.beginPath(); c.arc(0, r * .38, r * .3, .1, PI - .1); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.stroke(); ci(c, -r * .95, r * .35, r * .1, '#ffe14a');
+  },
+  kosmosmagier(c, s) {
+    const r = s * .36;
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, r * 1.3); g.addColorStop(0, hexA('#a77ae8', .55)); g.addColorStop(1, hexA('#a77ae8', 0)); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * 1.3, 0, 7); c.fill();
+    body(c, s, '#2a2070');
+    stars(c, [[-r * .55, r * .25, r * .16], [r * .6, r * .15, r * .13], [r * .1, r * .62, r * .12], [-r * .15, -r * .05, r * .09]], '#fff2a0');
+    c.beginPath(); c.moveTo(-r * 1.05, -r * .5); c.lineTo(0, -r * 1.85); c.lineTo(r * 1.05, -r * .5); c.closePath(); FS(c, '#4a2a9a');
+    c.beginPath(); c.ellipse(0, -r * .5, r * 1.2, r * .22, 0, 0, 7); FS(c, '#3a2a8a');
+    stars(c, [[-r * .25, -r * 1.05, r * .17], [r * .28, -r * .78, r * .12]], '#ffe14a');
+    [-1, 1].forEach(d => { c.beginPath(); c.ellipse(d * r * .34, -r * .02, r * .17, r * .2, 0, 0, 7); FS(c, '#ffffff'); ci(c, d * r * .34, -r * .02, r * .09, '#ff7ad8'); });
+    c.lineWidth = s * .035; c.beginPath(); c.arc(0, r * .42, r * .22, .2, PI - .2); c.stroke();
+  }
+};
+for (const sk of SKINS) BALLS[sk.id] = sk.model && MODEL[sk.id] ? MODEL[sk.id] : tinted(sk);
