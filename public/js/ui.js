@@ -77,6 +77,7 @@ function loop(ms) {
 /* ================= Hilfen ================= */
 function show(html) {
   clearTimers(); SCREEN.innerHTML = html; window.scrollTo(0, 0); decorate(SCREEN);
+  SCREEN.classList.remove('sin'); void SCREEN.offsetWidth; SCREEN.classList.add('sin');   // sanftes Einblenden
 }
 function setView(v) { if (S.view && S.view.stop) S.view.stop(); S.view = v; }
 function clearTimers() { S.timers.forEach(clearInterval); S.timers = []; }
@@ -1094,6 +1095,7 @@ document.addEventListener('click', ev => {
     // Solange eine Anfrage an den Server läuft (Kaufen, Öffnen, Verbessern ...), zählen weitere Klicks nicht: bei Lag wurde sonst doppelt bezahlt
     if (S.busy) return;
     sfx(t.dataset.act === 'home' || t.dataset.act === 'closeov' ? 'back' : 'click');
+    try { if (navigator.vibrate) navigator.vibrate(7); } catch (e) { }   // kurzes Antippen-Gefühl auf Handys
     const r = fn(t.dataset, t, ev);
     if (r && typeof r.then === 'function') {
       S.busy = true; t.disabled = true;

@@ -373,6 +373,7 @@ export function addFx(e) {
   else if (k === 'mood') { const cols = ['#a8e68c', '#e8453c', '#6aa8ff']; pt({ k: 'ring', x, y, age: 0, life: .55, r: 34, col: cols[e.a | 0] }); sparks(x, y, 8, cols[e.a | 0], 100, .6, 3); snd('mood'); }
   else if (k === 'mute') { pt({ k: 'ring', x, y, age: 0, life: .4, r: e.a * 2.2, col: '#b8b4a8' }); sparks(x, y, 6, '#d8d4c8', 70, .45, 2.8); snd('mute'); }
   else if (k === 'bombdrop') { snd('bombdrop', .8); }
+  else if (k === 'wall') { sparks(x, y, 6, '#d98a5a', 70, .4, 3); puffs(x, y, 3, 'rgba(160,120,90,.8)', 40, 6); snd('block', .8); }
   else if (k === 'skincast' || k === 'skinhit') { const sk = SKIN_BY_ID[e.e]; if (sk && sk.snd) snd(k === 'skincast' ? sk.snd.cast : sk.snd.hit, .8); }
   else if (k === 'shield') { pt({ k: 'ring', x, y, age: 0, life: .5, r: e.a * 3, col: '#bfe4ff' }); sparks(x, y, 10, '#ffffff', 110, .5, 2.8); snd('shield'); }
 }

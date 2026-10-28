@@ -57,6 +57,7 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
   if (fxState.shake > .05) { g.translate((Math.random() - .5) * fxState.shake * 1.6, (Math.random() - .5) * fxState.shake * 1.6); fxState.shake *= Math.pow(.02, dt); }
   const gr = Math.max(0, sim.grow || 0), k = AS / (BOX + 2 * gr);   // Kleiner Großer: Kamera zoomt heraus, die Arena ist größer
   g.translate(ax + gr * k, ay + gr * k); g.scale(k, k);
+  if (fxState.ko > 0) { const z = 1 + .16 * Math.min(1, fxState.ko / .9); g.translate(fxState.koX, fxState.koY); g.scale(z, z); g.translate(-fxState.koX, -fxState.koY); }   // K.O.: kurzer Zoom auf den Treffer
   for (const e of sim.fx) addFx(e);
   sim.fx.length = 0;
   const ffa = players && players.length > 2 && players.every((p, i) => p.team === i), objs = sim.objs, myTeam = players && mySlot >= 0 && players[mySlot] ? players[mySlot].team : 0;
@@ -84,6 +85,7 @@ export function drawArena(g, ax, ay, AS, sim, tf, tm, dt, mySlot, players, opt) 
   }
   for (const b of sim.balls) if (!b.dead && !opt.noBars) drawHpBar(g, b, myTeam, '#4f90e8', '#e4574a', ffa ? PLAYER_COL : null);
   drawFx(g, dt, tf);
+  if (fxState.ko > .72) { g.fillStyle = 'rgba(255,255,255,' + Math.min(.6, (fxState.ko - .72) * 3.2).toFixed(2) + ')'; g.fillRect(-20, -20, BOX + 40, BOX + 40); }   // weißer Blitz beim K.O.
   g.restore();
 }
 

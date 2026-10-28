@@ -40,7 +40,7 @@ function loadSamples() {
   }
 }
 const LAST = {};
-const FALLBACK = { skin_kosmos_cast: 'nova', skin_kosmos_hit: 'coin', mythic: 'legend', helper: 'pop', grow: 'whoosh', mute: 'zap', mood: 'coin', bombdrop: 'tick', shield: 'block', boing: 'pop', cannon: 'boom', grate: 'block', catch: 'hit' };   // falls ein neuer Effekt noch nicht geladen ist
+const FALLBACK = { portal: 'whoosh', wall: 'block', skin_kosmos_cast: 'nova', skin_kosmos_hit: 'coin', mythic: 'legend', helper: 'pop', grow: 'whoosh', mute: 'zap', mood: 'coin', bombdrop: 'tick', shield: 'block', boing: 'pop', cannon: 'boom', grate: 'block', catch: 'hit' };   // falls ein neuer Effekt noch nicht geladen ist
 export function sfx(name, v) {
   if (!ctx || mode < 1) return;
   const buf = buffers[name] || buffers[FALLBACK[name]]; if (!buf) return;
