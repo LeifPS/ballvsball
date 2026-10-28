@@ -7,6 +7,7 @@ import { INK, DPR, mkSprite, sketchCtx, strSeed } from './sk.js';
 import { bodySprite, drawBall, drawObj, drawFx, addFx, drawHpBar, ringJ, star, fxState, GROUND } from './art.js';
 import { R0 } from './ballart.js';
 import { drawBoxArt } from './boxart.js';
+import { SKIN } from './dropskin.js';
 
 export const TEAM_COL = ['#2b6fd0', '#d33a3a'];
 export const PLAYER_COL = ['#2b6fd0', '#d33a3a', '#2f9a4a', '#e0a21a'];
@@ -180,8 +181,9 @@ function drawDropperDecor(x, sk, L) {
     shape(R([[-7, 3], [7, 3], [7, 9], [-7, 9]]), '#2d303a', 1.6);
   }
 }
-function boardSprite(col, L) {
-  const key = col + L.id;
+function boardSprite(col, L, boxId) {
+  const skin = L.theme ? null : SKIN[boxId];   // Themen-Boxen: gleiche Elemente, eigene Optik
+  const key = col + L.id + (skin ? boxId : '');
   if (BOARD[key]) return BOARD[key];
   const sc = Math.min(2, DPR), W = BW + 40, H = BH + TOP + 50, fr = [];
   for (let f = 0; f < 3; f++) {
@@ -192,10 +194,11 @@ function boardSprite(col, L) {
     // Hintergrund in Boxfarbe, begrenzt durch Wände
     x.save(); x.beginPath(); L.poly.forEach((q, i) => i ? x.lineTo(q[0], Math.max(q[1], -TOP)) : x.moveTo(q[0], Math.max(q[1], -TOP))); x.closePath(); x.clip();
     const night = L.theme === 'halloween';
-    if (night) { const ng = x.createLinearGradient(0, -TOP, 0, 400); ng.addColorStop(0, '#2d2350'); ng.addColorStop(.55, '#4d3b82'); ng.addColorStop(1, '#6b4a8c'); x.fillStyle = ng; x.fillRect(-20, -TOP, W, H); nightDecor(x, sk, f); }
+    if (skin) skin.bg(x, sk, f);
+    else if (night) { const ng = x.createLinearGradient(0, -TOP, 0, 400); ng.addColorStop(0, '#2d2350'); ng.addColorStop(.55, '#4d3b82'); ng.addColorStop(1, '#6b4a8c'); x.fillStyle = ng; x.fillRect(-20, -TOP, W, H); nightDecor(x, sk, f); }
     else { x.fillStyle = '#f6efd9'; x.fillRect(-20, -TOP, W, H);
     x.globalAlpha = .22; x.fillStyle = col; x.fillRect(-20, -TOP, W, H); x.globalAlpha = 1; }
-    x.strokeStyle = night ? 'rgba(255,255,255,.05)' : 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; for (let i = -TOP; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
+    if (!skin) x.strokeStyle = night ? 'rgba(255,255,255,.05)' : 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; if (!skin) for (let i = -TOP; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
     // Zielzone: Streifen zum Becher
     x.globalAlpha = .18; x.fillStyle = '#ffd45a'; x.fillRect(L.goal[0], L.goal[1], L.goal[2], L.goal[3]); x.globalAlpha = 1;
     x.restore();
@@ -212,8 +215,9 @@ function boardSprite(col, L) {
       sk.strokeStyle = INK; x.strokeStyle = INK;
     }
     x.strokeStyle = INK; x.lineWidth = 3.6;
-    L.pegs.forEach(p => {
+    L.pegs.forEach((p, pi) => {
       if (L.theme === 'halloween') { tombstone(x, sk, p); return; }
+      if (skin) { (p[3] ? skin.bump : skin.peg)(x, sk, p, pi); return; }
       x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = p[3] ? '#e0533a' : '#d9c9a0'; x.fill();
       sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke();
       if (p[3]) { sk.beginPath(); sk.arc(p[0], p[1], p[2] + 4.5, 0, 7); sk.lineWidth = 1.6; sk.strokeStyle = 'rgba(224,83,58,.7)'; sk.stroke(); sk.strokeStyle = INK; x.fillStyle = '#fff'; x.beginPath(); x.arc(p[0], p[1], p[2] * .38, 0, 7); x.fill(); }
@@ -242,7 +246,7 @@ function drawPourer(g, boxId, s, tm) {
 export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
   const k = W / (BW + 16);   // 8 Einheiten Rand links und rechts, damit die Wandlinien nicht am Bildrand abgeschnitten werden
   g.save(); g.scale(k, k); g.translate(8, 170);
-  const L = s.L || layoutOf(boxId), B = boardSprite(col || '#d9a441', L);
+  const L = s.L || layoutOf(boxId), B = boardSprite(col || '#d9a441', L, boxId);
   g.drawImage(B.fr[((tf % 3) + 3) % 3], -20, -TOP, B.W, B.H);
   // Windräder (drehen sich mit der Simulationszeit), handgezeichnet wie alles andere: wackelige Kontur, versetzte Füllung, Schraffur
   // Wind: gestrichelte Streifen laufen nach außen; Kanonen blitzen beim Abschuss
