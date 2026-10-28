@@ -63,15 +63,6 @@ export function buildLayout(def) {
     poly: S.poly, outline: S.outline, goal: [BW / 2 - goalX / 2, 330, goalX, 70]
   };
 }
-// Kleinbox: gerade Wände, unten links und rechts Gitter; rechts darüber zwei Fangkörbe; nur durch die Mitte kommt man zum Becher
-const KLEIN_PEGS = [];
-for (let r = 0; r < 7; r++) for (let i = 0; i < (r % 2 ? 6 : 7); i++) KLEIN_PEGS.push([(r % 2 ? 48 : 26) + i * 41, 34 + r * 33, 5.5, (r === 3 && (i === 1 || i === 4)) ? 1 : 0]);
-const KLEIN_DEF = {
-  id: 'klein', shape: { sh: 372, half: 42 }, pegs: KLEIN_PEGS,
-  grates: [[0, 346, 108, 380], [BW - 108, 346, BW, 380]],
-  cups: [{ x0: 206, y0: 268, x1: 258, y1: 296 }, { x0: 236, y0: 322, x1: 290, y1: 350 }]
-};
-// Gefühlsbox (nach der Zeichnung von Erik und Thore): Stifte oben, zwei Gitterablagen, Propeller, Flummi, zwei Kanonen und Wind an den Seiten
 // Gefühlsbox: Dropper aus dem Editor (von Erik und Thore gebaut): Gitterablagen oben, Propeller, Flummi und starker Wind an den Seiten unten
 const FEEL_DEF = {
   id: 'gefuehl', shape: { sh: 175, half: 15 },
@@ -81,8 +72,8 @@ const FEEL_DEF = {
   grids: [[0, 40, 100, 60], [200, 60, 302, 38]]
 };
 const STD_DEF = { id: 'standard', shape: { sh: 175, half: 15 }, pegs: PEGS, shelves: SHELVES, spinners: SPINNERS };
-export const DEFS_DROPPER = { standard: STD_DEF, klein: KLEIN_DEF, gefuehl: FEEL_DEF };
-export const LAYOUTS = { standard: buildLayout(STD_DEF), klein: buildLayout(KLEIN_DEF), gefuehl: buildLayout(FEEL_DEF) };
+export const DEFS_DROPPER = { standard: STD_DEF, gefuehl: FEEL_DEF };
+export const LAYOUTS = { standard: buildLayout(STD_DEF), gefuehl: buildLayout(FEEL_DEF) };
 export const layoutOf = id => LAYOUTS[id] || LAYOUTS.standard;
 
 export function createBox(seed, n, layout) {

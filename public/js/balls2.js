@@ -13,7 +13,7 @@ export function shot(sim, b, e, sp, ang) {
   if (ang) v = rot2(v, ang);
   return newObj(sim, sp.k || 'bullet', b, b.x, b.y, {
     vx: v[0], vy: v[1], r: sp.r, dmg: sp.dmg, life: sp.life || 3, proj: true, vis: sp.vis, pierce: sp.pierce, pcd: sp.pcd,
-    stun: sp.stun, burnS: sp.burnS, burnD: sp.burnD, leech: sp.leech, speed: sp.speed, turn: sp.turn
+    stun: sp.stun, burnS: sp.burnS, burnD: sp.burnD, leech: sp.leech, speed: sp.speed, turn: sp.turn, over: sp.over
   });
 }
 // Zeitgeber: gibt true zurück, wenn ausgelöst wird
@@ -626,5 +626,5 @@ for (const box in BOX_OF) for (const id of BOX_OF[box]) {
   BALL_IDS.push(id);
 }
 export const BOXES = BOX_OF;
-export const BOX_IDS = ['standard', 'weltraum', 'kueche', 'sport', 'elemente', 'ozean', 'suess', 'familie', 'dino', 'klein', 'gefuehl', 'halloween'];
+export const BOX_IDS = ['standard', 'weltraum', 'kueche', 'sport', 'elemente', 'ozean', 'suess', 'familie', 'dino', 'alles', 'klein', 'gefuehl', 'halloween'];
 export function ballsInBox(box) { return BALL_IDS.filter(id => DEFS[id].box === box); }

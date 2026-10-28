@@ -13,6 +13,7 @@ const THEMES = {
   familie: { body: '#e8725a', lid: '#ffd9a8', glow: '#ffe6a8' },
   dino: { body: '#6aa84f', lid: '#c9b88a', glow: '#e8ffb0' },
   klein: { body: '#3b3b4c', lid: '#25252f', glow: '#d9c8ff' },
+  alles: { body: '#7bd36a', lid: '#ffd45a', glow: '#fff2a0' },
   gefuehl: { body: '#8fd16a', lid: '#ffe14a', glow: '#ffd0f0' },
   halloween: { body: '#f58a1f', lid: '#d96e0c', glow: '#ffe14a' }
 };
@@ -90,6 +91,12 @@ const BODY = {
     c.lineWidth = 2; c.strokeStyle = '#6a6a80'; c.beginPath(); c.moveTo(27, 62); c.quadraticCurveTo(50, 67, 73, 62); c.moveTo(27, 74); c.quadraticCurveTo(50, 79, 73, 74); c.stroke(); c.strokeStyle = INK;
     c.lineWidth = 3; [[40, 66], [60, 66]].forEach((p, i) => { c.beginPath(); c.arc(p[0], p[1], 3.4, 0, 7); FS(c, '#fff'); c.fillStyle = INK; c.beginPath(); c.arc(p[0] + .6, p[1] + .4, 1.5, 0, 7); c.fill(); });
     c.globalAlpha = .55 + .4 * Math.abs(Math.sin(t * 3)); star4(c, 66, 56, 3, '#ffe36a'); c.globalAlpha = 1;
+  },
+  alles(c, t) {   // bunte Streifen in allen Farben
+    c.lineWidth = 0;
+    ['#ff6a6a', '#ffb347', '#ffe14a', '#7bd36a', '#4fa3e8', '#a77ae8'].forEach((col, i) => { c.fillStyle = col; c.fillRect(21 + i * 9.7, 51, 9.7, 36); });
+    c.lineWidth = 3; c.strokeStyle = INK;
+    for (let i = 0; i < 3; i++) { const by = Math.sin(t * 3 + i * 1.7) * 1.2; c.beginPath(); c.arc(35 + i * 15, 70 + by, 4.2, 0, 7); FS(c, '#ffffff'); c.fillStyle = INK; c.beginPath(); c.arc(35 + i * 15, 70 + by, 1.6, 0, 7); c.fill(); }
   },
   gefuehl(c, t) {
     // drei Farbfelder mit je einem Gesicht: wütend, normal, fröhlich (nach der Zeichnung von Erik und Thore)
@@ -174,6 +181,17 @@ const LID = {
   klein(c, t) {
     c.lineWidth = 3; c.beginPath(); c.arc(35, -19, 4.5, 0, 7); FS(c, '#6a6a80');
     c.globalAlpha = .6 + .3 * Math.sin(t * 4); star4(c, 50, -10, 3, '#d9c8ff'); c.globalAlpha = 1;
+  },
+  alles(c, t) {   // drei Stängel mit Blättern
+    const sw = Math.sin(t * 2.4) * 1.5;
+    c.lineWidth = 3;
+    [[16, -24, -1], [35, -34, 0], [54, -26, 1]].forEach((p, i) => {
+      const x = p[0], top = p[1], d = p[2], s2 = sw * (i % 2 ? -1 : 1);
+      c.strokeStyle = INK; c.lineWidth = 3.4; c.beginPath(); c.moveTo(x, -16); c.quadraticCurveTo(x + d * 3 + s2, top / 2 - 8, x + d * 5 + s2 * 1.5, top); c.stroke();
+      [[-1, .5], [1, .72]].forEach(([sd, h]) => { const lx = x + d * 3 * h + s2 * h, ly = -16 + (top + 16) * h; c.beginPath(); c.moveTo(lx, ly); c.quadraticCurveTo(lx + sd * 9, ly - 8, lx + sd * 12, ly - 1); c.quadraticCurveTo(lx + sd * 7, ly + 1, lx, ly); c.closePath(); FS(c, '#58b848'); });
+      c.beginPath(); c.moveTo(x + d * 5 + s2 * 1.5, top); c.quadraticCurveTo(x + d * 5 - 5, top - 9, x + d * 5 + 1, top - 15); c.quadraticCurveTo(x + d * 5 + 7, top - 9, x + d * 5 + s2 * 1.5, top); c.closePath(); FS(c, '#6fd45a');
+    });
+    c.lineWidth = 3;
   },
   gefuehl(c, t) {
     // Schleife aus zwei großen blauen Schlaufen

@@ -9,12 +9,13 @@ export const BOX_LIST = [
   { id: 'suess', name: 'Süßigkeiten-Box', price: 150, cur: 'coins', col: '#e85fa5', desc: 'Lollis, Donuts und der Zuckerkönig.' },
   { id: 'familie', name: 'Familien-Box', price: 300, cur: 'coins', col: '#e8725a', desc: 'Die ganze Familie: Menschen und Tiere.' },
   { id: 'dino', name: 'Dino-Box', price: 200, cur: 'coins', col: '#6aa84f', desc: 'Raptoren, Panzerechsen und der T-Rex.' },
-  { id: 'klein', name: 'Kleinbox', price: 350, cur: 'coins', col: '#3a3a48', desc: 'Winzige Bälle mit großer Wirkung, dazu ein mythischer Riese.' },
+  { id: 'alles', name: 'Allesbox', price: 350, cur: 'coins', col: '#5fc27a', desc: 'Winzige Bälle mit großer Wirkung, dazu ein mythischer Riese.' },
+  { id: 'klein', name: 'Kleinbox', price: 450, cur: 'coins', col: '#3a3a48', desc: 'Magnete, Fragezeichen und eine mythische Kobra.' },
   { id: 'gefuehl', name: 'Gefühlsbox', price: 450, cur: 'coins', col: '#e86aa8', desc: 'Fröhlich, wütend, ängstlich ...: elf Gefühle und der Gefühlsherrscher.' },
   { id: 'halloween', name: 'Halloween-Box', price: 10, cur: 'tokens', col: '#e8761d', desc: 'Nur bis Ende Oktober! Kostet Halloween-Marken.', until: Date.UTC(2026, 9, 31, 23, 0, 0) }
 ];
-// Eigene Chancen (in %) für Boxen, denen Seltenheiten fehlen: Kleinbox hat nur Selten, Episch und Mythisch; Episch und Mythisch behalten ihre Werte, Selten bekommt den Rest
-export const BOX_RARITY = { klein: { selten: 89.5, episch: 10, mythisch: .5 } };
+// Eigene Chancen (in %) für Boxen, denen Seltenheiten fehlen: Allesbox hat nur Selten, Episch und Mythisch; Episch und Mythisch behalten ihre Werte, Selten bekommt den Rest
+export const BOX_RARITY = { alles: { selten: 89.5, episch: 10, mythisch: .5 } };
 export const BOX_BY_ID = Object.fromEntries(BOX_LIST.map(b => [b.id, b]));
 // 1. November 2026, 00:00 Uhr deutscher Zeit
 export const EVENT_END = BOX_BY_ID.halloween.until;

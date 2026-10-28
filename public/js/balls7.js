@@ -1,6 +1,6 @@
 // Kleinbox und Gefühlsbox (Ideen von Erik und Thore). Deterministisch wie balls2.js.
-import { DT, hurt, fx, rand, nearestEnemy, steer, addBall, len } from './core.js';
-import { DEFS, BALL_IDS, RARITY, newObj, clampPt } from './balls.js';
+import { DT, hurt, fx, rand, nearestEnemy, steer, addBall, len, stun, segDist } from './core.js';
+import { DEFS, BALL_IDS, RARITY, OBJS, newObj, clampPt } from './balls.js';
 import { shot, tick } from './balls2.js';
 
 export const TUNE = { expR: 48, expFuse: .9, expCd: .7, expT0: 3, expProt: .6, helpCap: 3, helpStep: 3, helpHp: .5 };   // Stellschrauben (werden beim Balancing verändert)
@@ -206,6 +206,121 @@ const N = {
     }
   }
 };
+/* ================= Kleinbox ================= */
+// Mauer (Allesherr): hält gegnerische Bälle und Schüsse auf, seine eigenen Magnet-Schüsse fliegen darüber
+OBJS.mauer = {
+  update(o, sim) {
+    o.life -= DT;
+    if (o.life <= 0) { o.dead = true; return; }
+    for (const p of sim.objs) {
+      if (p.dead || !p.proj || p.over || p.team === o.team) continue;
+      if (segDist(p.x, p.y, o.x1, o.y1, o.x2, o.y2) < (p.r || 4) + 3) { p.dead = true; fx(sim, 'block', p.x, p.y, 0); }
+    }
+    for (const b of sim.balls) {
+      if (b.dead || b.team === o.team) continue;
+      const dx = o.x2 - o.x1, dy = o.y2 - o.y1, l2 = dx * dx + dy * dy;
+      let t = l2 ? ((b.x - o.x1) * dx + (b.y - o.y1) * dy) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
+      const cx = o.x1 + dx * t, cy = o.y1 + dy * t, ex = b.x - cx, ey = b.y - cy, d = len(ex, ey), rr = b.r + 4;
+      if (d >= rr) continue;
+      const nx = d > .001 ? ex / d : 0, ny = d > .001 ? ey / d : 1;
+      b.x = cx + nx * rr; b.y = cy + ny * rr;
+      const vn = b.vx * nx + b.vy * ny;
+      if (vn < 0) { b.vx -= 2 * vn * nx; b.vy -= 2 * vn * ny; }
+    }
+  }
+};
+const frag = (b, sim) => { let n = 0; for (const x of sim.balls) if (!x.dead && x.st.boss === b.id) n++; return n; };
+Object.assign(N, {
+  allesherr: {
+    name: 'Allesherr', rarity: 'selten', hp: 105, speed: 130, r: 18, dmg: 'Mittel',
+    desc: 'Baut kurze Mauern, die Gegner und deren Schüsse aufhalten. Nur er schießt über die Mauern: seine Magnete machen Schaden.',
+    strong: 'Fernkämpfer-Gegner, Rammer', weak: 'Flinke Nahkämpfer',
+    contact: (b, sim) => 5 + sim.t * .05, contactCd: .5,
+    init(b) { b.st.cd = 1; b.st.wall = 2; },
+    update(b, sim) {
+      const e = nearestEnemy(sim, b);
+      if (!e) return;
+      b.st.wall -= DT;
+      if (b.st.wall <= 0) {
+        let n = 0; for (const o of sim.objs) if (o.k === 'mauer' && o.owner === b.id && !o.dead) n++;
+        if (n < 2) {
+          b.st.wall = 4.5;
+          const dx = e.x - b.x, dy = e.y - b.y, l = len(dx, dy) || 1, ux = dx / l, uy = dy / l, cx = clampPt(b.x + ux * 52), cy = clampPt(b.y + uy * 52);
+          newObj(sim, 'mauer', b, cx, cy, { x1: cx - uy * 24, y1: cy + ux * 24, x2: cx + uy * 24, y2: cy - ux * 24, life: 8 });
+          fx(sim, 'wall', cx, cy, 0);
+        } else b.st.wall = 1;
+      }
+      if (tick(b, 1.5)) shot(sim, b, e, { speed: 250, r: 5, dmg: 9 + sim.t * .1, vis: 'magnet', life: 3, lead: .35, over: true });
+    }
+  },
+  rallaxa: {
+    name: 'Rallaxa', rarity: 'episch', hp: 140, speed: 125, r: 20, dmg: 'Hoch',
+    desc: 'Ein schwarzer Magnet. Kommt ihr ein Gegner zu nah, hält sie ihn kurz fest. Danach muss sie sich aufladen.',
+    strong: 'Nahkämpfer', weak: 'Fernkämpfer',
+    contact: (b, sim) => 14 + sim.t * .15, contactCd: .5,
+    init(b) { b.st.cd = 2; b.st.charge = 0; },
+    update(b, sim) {
+      if (b.st.cd > 0) { b.st.cd -= DT; b.st.charge = 1 - Math.max(0, b.st.cd) / 6; return; }
+      b.st.charge = 1;
+      for (const e of sim.balls) {
+        if (e.dead || e.team === b.team || e.stun > 0 || e.stunImm > 0) continue;
+        if (len(e.x - b.x, e.y - b.y) < b.r + e.r + 28) { e.hold = 1.5; stun(sim, e, 1.5); b.st.cd = 6; fx(sim, 'hold', e.x, e.y, e.r); break; }
+      }
+    }
+  },
+  frallas: {
+    name: 'Frallas', rarity: 'legendaer', hp: 150, speed: 135, r: 19, dmg: 'Hoch',
+    desc: 'Ein Fragezeichen ohne Gesicht. Wer ihm Kontaktschaden zufügt, bekommt einen kleinen ?-Ball auf den Hals (höchstens vier). Ist Frallas besiegt, ist der Kampf vorbei.',
+    strong: 'Gegner mit wenig Schaden', weak: 'Flächenschaden',
+    contact: (b, sim) => 15 + sim.t * .15, contactCd: .5,
+    init(b) { b.st.nx = 0; },
+    onHurt(t, amt, src, kind, sim) {
+      if (kind !== 'contact' || t.dead || sim.t < t.st.nx || frag(t, sim) >= 4) return;
+      t.st.nx = sim.t + 1;
+      addHelper(sim, t, 'framini');
+    }
+  },
+  framini: {
+    name: '?-Ball', minion: true, rarity: 'selten', hp: 22, speed: 150, r: 9, dmg: 'Niedrig', dm: 1.2,
+    desc: 'Ein kleiner Fragezeichen-Ball.', strong: '-', weak: '-',
+    contact: (b, sim) => 8 + sim.t * .1, contactCd: .5
+  },
+  blauast: {
+    name: 'Blauast', rarity: 'legendaer', hp: 160, speed: 130, r: 19, dmg: 'Hoch',
+    desc: 'Dreht sich mit roten Augen. Startet mit einem Helfer, der genauso stark ist: Solange der Helfer lebt, kann Blauast keinen Schaden nehmen.',
+    strong: 'Lange Kämpfe', weak: 'Flächenschaden',
+    contact: (b, sim) => 15 + sim.t * .15, contactCd: .5,
+    takes: (b, sim) => (frag(b, sim) ? 0 : 1),
+    init(b, sim) {
+      const h = addBall(sim, 'blauhelfer', b.team, b.slot, b.x + (b.x < 150 ? 34 : -34), b.y, b.x < 150 ? 0 : 180, {});
+      h.st.boss = b.id; b.st.shield = 1;
+    },
+    update(b, sim) { b.st.shield = frag(b, sim) > 0; }
+  },
+  blauhelfer: {
+    name: 'Blau-Helfer', rarity: 'legendaer', hp: 160, speed: 130, r: 19, dmg: 'Hoch',
+    desc: 'Der Helfer von Blauast.', strong: '-', weak: '-',
+    contact: (b, sim) => 15 + sim.t * .15, contactCd: .5
+  },
+  kobra: {
+    name: 'Kobra', rarity: 'mythisch', hp: 440, speed: 140, r: 22, dmg: 'Extrem',
+    desc: 'Eine Schlange im Inneren und keine besonderen Fähigkeiten: Einfach sehr viel Leben und sehr viel Schaden.',
+    strong: 'Fast alles', weak: 'Bomben',
+    contact: (b, sim) => 30 + sim.t * .3, contactCd: .5
+  },
+  bladro: {
+    name: 'Bladro', rarity: 'gewoehnlich', hp: 90, speed: 145, r: 16, dmg: 'Mittel',
+    desc: 'Ein Blatt im Inneren. Schickt Blätter los, die in Schlangenlinie zum Gegner segeln.',
+    strong: 'Langsame Gegner', weak: 'Schnelle Gegner',
+    contact: (b, sim) => 6 + sim.t * .06, contactCd: .5,
+    init(b) { b.st.cd = 1; },
+    update(b, sim) {
+      if (!tick(b, 1.7)) return;
+      const e = nearestEnemy(sim, b);
+      if (e) { shot(sim, b, e, { speed: 190, r: 5, dmg: 7 + sim.t * .08, vis: 'blatt', turn: 1.3, life: 3.4, lead: 0 }); shot(sim, b, e, { speed: 170, r: 5, dmg: 7 + sim.t * .08, vis: 'blatt', turn: 1.3, life: 3.4, lead: 0 }, .5); }
+    }
+  }
+});
 // Liebender Ball: wie der Vampirball (klammert sich fest und saugt), heilt aber zusätzlich um den ausgeteilten Schaden
 N.liebend = Object.assign({}, DEFS.vampir, {
   name: 'Liebender Ball', rarity: 'legendaer', hp: 125, speed: 145, r: 18, dmg: 'Hoch', lifesteal: .5,
@@ -214,9 +329,10 @@ N.liebend = Object.assign({}, DEFS.vampir, {
 });
 
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
-const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1 };
+const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1, allesherr: 1.15, rallaxa: 1.55, frallas: 1.65, blauast: 0.49, kobra: 0.73, bladro: 1.4 };
 const BOX_OF = {
-  klein: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
+  alles: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
+  klein: ['allesherr', 'rallaxa', 'frallas', 'blauast', 'kobra', 'bladro'],
   gefuehl: ['froh', 'wuet', 'gelassen', 'verlegen', 'aengstlich', 'neugierig', 'stolz', 'neid', 'liebend', 'gefuehl', 'herrscher']
 };
 for (const box in BOX_OF) for (const id of BOX_OF[box]) {
@@ -226,3 +342,5 @@ for (const box in BOX_OF) for (const id of BOX_OF[box]) {
   BALL_IDS.push(id);
 }
 DEFS.minihelfer = N.minihelfer;   // Helfer: nicht in Boxen und nicht in der Sammlung
+DEFS.framini = N.framini; DEFS.blauhelfer = N.blauhelfer;
+Object.defineProperty(N.blauhelfer, 'dm', { get() { return N.blauast.dm; } });   // der Helfer ist genauso stark wie Blauast

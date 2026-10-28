@@ -121,7 +121,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   else if (type === 'schwarzloch') { ringJ(g, 0, 0, 38 + Math.sin(tm * 3) * 4, 1.2, 'rgba(139,79,201,.4)', tf, b.id); }
   else if (type === 'tornado') { const p = partSprite('swirl'); spr(g, p, 0, 0, f, (b.r + 14) / p.rad, tm * 4, .55); }
   /* Körper */
-  g.save(); g.rotate(tilt); g.scale(sx * bob * k, sy * bob * k);
+  g.save(); g.rotate(type === 'blauast' && !b.preview ? tm * 4 : tilt); g.scale(sx * bob * k, sy * bob * k);
   if (type === 'herrscher') {   // Regenbogen-Körper, dreht sich langsam
     const gr = g.createConicGradient ? g.createConicGradient(tm * 1.6, 0, 0) : g.createLinearGradient(-R0, -R0, R0, R0);
     ['#ff3b3b', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#8a5cff', '#ff3bd0', '#ff3b3b'].forEach((c, i, a) => gr.addColorStop(i / (a.length - 1), c));
@@ -174,6 +174,14 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   if (type === 'kleinexplus') { g.strokeStyle = INK; g.lineWidth = 2; g.lineCap = 'round'; const sk = sketchCtx(g, 2.7 + (tf % 3) * 1.713, 18); sk.lineWidth = 2; for (let i = 0; i < 4; i++) { const a = tm * 6 + i * 1.571; sk.beginPath(); sk.arc(0, 0, b.r + 7, a, a + .7); sk.stroke(); } }
   if (type === 'gefuehl') { g.save(); g.globalAlpha = (ghost ? .45 : 1) * .55; const sk = sketchCtx(g, 4.4 + (tf % 3) * 1.713, 26); g.strokeStyle = INK; g.lineWidth = 1.4; sk.lineWidth = 1.4; for (let i = 0; i < 4; i++) { const a = tm * .9 + i * 1.571; g.fillStyle = '#a79fb6'; sk.beginPath(); sk.ellipse(Math.cos(a) * b.r * 1.05, Math.sin(a) * b.r * .95, b.r * .36, b.r * .26, a, 0, 7); sk.fill(); sk.stroke(); } g.restore(); }
   if (b.silenced && !b.preview) { g.save(); g.globalAlpha *= .95; const sk = sketchCtx(g, 6.6 + (tf % 3) * 1.713, 20); g.lineJoin = g.lineCap = 'round'; g.fillStyle = '#e8e4d6'; g.strokeStyle = INK; g.lineWidth = 1.8; sk.lineWidth = 1.8; sk.beginPath(); sk.arc(0, -b.r - 24, 8, 0, 7); sk.fill(); sk.stroke(); sk.beginPath(); sk.moveTo(-5, -b.r - 19); sk.lineTo(5, -b.r - 29); sk.stroke(); g.restore(); }
+  if (type === 'allesherr' && !b.preview) { const a = tm * 2.6; g.save(); g.translate(Math.cos(a) * (b.r + 9), Math.sin(a) * (b.r + 9)); g.rotate(a + 1.57); spr(g, partSprite('magnet'), 0, 0, f, 1, 0); g.restore(); }
+  if (type === 'rallaxa' && !b.preview) {
+    const ch = st.charge || 0;
+    if (ch < 1) { g.save(); g.strokeStyle = 'rgba(80,80,100,.8)'; g.lineWidth = 2.6; g.lineCap = 'round'; const sk = sketchCtx(g, 8.2 + (tf % 3) * 1.713, 18); sk.lineWidth = 2.6; sk.beginPath(); sk.arc(0, 0, b.r + 6, -1.57, -1.57 + ch * 6.283); sk.stroke(); g.restore(); }
+    else ringJ(g, 0, 0, b.r + 7, 2.2, 'rgba(60,60,90,.55)', tf, b.id + 8);
+  }
+  if (b.hold > 0 && !b.preview) { for (let i = 0; i < 3; i++) ringJ(g, 0, 0, b.r + 5 + i * 5 + Math.sin(tm * 10 + i) * 1.5, 2.2, 'rgba(40,40,60,' + (.7 - i * .18).toFixed(2) + ')', tf, b.id + 11 + i); }
+  if (type === 'blauast' && st.shield && !b.preview) { g.save(); g.fillStyle = 'rgba(170,220,255,.28)'; g.beginPath(); g.arc(0, 0, b.r + 6, 0, 7); g.fill(); g.restore(); ringJ(g, 0, 0, b.r + 6, 2.4, 'rgba(255,255,255,.95)', tf, b.id + 4); ringJ(g, 0, 0, b.r + 6, 1.2, INK, tf + 1, b.id + 6); }
   const H = HELD[type];
   if (H && !b.preview) {
     const e = nearestEnemy(sim, b), ta = e ? Math.atan2(e.y - b.y, e.x - b.x) : (v.aim == null ? 0 : v.aim);
@@ -222,6 +230,14 @@ export const GROUND = { puddle: 1, fire: 1, spike: 1, bomb: 1, meteor: 1, mine: 
 export function drawObj(g, o, sim, tf, tm) {
   const f = tf + (o.owner || 0) * 3;
   switch (o.k) {
+    case 'mauer': {   // Ziegelmauer, handgezeichnet
+      const dx = o.x2 - o.x1, dy = o.y2 - o.y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L * 5, ny = dx / L * 5, grow = Math.min(1, (8 - o.life) * 5 + .2), fade = Math.min(1, o.life * 1.5);
+      const sk = sketchCtx(g, 2.3 + (tf % 3) * 1.713, 22); g.save(); g.globalAlpha = fade; g.lineJoin = g.lineCap = 'round'; g.strokeStyle = INK; g.lineWidth = 2.4; sk.lineWidth = 2.4;
+      const mx = (o.x1 + o.x2) / 2, my = (o.y1 + o.y2) / 2, ax = mx - dx / 2 * grow, ay = my - dy / 2 * grow, bx = mx + dx / 2 * grow, by = my + dy / 2 * grow;
+      g.fillStyle = '#d98a5a'; sk.beginPath(); sk.moveTo(ax + nx, ay + ny); sk.lineTo(bx + nx, by + ny); sk.lineTo(bx - nx, by - ny); sk.lineTo(ax - nx, ay - ny); sk.closePath(); sk.fill(); sk.stroke();
+      g.lineWidth = 1.4; sk.lineWidth = 1.4; sk.beginPath(); sk.moveTo(ax, ay); sk.lineTo(bx, by); for (let i = 1; i < 5; i++) { const t = i / 5, px = ax + (bx - ax) * t, py = ay + (by - ay) * t; sk.moveTo(px + nx, py + ny); sk.lineTo(px - nx, py - ny); } sk.stroke();
+      g.restore(); break;
+    }
     case 'spike': { const a = Math.atan2(o.ny, o.nx) + 1.5708; spr(g, objSprite('spike'), o.x, o.y, f, 1, a); break; }
     case 'bullet': case 'frost': case 'bee': {
       const key = o.vis || (o.k === 'bullet' ? 'bullet' : o.k), sp = objSprite(key), a = Math.atan2(o.vy, o.vx);

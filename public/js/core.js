@@ -210,6 +210,7 @@ export function stepSim(sim) {
     if (b.stun > 0) { b.stun -= DT; if (b.stun <= 0) { b.stun = 0; b.stunImm = 1.5; } }
     else if (b.stunImm > 0) b.stunImm -= DT;
     b.noMove = false;
+    if (b.hold > 0) { b.hold -= DT; b.noMove = true; }   // festgehalten (Rallaxa): bleibt stehen
     b.silenced = b.silNext; b.silNext = false;   // Neugieriger Ball: Fähigkeiten des Gegners aus (wirkt mit einem Schritt Verzögerung)
     if (b.stun <= 0 && b.def.update && !b.silenced) b.def.update(b, sim);
     if (!b.noMove) moveBall(sim, b);
