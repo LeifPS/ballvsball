@@ -402,7 +402,7 @@ Object.assign(N, {
     }
   },
   saturno: {
-    name: 'La Vaca Saturno', rarity: 'mythisch', hp: 270, speed: 135, r: 23, dmg: 'Extrem',
+    name: 'La Vaca Saturno', rarity: 'mythisch', hp: 235, speed: 135, r: 23, dmg: 'Extrem',
     desc: 'Eine Kuh mit Saturn-Ringen. Schleudert dreimal drei Ringe, die durch alles hindurchschneiden.',
     strong: 'Fast alles', weak: 'Bomben',
     contact: (b, sim) => 26 + sim.t * .3, contactCd: .5,
@@ -422,7 +422,7 @@ N.liebend = Object.assign({}, DEFS.vampir, {
 });
 
 // Schadensfaktoren aus dem Balance-Lauf (siehe tools/balance.js)
-const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1, allesherr: 1.15, rallaxa: 1.55, frallas: 1.65, blauast: 0.49, kobra: 0.73, bladro: 1.4, tungtung: 1.25, tralalero: 2.5, bombardiro: 0.9, cappuccino: 2, ballerina: 2.15, brr: 1.9, lirili: 1, saturno: 0.8 };
+const DM7 = { kleinstachel: 6.14, kleinerhelfer: 1, kleinexplus: 1, kleinergross: 2.15, froh: 4.28, wuet: 1.23, gelassen: 1.15, verlegen: .92, aengstlich: 1.55, neugierig: .51, stolz: 2.29, neid: 1.6, liebend: .95, gefuehl: 0.86, herrscher: 1, allesherr: 1, rallaxa: 1.55, frallas: 1.65, blauast: 0.49, kobra: 0.73, bladro: 1.4, tungtung: 1.25, tralalero: 2.5, bombardiro: 0.9, cappuccino: 2, ballerina: 2.15, brr: 1.9, lirili: 1, saturno: 0.6 };
 const BOX_OF = {
   klein: ['kleinstachel', 'kleinerhelfer', 'kleinexplus', 'kleinergross'],
   alles: ['allesherr', 'rallaxa', 'frallas', 'blauast', 'kobra', 'bladro'],

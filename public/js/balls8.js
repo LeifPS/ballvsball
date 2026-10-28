@@ -146,7 +146,7 @@ const N = {
     }
   }
 };
-const DM8 = { laub: 1.05, pilz: 4, igel: 1.1, eichhoernchen: 1.6, drachen: 2, vogelscheuche: 0.87, wind: 3, nebel: 3.3, gewitter: 0.8, schirm: 0.85, leuchtturm: 0.75, kapitaen: 0.5 };
+const DM8 = { laub: 1.05, pilz: 4, igel: 1.1, eichhoernchen: 1.6, drachen: 1.8, vogelscheuche: 0.8, wind: 3, nebel: 3.3, gewitter: 0.8, schirm: 0.85, leuchtturm: 0.75, kapitaen: 0.5 };
 const BOX_OF = {
   herbst: ['laub', 'pilz', 'igel', 'eichhoernchen', 'drachen', 'vogelscheuche'],
   sturm: ['wind', 'nebel', 'gewitter', 'schirm', 'leuchtturm', 'kapitaen']
