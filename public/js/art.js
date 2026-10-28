@@ -72,6 +72,19 @@ function whiteOf(cv) {
 
 /* ---------- Ball ---------- */
 // Koordinaten in Arena-Einheiten; tf = Boil-Frame, tm = Sekunden
+let MC = null;
+function moodOverlay(g, frame, side, tm, hot) {
+  if (!MC) MC = document.createElement('canvas');
+  if (MC.width !== frame.width || MC.height !== frame.height) { MC.width = frame.width; MC.height = frame.height; }
+  const m = MC.getContext('2d'), W = MC.width, H = MC.height;
+  m.globalCompositeOperation = 'source-over'; m.clearRect(0, 0, W, H); m.drawImage(whiteOf(frame), 0, 0);
+  m.globalCompositeOperation = 'source-in';
+  const per = W * .9, off = ((tm * (hot ? 1.5 : .45)) % 1) * per, gr = m.createLinearGradient(off - per, off - per, off + per, off + per);
+  const c1 = hot ? 'rgba(255,50,30,.88)' : 'rgba(50,100,230,.85)', c2 = hot ? 'rgba(255,190,40,.78)' : 'rgba(100,150,255,.8)', c0 = hot ? 'rgba(255,90,30,.25)' : 'rgba(70,120,230,.3)';
+  [[0, c0], [.2, c1], [.4, c2], [.6, c0], [.8, c1], [1, c0]].forEach(q => gr.addColorStop(q[0], q[1]));
+  m.fillStyle = gr; m.fillRect(0, 0, W, H);
+  g.save(); g.globalAlpha = hot ? .72 + .28 * Math.sin(tm * 12) : .8; g.drawImage(MC, -side / 2, -side / 2, side, side); g.restore();
+}
 function badge(g, x, y, txt, col, tf) {
   g.save(); g.font = '700 15px "Patrick Hand", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
   const w = g.measureText(txt).width + 12, sk = sketchCtx(g, 5.1 + (tf % 3) * 1.713, 22);
@@ -117,6 +130,8 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   }
   const sp = bodySprite(type === 'erik' && st.emo != null ? 'erik_' + 'wfta'[st.emo] : type === 'gefuehl' && st.mode != null ? 'gefuehl_' + 'fwa'[st.mode] : type, !b.preview);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
+  // Fröhlich/Wütend/Gefühlsball: liegt der Ball hinten, läuft ein Farbverlauf über den Ball (blau und gedämpft = halber Schaden, rot und lodernd = doppelter Schaden)
+  if (!b.preview && st.weak && (type === 'froh' || type === 'wuet' || (type === 'gefuehl' && st.mode < 2))) moodOverlay(g, sp.fr[((f % 3) + 3) % 3], sp.side, tm, type === 'wuet' || (type === 'gefuehl' && st.mode === 1));
   // Weißes Aufblinken: nur die Silhouette des Balls (kein Kreis), bei Treffern kurz, bei Dauerschaden langsam pulsierend
   const pulse = b.dotT > 0 ? .55 * Math.pow(Math.max(0, Math.sin(tm * 13 + b.id)), 2) : 0;
   const fl = Math.max(b.flash > 0 ? b.flash * 6 : 0, pulse) + (tint || 0);
@@ -154,13 +169,6 @@ export function drawBall(g, b, sim, tf, tm, tint) {
     for (let i = 0; i < 9; i++) { const dist = b.r + 8 + i * 15, w = .45 + i * .1; spr(g, p, ax * dist, ay * dist, f + i, w * (.9 + .15 * Math.sin(tm * 14 + i)), 0, .88); }
   }
   /* Gefühle: Zustandsanzeigen */
-  const weakT = type === 'froh' || type === 'wuet' || (type === 'gefuehl' && st.mode < 2);
-  const wk = weakT && st.weak && !b.preview;
-  if (wk) {
-    const isW = type === 'wuet' || (type === 'gefuehl' && st.mode === 1);
-    ringJ(g, 0, 0, b.r + 5, 2.2, isW ? 'rgba(230,50,40,.85)' : 'rgba(110,140,200,.8)', tf, b.id + 3);
-    badge(g, 0, -b.r - 25, isW ? '×2' : '½', isW ? '#e8453c' : '#8fb0e8', tf + b.id);
-  }
   if (type === 'stolz' && st.proud && !b.preview) star(g, 0, -b.r - 20, 4.4 + Math.sin(tm * 6) * .6, '#ffd21f');
   if ((type === 'herrscher' || type === 'kleinexplus') && st.shield) { g.save(); g.fillStyle = 'rgba(170,220,255,.28)'; g.beginPath(); g.arc(0, 0, b.r + 6, 0, 7); g.fill(); g.restore(); ringJ(g, 0, 0, b.r + 6, 2.4, 'rgba(255,255,255,.95)', tf, b.id + 4); ringJ(g, 0, 0, b.r + 6, 1.2, INK, tf + 1, b.id + 6); }
   if (type === 'kleinexplus') { g.strokeStyle = INK; g.lineWidth = 2; g.lineCap = 'round'; const sk = sketchCtx(g, 2.7 + (tf % 3) * 1.713, 18); sk.lineWidth = 2; for (let i = 0; i < 4; i++) { const a = tm * 6 + i * 1.571; sk.beginPath(); sk.arc(0, 0, b.r + 7, a, a + .7); sk.stroke(); } }
