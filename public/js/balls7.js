@@ -217,7 +217,7 @@ OBJS.mauer = {
       if (segDist(p.x, p.y, o.x1, o.y1, o.x2, o.y2) < (p.r || 4) + 3) { p.dead = true; fx(sim, 'block', p.x, p.y, 0); }
     }
     for (const b of sim.balls) {
-      if (b.dead || b.team === o.team) continue;
+      if (b.dead) continue;   // auch der Besitzer selbst wird aufgehalten
       const dx = o.x2 - o.x1, dy = o.y2 - o.y1, l2 = dx * dx + dy * dy;
       let t = l2 ? ((b.x - o.x1) * dx + (b.y - o.y1) * dy) / l2 : 0; t = t < 0 ? 0 : t > 1 ? 1 : t;
       const cx = o.x1 + dx * t, cy = o.y1 + dy * t, ex = b.x - cx, ey = b.y - cy, d = len(ex, ey), rr = b.r + 4;
