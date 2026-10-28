@@ -512,13 +512,13 @@ function multi() {
   const grp = (n, act, title, sub, tc) => {
     const bs = []; for (let i = 0; i < n; i++) bs.push('<span class="mb">' + ball(pick(i + n), 66, .7, i % 2 ? 'data-dark="1"' : '') + '</span>');
     const arr = n === 2 ? bs[0] + '<span class="mvs jit">VS</span>' + bs[1] : n === 3 ? '<span class="mrow">' + bs[0] + '</span><span class="mrow">' + bs[1] + bs[2] + '</span>' : '<span class="mrow">' + bs[0] + bs[1] + '</span><span class="mrow">' + bs[2] + bs[3] + '</span>';
-    const off = n > 2;   // Wartung
+    const off = n > 3;   // Wartung (4 Spieler)
     return '<button class="htile mode' + (n === 2 ? ' two' : '') + (off ? ' off' : '') + '" style="--tc:' + tc + '"' + (off ? ' disabled' : ' data-act="' + act + '"') + '><span class="mart">' + arr + '</span><span class="grow"><b>' + title + '</b><span class="small">' + (off ? 'Gerade wegen Wartung gesperrt' : sub) + '</span></span></button>';
   };
   show('<div class="col">' + backBar('Kampf') +
     '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle, wie viele Spieler kämpfen. Fehlende Spieler füllen Bots auf.</p>' +
     grp(2, 'queue1', '1 gegen 1', 'Der Klassiker: drei Leben', '#ffd9a0') +
-    grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#d6ecff') +
+    grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: drei Leben, nur der Beste verliert keins', '#d6ecff') +
     grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#dff3c8') +
     '<button class="htile mode" style="--tc:#ffe0f0" data-act="friends"><span class="mart"><span class="hv">' + gi('heart', 40, '#ff6f9a') + gi('heart', 30, '#ff9ac4') + '</span><span class="codebig jit" style="font-size:26px;letter-spacing:3px">ABCD</span></span><span class="grow"><b>Mit Freunden</b><span class="small">Raum mit Code, ohne Belohnung</span></span></button></div>');
 }
@@ -579,7 +579,7 @@ function livesHTML(count, max) { let h = ''; for (let i = 0; i < (max || 3); i++
 function matchHeader() {
   const m0 = S.match;
   if (m0.ffa) {
-    const cell = p => { const l = m0.lives[p.team], out = l <= 0; return '<div style="text-align:center;opacity:' + (out ? .45 : 1) + '"><div class="small" style="color:' + PLAYER_COL[p.team] + ';font-weight:700;text-shadow:1px 1px 0 var(--ink);max-width:' + Math.floor(250 / m0.n) + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.slot === m0.you ? 'Du' : esc(p.name)) + '</div>' + livesHTML(l, 2) + '</div>'; };
+    const cell = p => { const l = m0.lives[p.team], out = l <= 0; return '<div style="text-align:center;opacity:' + (out ? .45 : 1) + '"><div class="small" style="color:' + PLAYER_COL[p.team] + ';font-weight:700;text-shadow:1px 1px 0 var(--ink);max-width:' + Math.floor(250 / m0.n) + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.slot === m0.you ? 'Du' : esc(p.name)) + '</div>' + livesHTML(l, m0.n === 3 ? 3 : 2) + '</div>'; };
     return '<div id="mh"><div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);padding-right:52px">' + (m0.friendly ? 'Freundschaftsspiel' : 'Runde ' + m0.round) + '</div><div class="row sb gap6" style="padding-right:4px">' + m0.players.map(cell).join('') + '</div></div>';
   }
   const m = S.match, me = m.players[m.you], my = me.team, en = 1 - my;

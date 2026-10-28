@@ -182,6 +182,16 @@ if (end) {
   await new Promise(r => setTimeout(r, 500));
   ok(err === 'maintenance', 'Mehrspieler gesperrt (Wartung)');
 }
+// Zu dritt: offen, drei Leben für jeden
+{
+  const wsT = await connect(t1); let st = null;
+  wsT._h = m => { if (m.t === 'match_start') st = m; };
+  await new Promise(r => setTimeout(r, 300));
+  wsT.send(JSON.stringify({ t: 'queue', mode: 3 }));
+  for (let i = 0; i < 40 && !st; i++) await new Promise(r => setTimeout(r, 500));
+  ok(st && st.n === 3 && st.lives.length === 3 && st.lives.every(l => l === 3), 'Zu dritt: 3 Spieler mit je 3 Leben');
+  wsT.close();
+}
 // Spielstand übertragen
 {
   const ta = tok(), tb = tok(), tc = tok();

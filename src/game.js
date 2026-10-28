@@ -4,9 +4,9 @@ import { DurableObject } from 'cloudflare:workers';
 import { hash } from './hash.js';
 import { runFight, DEFS, BALL_IDS, DT } from '../public/js/engine.js';
 
-const LIVES = 3, LIVES_FFA = 2;   // Mehrspieler (3 oder 4 Spieler, jeder gegen jeden): weniger Leben, damit es nicht ewig dauert
+const LIVES = 3, LIVES_FFA = 3;   // Mehrspieler (3 oder 4 Spieler, jeder gegen jeden): weniger Leben, damit es nicht ewig dauert
 const QUEUE_WAIT = 15000;
-const MAINT_FFA = true;   // Mehrspieler (3 und 4 Spieler) wegen Wartung gesperrt
+const MAINT_FFA = true;   // Mehrspieler mit 4 Spielern wegen Wartung gesperrt (3 Spieler sind offen)
 const GONE_MS = 12000;   // so lange wartet ein Kampf auf einen getrennten Spieler, bevor er für ihn automatisch weiterläuft
 const PICK_SECS = 15, DIR_SECS = 12;
 const BOT_NAMES = ['Kugel-Karl', 'Rollo', 'Bella Bounce', 'Dotti', 'Prall', 'Hopsi', 'Rumpel', 'Klecks', 'Purzel', 'Mocca', 'Fleck', 'Pünktchen'];
@@ -152,9 +152,9 @@ export class Game extends DurableObject {
     }
     if (!c.user) return;
     switch (m.t) {
-      case 'queue': if (MAINT_FFA && m.mode >= 3) { this.send(c, { t: 'error', code: 'maintenance' }); return; } return this.joinQueue(c, m.mode === 3 ? 3 : m.mode === 4 ? 4 : 1);   // Team-Kampf (2 gegen 2) ist vorerst abgeschaltet
+      case 'queue': if (MAINT_FFA && m.mode >= 4) { this.send(c, { t: 'error', code: 'maintenance' }); return; } return this.joinQueue(c, m.mode === 3 ? 3 : m.mode === 4 ? 4 : 1);   // Team-Kampf (2 gegen 2) ist vorerst abgeschaltet
       case 'unqueue': return this.leaveQueue(c);
-      case 'room_create': if (MAINT_FFA && m.mode >= 3) { this.send(c, { t: 'error', code: 'maintenance' }); return; } return this.roomCreate(c, m.mode === 3 ? 3 : m.mode === 4 ? 4 : 1);
+      case 'room_create': if (MAINT_FFA && m.mode >= 4) { this.send(c, { t: 'error', code: 'maintenance' }); return; } return this.roomCreate(c, m.mode === 3 ? 3 : m.mode === 4 ? 4 : 1);
       case 'room_join': return this.roomJoin(c, String(m.code || '').toUpperCase().trim());
       case 'room_slot': return this.roomSlot(c, m.slot);
       case 'room_leave': return this.roomLeave(c);
@@ -296,7 +296,7 @@ export class Game extends DurableObject {
     const names = shuffle(BOT_NAMES);
     for (const p of players) if (p.bot) p.name = names.pop();
     const m = {
-      id: this.nextMatch++, mode, n, ffa, friendly, players, lives: ffa ? Array(n).fill(LIVES_FFA) : [LIVES, LIVES], outCount: 0, round: 0, phase: 'load',
+      id: this.nextMatch++, mode, n, ffa, friendly, players, lives: ffa ? Array(n).fill(n === 3 ? LIVES_FFA : 2) : [LIVES, LIVES], outCount: 0, round: 0, phase: 'load',
       timer: null, deadline: 0, over: false, aborted: false
     };
     this.matches.set(m.id, m);
