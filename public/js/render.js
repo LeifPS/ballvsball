@@ -270,7 +270,7 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
     }
   }
   if (L.portals) for (const p of L.portals) {   // Geister-Portale: drehende Wirbel
-    const gl = p.hit !== undefined && s.step - p.hit < 20 ? 1 + (20 - (s.step - p.hit)) / 20 * .35 : 1;
+    const dh = p.hit === undefined ? 99 : s.step - p.hit, gl = dh >= 0 && dh < 20 ? 1 + (20 - dh) / 20 * .35 : 1;
     for (const [px, py] of [[p.ax, p.ay], [p.bx, p.by]]) {
       g.save(); g.translate(px, py); g.scale(gl, gl); g.lineCap = 'round'; const sk = sketchCtx(g, 5.5 + (tf % 3) * 1.713, 24); g.lineWidth = 2.6; sk.lineWidth = 2.6;
       g.fillStyle = 'rgba(60,20,110,.75)'; g.strokeStyle = INK; sk.beginPath(); sk.arc(0, 0, p.r, 0, 7); sk.fill(); sk.stroke();
