@@ -1,0 +1,36 @@
+<!doctype html>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Box-Test</title>
+<style>body{font:16px sans-serif;background:#8c6;margin:8px}.g{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}.c{background:#7b5;border-radius:8px;padding:6px;text-align:center}canvas{display:block;margin:0 auto}</style>
+<h3>Box-Test (Mac/iPad): Foto oder Screenshot machen und sagen, welche Nummern normal aussehen</h3>
+<div id="o">Geräte-Pixelverhältnis: <b id="d"></b> · <span id="e"></span></div>
+<div class="g" id="g"></div>
+<script type="module">
+import { drawBoxArt } from './js/boxart.js';
+const dpr = window.devicePixelRatio || 1; document.getElementById('d').textContent = dpr;
+const V = [
+  ['1 wie im Spiel', 1, {}], ['2 Software-Canvas', 1, { willReadFrequently: true }],
+  ['3 Ecken eckig', 1, { bevel: true }], ['4 Auflösung 1', 'r1', {}],
+  ['5 Auflösung 2', 'r2', {}], ['6 Auflösung 3', 'r3', {}],
+  ['7 Software + Auflösung 1', 'r1', { willReadFrequently: true }], ['8 ohne Alpha', 1, { alpha: false }]
+];
+const g = document.getElementById('g'), S = 150, cvs = [];
+for (const [name, mode, opt] of V) {
+  const r = typeof mode === 'string' ? +mode.slice(1) : Math.min(2.5, Math.max(1, dpr));
+  const cv = document.createElement('canvas'); cv.width = cv.height = Math.round(S * r); cv.style.width = cv.style.height = S + 'px';
+  const wrap = document.createElement('div'); wrap.className = 'c'; wrap.appendChild(cv); wrap.append(name); g.appendChild(wrap);
+  let ctx; try { ctx = cv.getContext('2d', { willReadFrequently: !!opt.willReadFrequently, alpha: opt.alpha !== false }); } catch (e) { document.getElementById('e').textContent += e.message; }
+  cvs.push({ cv, ctx, r, opt });
+}
+const bevel = ctx => new Proxy(ctx, { get(t, p) { const v = t[p]; return typeof v === 'function' ? v.bind(t) : v; }, set(t, p, v) { if (p === 'lineJoin') v = 'bevel'; if (p === 'lineCap') v = 'butt'; t[p] = v; return true; } });
+function tick(ms) {
+  requestAnimationFrame(tick);
+  try {
+    for (const { cv, ctx, r, opt } of cvs) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(r, r);
+      drawBoxArt(opt.bevel ? bevel(ctx) : ctx, 'standard', ms / 1000, S);
+    }
+  } catch (e) { document.getElementById('e').textContent = 'Fehler: ' + e.message; }
+}
+requestAnimationFrame(tick);
+</script>
