@@ -173,6 +173,19 @@ if (end) {
   const after = (await api('/api/me', t1)).me.coins;
   ok(after - before === end.coins && end.coins === (end.win ? 40 : 10), 'Belohnung gebucht: ' + end.coins);
 }
+// Kampflog: der Kampf steht in der Liste, ist abrufbar, teilbar und öffentlich ansehbar
+{
+  await new Promise(r => setTimeout(r, 300));
+  const L = await api('/api/log', t1);
+  ok(L.ok && L.items.length >= 1 && L.items[0].mine.length === rounds && L.items[0].res.length === rounds, 'Kampflog listet den Kampf (' + (L.items ? L.items.length : 0) + ')');
+  const G = await api('/api/log/get', t1, { id: L.items[0].id });
+  ok(G.ok && G.rec.rounds.length === rounds && G.rec.rounds.every(r => runFight(r.cfg).winner === r.winner), 'Kampflog: Wiederholung stimmt mit dem Ergebnis überein');
+  const Sh = await api('/api/log/share', t1, { id: L.items[0].id });
+  ok(Sh.ok && Sh.token.length >= 8, 'Teilen-Link erzeugt');
+  const pub = await (await fetch(B + '/api/replay?t=' + Sh.token)).json();
+  ok(pub.ok && pub.rec.rounds.length === rounds, 'Geteilte Wiederholung öffentlich abrufbar');
+  const bad = await fetch(B + '/api/replay?t=nichtda12345'); ok(bad.status === 404, 'Unbekannter Link: 404');
+}
 // Mehrspieler ist wegen Wartung gesperrt
 {
   const wsF = await connect(t1); let err = null;

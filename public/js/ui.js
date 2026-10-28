@@ -108,6 +108,7 @@ function topType() {
   return best || 'stachel';
 }
 function wallet() {
+  if (!S.me) return '';   // Gast (geteilte Wiederholung)
   return '<div class="row gap6">' + (eventLive() ? '<div class="pill" title="Kürbisse">' + tokHTML(S.me.tokens) + '</div>' : '') + '<div class="pill">' + coinHTML(S.me.coins) + '</div></div>';
 }
 function backBar(title, to) {
@@ -185,6 +186,14 @@ async function boot() {
   sndIcon();
   S.token = lget('bvb_token');
   if (!S.token) { S.token = crypto.randomUUID() + crypto.randomUUID(); lset('bvb_token', S.token); }
+  const rp = location.hash.match(/^#replay=([a-z0-9]{6,20})$/);
+  if (rp) {
+    try { const g = await (await fetch('/api/replay?t=' + rp[1])).json(); if (g.rec) { S.guestRec = g.rec; return showRounds(g.rec, 'Geteilter Kampf', 'logexit', false); } } catch (e) { console.error('Wiederholung', e); }
+    history.replaceState(null, '', location.pathname);
+  }
+  return boot2();
+}
+async function boot2() {
   const r = await api('/api/login', {});
   if (r.err === 'need_name') return nameScreen('');
   if (r.err) return netError(r.err);
@@ -222,7 +231,7 @@ function onMsg(m) {
       if (m.ok) {
         S.wsOK = true;
         // Der Server kennt keinen Kampf mehr (Neustart, Abbruch): nicht ewig auf Kampfbildschirmen warten
-        if (S.match && !m.inMatch) { S.match = null; toast('Der Kampf wurde beendet.'); home(); }
+        if (S.match && !S.match.replay && !m.inMatch) { S.match = null; toast('Der Kampf wurde beendet.'); home(); }
       } else toast('Server-Anmeldung fehlgeschlagen.');
       break;
     case 'kicked': S.kicked = true; show('<div class="col center"><h1>Ball gegen Ball</h1><div class="panel"><p>Dein Konto wurde auf einem anderen Gerät oder Tab geöffnet.</p></div>' + btn('Hier weiterspielen', 'reload') + '</div>'); break;
@@ -260,14 +269,75 @@ function home() {
     '<h1 class="jit">Ball gegen Ball</h1>' +
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
     '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
-    (ev ? '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="halloween">' + gi('token', 46) + '<div class="grow"><h3>Halloween-Box ist da!</h3><span class="small">' + timeLeft(me.eventEnd - now()) + ' - 6 neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>' : '') +
+    BOX_LIST.filter(b => b.until && boxActive(b.id, now())).map(b => '<button class="panel boxcard event" style="padding:10px 14px" data-act="boxdetail" data-id="' + b.id + '">' + gi('token', 46) + '<div class="grow"><h3>' + esc(b.name) + ' ist da!</h3><span class="small">' + timeLeft(b.until - now()) + ' - ' + ballsInBox(b.id).length + ' neue Bälle</span></div>' + gi('arrow', 26).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>').join('') +
     btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'multi', '', 'fight') +
     '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + BALL_IDS.length + ' Bällen</span></button>' +
     '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
+    '<div class="row gap6"><button class="htile" style="--tc:#e3dcf7" data-act="log"><span class="hv">' + gi('sword', 36) + '</span><b>Kampflog</b><span class="small">Wiederholen und teilen</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="market"><span class="hv">' + gi('coin', 40) + gi('coin', 30) + '</span><b>Markt</b><span class="small">Kaufen und verkaufen</span></button>' +
     '<button class="htile" style="--tc:#f3d6f0" data-act="trades"><span class="hv">' + gi('arrow', 34) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 34) + '</span></span><b>Tauschen</b><span class="small">Mit anderen Spielern</span></button></div>' +
     (me.dailyReady ? '<button class="htile daily" data-act="daily"><span class="hv">' + gi('star', 44, '#ffd45a') + '</span><span class="grow"><b>Tagesbelohnung abholen</b><span class="small">' + (ev ? 'Münzen und +5 Marken' : 'Münzen für heute') + '</span></span></button>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
     (/[?&]test=1/.test(location.search) ? btn('TEST: unendlich Münzen und Marken', 'testcoins', '', 'red') : '') + '</div>');
+}
+
+/* ================= Kampflog ================= */
+const MODE_NAME = it => (it.n === 2 ? '1 gegen 1' : it.ffa ? (it.n === 3 ? 'Zu dritt' : 'Zu viert') : '2 gegen 2') + (it.friendly ? ' (Freunde)' : '');
+function ago(ts) {
+  const d = (Date.now() + (S.skew || 0) - ts) / 1000;
+  if (d < 90) return 'gerade eben'; if (d < 3600) return 'vor ' + Math.round(d / 60) + ' Min.'; if (d < 86400) return 'vor ' + Math.round(d / 3600) + ' Std.';
+  const n = Math.round(d / 86400); return n === 1 ? 'gestern' : 'vor ' + n + ' Tagen';
+}
+const RES_COL = { 1: '#4fb25a', 0: '#e0b020', '-1': '#d9534f' };
+function resPill(it) {
+  const t = it.ffa ? (it.win ? 'Platz 1' : 'Platz ' + it.place) : it.win ? 'Sieg' : 'Niederlage';
+  return '<span class="rarpill" style="background:' + (it.win ? '#4fb25a' : '#d9534f') + ';color:#fff">' + t + '</span>';
+}
+function dots(it) { return '<span class="row gap6" style="gap:3px">' + it.res.map(r => '<i style="display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid var(--ink);background:' + RES_COL[r] + '"></i>').join('') + '</span>'; }
+async function logScreen(tab) {
+  S.screen = 'log'; setView(null); closeOverlay(); setScene('menu'); tab = tab || S.logTab || 'list'; S.logTab = tab;
+  if (!S.logItems) { show('<div class="col">' + backBar('Kampflog') + '<p class="center" style="color:#fff">Lade ...</p></div>'); const r = await api('/api/log'); if (r.err) { toast(errText(r.err)); return home(); } S.logItems = r.items; }
+  const it = S.logItems, tabs = '<div class="row gap6">' + [['list', 'Kämpfe'], ['stats', 'Statistik']].map(([k, n]) => '<button class="btn sm' + (tab === k ? ' pri' : '') + '" data-act="logtab" data-t="' + k + '">' + n + '</button>').join('') + '</div>';
+  if (!it.length) return show('<div class="col">' + backBar('Kampflog') + '<div class="panel center"><p>Noch keine Kämpfe. Nach deinem ersten Kampf erscheint er hier.</p></div></div>');
+  if (tab === 'stats') {
+    const real = it.filter(x => !x.friendly), wins = real.filter(x => x.win).length, rounds = [].concat(...it.map(x => x.res.map((r, i) => ({ r, t: x.mine[i] })))), rw = rounds.filter(x => x.r === 1).length;
+    const per = {}; for (const x of rounds) { if (!x.t) continue; const o = per[x.t] || (per[x.t] = { n: 0, w: 0 }); o.n++; if (x.r === 1) o.w++; }
+    const top = Object.entries(per).sort((a, b) => b[1].n - a[1].n).slice(0, 8);
+    const opp = {}; for (const x of it) for (const n of x.opp) if (!/\(Bot\)$/.test(n)) opp[n] = (opp[n] || 0) + 1;
+    const oppTop = Object.entries(opp).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    let streak = 0, best = 0; for (const x of it.slice().reverse()) { if (x.win) { streak++; best = Math.max(best, streak); } else streak = 0; }
+    return show('<div class="col">' + backBar('Kampflog') + tabs +
+      '<div class="panel"><p><b>' + it.length + '</b> Kämpfe gespeichert - <b>' + wins + '</b> Siege bei <b>' + real.length + '</b> gewerteten Kämpfen' + (real.length ? ' (' + Math.round(wins / real.length * 100) + ' %)' : '') + '</p>' +
+      '<p class="small mute">Gewonnene Runden: ' + rw + ' von ' + rounds.length + (rounds.length ? ' (' + Math.round(rw / rounds.length * 100) + ' %)' : '') + ' - längste Siegesserie: ' + best + '</p></div>' +
+      '<div class="panel"><p><b>Deine Bälle</b></p>' + top.map(([t, o]) => '<div class="row gap6" style="align-items:center;margin:4px 0">' + ball(t, 40, .7) + '<div class="grow"><div class="small"><b>' + esc(ballName(t)) + '</b> - ' + o.n + ' Runden, ' + Math.round(o.w / o.n * 100) + ' % gewonnen</div><div style="height:8px;border:2px solid var(--ink);border-radius:6px;background:#fff;overflow:hidden"><i style="display:block;height:100%;width:' + Math.round(o.w / o.n * 100) + '%;background:#4fb25a"></i></div></div></div>').join('') + '</div>' +
+      (oppTop.length ? '<div class="panel"><p><b>Häufigste Gegner</b></p>' + oppTop.map(([n, c]) => '<p class="small">' + esc(n) + ' - ' + c + 'x</p>').join('') + '</div>' : '') + '</div>');
+  }
+  show('<div class="col">' + backBar('Kampflog') + tabs + it.map(x => '<button class="card cell" style="min-height:0;padding:10px 12px;text-align:left" data-act="logopen" data-id="' + x.id + '"><div class="row sb" style="align-items:center"><b>' + MODE_NAME(x) + '</b>' + resPill(x) + '</div>' +
+    '<div class="row sb small mute" style="align-items:center;margin-top:4px"><span>' + (x.opp.length ? 'gegen ' + esc(x.opp.slice(0, 3).join(', ')) : '') + '</span><span>' + ago(x.ts) + '</span></div>' +
+    '<div class="row sb" style="align-items:center;margin-top:6px"><span class="row gap6" style="gap:2px">' + x.mine.slice(0, 6).map(t => t ? ball(t, 32, .7) : '').join('') + '</span>' + dots(x) + '</div></button>').join('') + '</div>');
+}
+async function logDetail(id) {
+  S.screen = 'logd'; setView(null); closeOverlay();
+  const r = await api('/api/log/get', { id }); if (r.err) { toast(errText(r.err)); return logScreen(); }
+  const rec = r.rec; S.logRec = { id, rec };
+  showRounds(rec, 'Kampf vom ' + new Date(rec.ts).toLocaleDateString('de-DE') + ' - ' + MODE_NAME(rec), 'logback', true);
+}
+function showRounds(rec, title, back, mine) {
+  S.screen = 'logd'; setView(null); setScene('menu');
+  const me = rec.players.find(p => p.slot === rec.you), mt = me ? me.team : 0;
+  const nm = p => esc(p.slot === rec.you && mine ? 'Du' : p.name + (p.bot ? ' (Bot)' : ''));
+  show('<div class="col">' + backBar(title, back) +
+    '<div class="panel center"><p><b>' + (rec.ffa ? (rec.win ? 'Platz 1' : 'Platz ' + rec.place) : rec.win ? 'Sieg' : 'Niederlage') + '</b> - ' + rec.rounds.length + ' Runden</p><p class="small mute">' + rec.players.map(nm).join(', ') + '</p></div>' +
+    rec.rounds.map((r, i) => {
+      const win = rec.ffa ? ((r.losers || []).length ? !(r.losers || []).includes(mt) : null) : r.winner < 0 ? null : r.winner === mt;
+      const row = r.cfg.balls.map(b => '<span style="text-align:center">' + ball(b.type, 40, .7) + '<div class="small" style="max-width:56px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + nm(rec.players.find(p => p.slot === b.slot) || { name: '?', slot: -1 }) + '</div></span>').join('');
+      return '<div class="panel"><div class="row sb" style="align-items:center"><b>Runde ' + (i + 1) + '</b><span class="rarpill" style="background:' + (win === null ? '#e0b020' : win ? '#4fb25a' : '#d9534f') + ';color:#fff">' + (win === null ? 'Unentschieden' : win ? 'Gewonnen' : 'Verloren') + '</span></div>' +
+        '<div class="row gap6" style="flex-wrap:wrap;justify-content:center;margin:6px 0">' + row + '</div>' + btn('Ansehen', 'replay', 'data-i="' + i + '"', 'sm') + '</div>';
+    }).join('') + (mine ? btn('Link zum Teilen kopieren', 'logshare', 'data-id="' + S.logRec.id + '"', 'pri') : btn('Selbst spielen', 'logexit', '', 'pri')) + '</div>');
+}
+function replayRound(rec, idx, back) {
+  const r = rec.rounds[idx];
+  S.match = { replay: true, rec, idx, back, players: rec.players, you: rec.you, n: rec.n, mode: rec.mode, ffa: rec.ffa, lives: r.lives, friendly: true, round: idx + 1 };
+  fightScreen({ t: 'fight', cfg: r.cfg, steps: r.steps, winner: r.winner, losers: r.losers || [], lives: r.lives, over: false, round: idx + 1, replay: true });
 }
 
 /* ================= Sammlung ================= */
@@ -580,12 +650,12 @@ function matchHeader() {
   const m0 = S.match;
   if (m0.ffa) {
     const cell = p => { const l = m0.lives[p.team], out = l <= 0; return '<div style="text-align:center;opacity:' + (out ? .45 : 1) + '"><div class="small" style="color:' + PLAYER_COL[p.team] + ';font-weight:700;text-shadow:1px 1px 0 var(--ink);max-width:' + Math.floor(250 / m0.n) + 'px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + (p.slot === m0.you ? 'Du' : esc(p.name)) + '</div>' + livesHTML(l, m0.n === 3 ? 3 : 2) + '</div>'; };
-    return '<div id="mh"><div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);padding-right:52px">' + (m0.friendly ? 'Freundschaftsspiel' : 'Runde ' + m0.round) + '</div><div class="row sb gap6" style="padding-right:4px">' + m0.players.map(cell).join('') + '</div></div>';
+    return '<div id="mh"><div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);padding-right:52px">' + (m0.replay ? 'Wiederholung - Runde ' + m0.round : m0.friendly ? 'Freundschaftsspiel' : 'Runde ' + m0.round) + '</div><div class="row sb gap6" style="padding-right:4px">' + m0.players.map(cell).join('') + '</div></div>';
   }
   const m = S.match, me = m.players[m.you], my = me.team, en = 1 - my;
   const nm = t => m.n === 2 ? esc(m.players.find(p => p.team === t).name) : (t === my ? 'Dein Team' : 'Gegner');
   return '<div class="row sb" id="mh" style="padding-right:52px"><div><div class="small" style="color:#cfe4ff;text-shadow:1px 1px 0 var(--ink)">' + (m.n === 2 ? 'Du' : 'Dein Team') + '</div>' + livesHTML(m.lives[my]) + '</div>' +
-    '<div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (m.friendly ? 'Freundschaftsspiel' : 'Runde ' + m.round) + '</div>' +
+    '<div class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (m.replay ? 'Wiederholung - Runde ' + m.round : m.friendly ? 'Freundschaftsspiel' : 'Runde ' + m.round) + '</div>' +
     '<div style="text-align:right"><div class="small" style="color:#ffd0c8;text-shadow:1px 1px 0 var(--ink)">' + nm(en) + '</div>' + livesHTML(m.lives[en]) + '</div></div>';
 }
 function matchIntro() {
@@ -683,6 +753,7 @@ function fightScreen(m) {
   for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.type].name;
   let acc = 0, phase = 'count', t0 = 0, koT = 0, sentReady = false, cdN = 4, tPhase = 0, resShown = false;
   const cdw = $('#cdwrap');
+  const NB = () => m.replay ? (M.idx + 1 < M.rec.rounds.length ? btn('Nächste Runde', 'replaynext', '', 'pri') : '') + btn('Zurück', 'replayback') : btn('Weiter', 'fightnext', '', 'pri');
   const finish = () => {
     resShown = true;
     const win = m.winner === myTeam, draw = m.winner < 0;
@@ -694,13 +765,13 @@ function fightScreen(m) {
       const head = !L.length ? 'Unentschieden!' : mine ? 'Du verlierst ein Leben!' : 'Du bleibst verschont!';
       const sub = !L.length ? 'Niemand verliert ein Leben.' : (mine ? (out ? 'Das war dein letztes Leben. ' : '') + (nm.length ? 'Auch ' + nm.join(', ') + ' verlieren eins.' : '') : nm.join(', ') + (nm.length > 1 ? ' verlieren' : ' verliert') + ' ein Leben.') + (m.over && !mine ? ' Das war der letzte Kampf.' : '');
       $('#fres').innerHTML = '<div class="panel center pop"><h2 class="jit" style="font-size:40px;color:' + (!L.length ? '#8a6a1a' : mine ? '#c93030' : '#2f8a3a') + '">' + head + '</h2><p class="small mute">' + sub + '</p></div>';
-      $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext', '', 'pri') + '</div>';
+      $('#fbtn').innerHTML = '<div class="grow">' + NB() + '</div>';
       window.scrollTo(0, document.body.scrollHeight); return;
     }
     $('#fres').innerHTML = draw ? '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:#8a6a1a">Unentschieden!</h2><p class="small mute">Beide waren gleichzeitig besiegt. Niemand verliert ein Leben.</p></div>' :
       '<div class="panel center pop"><h2 class="jit" style="font-size:44px;color:' + (win ? '#2f8a3a' : '#c93030') + '">' + (win ? 'Runde gewonnen!' : 'Runde verloren!') + '</h2><p class="small mute">' +
       (m.over ? (win ? 'Das war der letzte Kampf.' : 'Das war dein letztes Leben.') : (win ? 'Der Gegner verliert ein Leben.' : 'Du verlierst ein Leben.')) + '</p></div>';
-    $('#fbtn').innerHTML = '<div class="grow">' + btn('Weiter', 'fightnext', '', 'pri') + '</div>';
+    $('#fbtn').innerHTML = '<div class="grow">' + NB() + '</div>';
     window.scrollTo(0, document.body.scrollHeight);
   };
   // "Weiter": Bereitmeldung senden und alle 2,5 s wiederholen, bis die nächste Runde kommt (bei kurzem Verbindungsabbruch ging die Meldung sonst verloren)
@@ -738,7 +809,7 @@ function fightScreen(m) {
         koT += dt; sdt = dt * .3;
         if (koT > 1.5 && !resShown) { phase = 'done'; finish(); }
       } else if (phase === 'done' && !sentReady && performance.now() / 1000 - tm > -1) {
-        koT += dt; if (koT > 8) S.fightNext();
+        koT += dt; if (koT > 8 && !m.replay) S.fightNext();
       }
       // Slow-Motion beim Treffer des Endschlags: Effekte laufen langsam weiter
       for (const s2 of fxState.sound) sfx(s2[0], s2[1]);
@@ -806,6 +877,20 @@ const ACT = {
   roomslot(d) { wsSend({ t: 'room_slot', slot: +d.s }); },
   roomstart() { wsSend({ t: 'room_start' }); },
   roomleave() { wsSend({ t: 'room_leave' }); },
+  log() { S.logItems = null; logScreen('list'); },
+  logtab(d) { logScreen(d.t); },
+  logopen(d) { logDetail(Number(d.id)); },
+  logback() { logScreen(); },
+  replay(d) { const M = S.logRec && !S.guestRec ? S.logRec.rec : S.guestRec; replayRound(M, Number(d.i), S.guestRec ? () => showRounds(S.guestRec, 'Geteilter Kampf', 'logexit', false) : () => showRounds(S.logRec.rec, 'Kampf vom ' + new Date(S.logRec.rec.ts).toLocaleDateString('de-DE') + ' - ' + MODE_NAME(S.logRec.rec), 'logback', true)); },
+  replaynext() { const M = S.match; if (M && M.replay) replayRound(M.rec, M.idx + 1, M.back); },
+  replayback() { const M = S.match; S.match = null; clearFx(); if (M && M.back) M.back(); else home(); },
+  async logshare(d) {
+    const r = await api('/api/log/share', { id: Number(d.id) }); if (r.err) { toast(errText(r.err)); return; }
+    const url = location.origin + '/#replay=' + r.token;
+    try { if (navigator.share) { await navigator.share({ title: 'Ball gegen Ball', text: 'Schau dir meinen Kampf an!', url }); return; } } catch (e) { }
+    try { await navigator.clipboard.writeText(url); toast('Link kopiert.'); } catch (e) { overlay('<div class="col"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Link zum Teilen</h2><div class="panel"><p class="small" style="word-break:break-all">' + esc(url) + '</p></div>' + btn('Schließen', 'closeov') + '</div>'); }
+  },
+  logexit() { S.guestRec = null; history.replaceState(null, '', location.pathname); closeOverlay(); S.match = null; boot2(); },
   collection() { collection(); },
   cfilter(d) { S.col[d.k] = d.v; collection(); },
   cown() { S.col.own = !S.col.own; collection(); },

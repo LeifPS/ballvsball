@@ -424,6 +424,7 @@ export class Game extends DurableObject {
       const over = !draw && m.lives[1 - res.winner] <= 0;
       m.fight = { cfg, steps: res.steps, winner: res.winner, reason: res.reason, lives: m.lives.slice(), over, round: m.round };
     }
+    (m.log = m.log || []).push({ cfg, steps: res.steps, winner: res.winner, losers: m.fight.losers || [], lives: m.fight.lives, round: m.round });
     m.phase = 'fight';
     for (const p of live) {
       p.ready = p.bot || p.left;
@@ -481,8 +482,15 @@ export class Game extends DurableObject {
     m.phase = 'wait';
     m.timer = setTimeout(safe(() => this.startRound(m)), 600);
   }
+  // Kampf im Kampflog der Menschen speichern (Wiederholung und Teilen)
+  logFor(m, p, win, place) {
+    if (p.bot || !m.log || !m.log.length) return;
+    const players = m.players.map(q => ({ slot: q.slot, team: q.team, name: q.name, bot: !!q.bot }));
+    try { Promise.resolve(this.store().logBattle(p.userId, { mode: m.mode, n: m.n, ffa: m.ffa, friendly: m.friendly, win, place, you: p.slot, players, rounds: m.log })).catch(e => console.log('log', e)); } catch (e) { console.log('log', e); }
+  }
   async eliminate(m, p, place) {
     if (p.bot) return;
+    this.logFor(m, p, place === 1, place);
     this.userMatch.delete(p.userId);
     const conn = p.conn;
     p.conn = null;
@@ -506,6 +514,7 @@ export class Game extends DurableObject {
       if (p.bot) continue;
       this.userMatch.delete(p.userId);
       const win = p.team === winnerTeam;
+      this.logFor(m, p, win, 0);
       let coins = 0, tokens = 0;
       if (!m.friendly && !p.left) {
         const botOpp = m.players.some(o => o.bot && o.team !== p.team);

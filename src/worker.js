@@ -17,6 +17,10 @@ export default {
       const game = env.GAME.get(env.GAME.idFromName('main'));
       return game.fetch(request);
     }
+    if (url.pathname === '/api/replay' && request.method === 'GET') {   // öffentlicher Link zu einer geteilten Wiederholung
+      const r = await store.replayGet(url.searchParams.get('t') || '');
+      return out(r, r && r.err ? 404 : 200);
+    }
     if (request.method !== 'POST') return out({ err: 'method' }, 405);
     const token = request.headers.get('x-token') || '';
     if (token.length < 20 || token.length > 100) return out({ err: 'auth' }, 401);
@@ -42,6 +46,9 @@ export default {
       case '/api/market/buy': r = await store.marketBuy(tk, b.uid); break;
       case '/api/market/browse': r = await store.marketBrowse(tk, b); break;
       case '/api/player': r = await store.playerInfo(tk, b.name); break;
+      case '/api/log': r = await store.logList(tk); break;
+      case '/api/log/get': r = await store.logGet(tk, b.id); break;
+      case '/api/log/share': r = await store.logShare(tk, b.id); break;
       case '/api/trades': r = await store.trades(tk); break;
       case '/api/trade/create': r = await store.tradeCreate(tk, b.to, b.give, b.want, b.coinsGive, b.coinsWant); break;
       case '/api/trade/answer': r = await store.tradeAnswer(tk, b.id, b.action); break;

@@ -74,6 +74,8 @@ export class Store extends DurableObject {
     this.sql.exec('INSERT INTO tstars(owner,type,stars) SELECT owner,type,MAX(stars) FROM balls WHERE stars>0 GROUP BY owner,type ON CONFLICT(owner,type) DO UPDATE SET stars=MAX(stars,excluded.stars)');
     this.sql.exec('UPDATE balls SET stars=0 WHERE stars>0');
     this.sql.exec('CREATE TABLE IF NOT EXISTS transfers(code TEXT PRIMARY KEY, user_id INTEGER NOT NULL, expires INTEGER NOT NULL)');
+    this.sql.exec(`CREATE TABLE IF NOT EXISTS battles(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, ts INTEGER NOT NULL, sum TEXT NOT NULL, rec TEXT NOT NULL, share TEXT)`);
+    this.sql.exec('CREATE INDEX IF NOT EXISTS battles_user ON battles(user_id, id)');
     if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
   }
 
@@ -194,6 +196,51 @@ export class Store extends DurableObject {
     const tk5 = eventActive(Date.now()) ? 5 : 0;
     this.q('UPDATE users SET coins=coins+?, tokens=tokens+?, last_daily=?, streak=? WHERE id=?', gain, tk5, today, streak, u.id);
     return { ok: true, gain, tokens: tk5, streak, me: this.profile(this.userBy(tk)) };
+  }
+  /* ---------- Kampflog: alle vergangenen Spiele, Wiederholung und Teilen ---------- */
+  logBattle(userId, rec) {
+    try {
+      const me = rec.players.find(p => p.slot === rec.you);
+      const myTeam = me ? me.team : 0;
+      const mine = [], res = [];
+      for (const r of rec.rounds) {
+        const b = r.cfg.balls.find(x => x.slot === rec.you);
+        mine.push(b ? b.type : '');
+        res.push(rec.ffa ? ((r.losers || []).length ? ((r.losers || []).includes(myTeam) ? -1 : 1) : 0) : r.winner < 0 ? 0 : r.winner === myTeam ? 1 : -1);
+      }
+      const sum = { mode: rec.mode, n: rec.n, ffa: !!rec.ffa, friendly: !!rec.friendly, win: !!rec.win, place: rec.place || 0, opp: rec.players.filter(p => p.slot !== rec.you).map(p => (p.bot ? p.name + ' (Bot)' : p.name)), mine, res };
+      const ts = Date.now();
+      this.q('INSERT INTO battles(user_id,ts,sum,rec) VALUES(?,?,?,?)', userId, ts, JSON.stringify(sum), JSON.stringify({ ts, mode: rec.mode, n: rec.n, ffa: !!rec.ffa, friendly: !!rec.friendly, win: !!rec.win, place: rec.place || 0, you: rec.you, players: rec.players, rounds: rec.rounds }));
+      this.q('DELETE FROM battles WHERE user_id=? AND id NOT IN (SELECT id FROM battles WHERE user_id=? ORDER BY id DESC LIMIT 200)', userId, userId);
+    } catch (e) { console.log('logBattle', e); }
+  }
+  logList(tk) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const rows = this.q('SELECT id,ts,sum,share FROM battles WHERE user_id=? ORDER BY id DESC LIMIT 100', u.id);
+    return { ok: true, items: rows.map(r => Object.assign({ id: r.id, ts: r.ts, shared: !!r.share }, JSON.parse(r.sum))) };
+  }
+  logGet(tk, id) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const r = this.q('SELECT rec,share FROM battles WHERE id=? AND user_id=?', Number(id), u.id)[0];
+    if (!r) return { err: 'not_found' };
+    return { ok: true, rec: JSON.parse(r.rec), share: r.share };
+  }
+  logShare(tk, id) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const r = this.q('SELECT id,share FROM battles WHERE id=? AND user_id=?', Number(id), u.id)[0];
+    if (!r) return { err: 'not_found' };
+    let t = r.share;
+    if (!t) { const a = crypto.getRandomValues(new Uint8Array(9)); t = ''; for (const x of a) t += 'abcdefghijkmnpqrstuvwxyz23456789'[x % 32]; this.q('UPDATE battles SET share=? WHERE id=?', t, r.id); }
+    return { ok: true, token: t };
+  }
+  replayGet(token) {
+    if (typeof token !== 'string' || token.length < 6 || token.length > 20) return { err: 'not_found' };
+    const r = this.q('SELECT rec FROM battles WHERE share=?', token)[0];
+    if (!r) return { err: 'not_found' };
+    return { ok: true, rec: JSON.parse(r.rec) };
   }
   testCoins(tk) {
     const u = this.userBy(tk);
