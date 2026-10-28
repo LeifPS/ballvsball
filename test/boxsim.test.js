@@ -23,7 +23,7 @@ assert.ok(found > 0);
 
 // Eigene Dropper (Kleinbox, Gefühlsbox): fast immer kommt mindestens ein Ball unten an, und die Ergebnisse sind reproduzierbar
 import { LAYOUTS } from '../public/js/boxsim.js';
-for (const id of ['gefuehl']) {
+for (const id of ['gefuehl','halloween']) {
   let ok = 0;
   for (let sd = 1; sd <= 80; sd++) {
     const r = simBox(sd * 31, 10, LAYOUTS[id]);

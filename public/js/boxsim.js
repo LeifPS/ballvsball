@@ -57,7 +57,7 @@ export function buildLayout(def) {
     id: def.id || 'eigen', def,
     segs: S.segs.concat(def.segs || [], ...grids.map(g => [g]), ...blocks.map(rectSegs), ...cups.map(cupSegs)),
     shelves: def.shelves || [], pegs: def.pegs || [], spinners: def.spinners || [],
-    flum: def.flum || [], cannons: def.cannons || [], wind: def.wind || [],
+    flum: def.flum || [], cannons: def.cannons || [], wind: def.wind || [], webs: def.webs || [], portals: def.portals || [], theme: def.theme || '',
     traps: grates.map(r => ({ k: 'grate', x0: r[0], y0: r[1], x1: r[2], y1: r[3] })).concat(cups.map(c => ({ k: 'cup', x0: c.x0 + 6, y0: c.y0 + 6, x1: c.x1 - 6, y1: c.y1 - 3 }))),
     cups, grates, grids, blocks,
     poly: S.poly, outline: S.outline, goal: [BW / 2 - goalX / 2, 330, goalX, 70]
@@ -71,9 +71,19 @@ const FEEL_DEF = {
   wind: [{ x0: 48, y0: 240, x1: 136, y1: 402, ax: -5000, ay: -40 }, { x0: 164, y0: 236, x1: 254, y1: 402, ax: 5000, ay: -40 }, { x0: 256, y0: 162, x1: 300, y1: 236, ax: -500, ay: 0 }, { x0: -2, y0: 160, x1: 46, y1: 242, ax: 500, ay: 0 }],
   grids: [[0, 40, 100, 60], [200, 60, 302, 38]]
 };
+// Halloween-Dropper: Friedhof bei Nacht. Grabsteine als Nägel, Kerzen als rote Bumper, Kürbis-Flummis, eine Fledermaus als Propeller, Spinnennetze bremsen, Geister-Portale versetzen, der Hexenkessel fängt Bälle
+const HALLOW_PEGS = [[40, 40, 6, 0], [100, 30, 6, 0], [160, 42, 6, 0], [222, 30, 6, 0], [266, 62, 6, 0], [70, 92, 6, 0], [130, 84, 6, 1], [190, 92, 6, 0], [248, 118, 6, 0], [30, 148, 6, 0], [100, 150, 6, 0], [160, 156, 6, 1], [268, 170, 6, 0], [60, 214, 6, 0], [232, 226, 6, 0]];
+const HALLOW_DEF = {
+  id: 'halloween', theme: 'halloween', shape: { sh: 200, half: 16 }, pegs: HALLOW_PEGS,
+  flum: [[78, 190, 15], [222, 176, 15]],
+  spinners: [{ x: 150, y: 232, len: 42, w: 4.5, om: 1.8 }],
+  webs: [{ x: 52, y: 118, r: 30 }, { x: 246, y: 66, r: 30 }],
+  portals: [{ ax: 72, ay: 276, bx: 228, by: 266, r: 15 }],
+  cups: [{ x0: 108, y0: 304, x1: 144, y1: 328 }]
+};
 const STD_DEF = { id: 'standard', shape: { sh: 175, half: 15 }, pegs: PEGS, shelves: SHELVES, spinners: SPINNERS };
-export const DEFS_DROPPER = { standard: STD_DEF, gefuehl: FEEL_DEF };
-export const LAYOUTS = { standard: buildLayout(STD_DEF), gefuehl: buildLayout(FEEL_DEF) };
+export const DEFS_DROPPER = { standard: STD_DEF, gefuehl: FEEL_DEF, halloween: HALLOW_DEF };
+export const LAYOUTS = { standard: buildLayout(STD_DEF), gefuehl: buildLayout(FEEL_DEF), halloween: buildLayout(HALLOW_DEF) };
 export const layoutOf = id => LAYOUTS[id] || LAYOUTS.standard;
 
 export function createBox(seed, n, layout) {
@@ -142,6 +152,14 @@ export function stepBox(s) {
     for (const sg of L.segs) hitSeg(b, sg, .35);
     for (const sg of L.shelves) hitSeg(b, sg, .3);
     for (const p of L.pegs) hitPoint(b, p[0], p[1], p[2], p[3] ? .95 : .45);
+    if (L.webs) for (const w of L.webs) { const dx = b.x - w.x, dy = b.y - w.y; if (dx * dx + dy * dy < w.r * w.r) { b.vx *= .94; b.vy *= .94; b.web = s.step; } }   // Spinnennetz: bremst
+    if (L.portals) for (const p of L.portals) {
+      if (s.step - (b.pt || -999) < 90) continue;
+      for (let k = 0; k < 2; k++) {
+        const fx0 = k ? p.bx : p.ax, fy0 = k ? p.by : p.ay, dx = b.x - fx0, dy = b.y - fy0;
+        if (dx * dx + dy * dy < p.r * p.r) { b.x = k ? p.ax : p.bx; b.y = (k ? p.ay : p.by) + 4; b.pt = s.step; p.hit = s.step; if (s.ev) s.ev.push('portal'); break; }
+      }
+    }
     if (L.flum) for (const f of L.flum) { if (s.ev) { const fx0 = b.x - f[0], fy0 = b.y - f[1], rr0 = BR + f[2] + 1; if (fx0 * fx0 + fy0 * fy0 < rr0 * rr0 && s.step - (b.boing || -99) > 12) { s.ev.push('boing'); b.boing = s.step; } } hitPoint(b, f[0], f[1], f[2], 1.12); }
     if (L.wind) for (const w of L.wind) if (b.x > w.x0 && b.x < w.x1 && b.y > w.y0 && b.y < w.y1) { b.vx += w.ax * BDT; b.vy += w.ay * BDT; }
     if (L.cannons) for (const c of L.cannons) {

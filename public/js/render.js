@@ -93,6 +93,32 @@ export function clearBoardCache() { for (const k in BOARD) delete BOARD[k]; }   
 const TOP = 190;                       // Platz über dem Spielfeld für die Kiste (Weltkoordinaten -TOP..)
 export const BOX_H = BH + 186;         // sichtbare Höhe: von y = -170 bis unter den Becher
 const CUP = { x0: 96, x1: 204, y0: 376, y1: 442 };
+// Halloween: Nachthimmel mit Mond, Sternen, kahlem Baum, Zaun und Spinnweben in den Ecken
+function nightDecor(x, sk, f) {
+  x.lineJoin = x.lineCap = 'round';
+  x.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 26; i++) { const sx2 = (i * 53) % 300, sy2 = -170 + (i * 37) % 300; x.beginPath(); x.arc(sx2, sy2, 1 + (i % 3) * .6, 0, 7); x.fill(); }
+  // Mond
+  x.fillStyle = '#fff1b0'; sk.lineWidth = 2.6; sk.strokeStyle = INK; sk.beginPath(); sk.arc(232, -92, 34, 0, 7); sk.fill(); sk.stroke();
+  x.fillStyle = 'rgba(210,190,120,.7)'; [[222, -102, 7], [244, -84, 5], [226, -78, 4]].forEach(c => { x.beginPath(); x.arc(c[0], c[1], c[2], 0, 7); x.fill(); });
+  // kahler Baum links
+  sk.lineWidth = 4; sk.strokeStyle = '#1f1738'; sk.beginPath(); sk.moveTo(14, 175); sk.quadraticCurveTo(22, 90, 18, 20); sk.moveTo(20, 80); sk.quadraticCurveTo(50, 60, 62, 20); sk.moveTo(19, 110); sk.quadraticCurveTo(-4, 90, -6, 62); sk.moveTo(21, 50); sk.quadraticCurveTo(38, 38, 40, 4); sk.stroke(); sk.strokeStyle = INK;
+  // Zaun unten
+  sk.lineWidth = 2.6; sk.strokeStyle = '#1f1738'; for (let i = 0; i < 8; i++) { const fx2 = 8 + i * 38; sk.beginPath(); sk.moveTo(fx2, 330); sk.lineTo(fx2, 296); sk.lineTo(fx2 + 4, 288); sk.lineTo(fx2 + 8, 296); sk.lineTo(fx2 + 8, 330); sk.stroke(); }
+  sk.strokeStyle = INK;
+  // Spinnweben in den oberen Ecken
+  x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 1.2;
+  for (const cx of [0, 300]) { const d = cx ? -1 : 1; for (let k = 0; k < 5; k++) { const a = k / 4 * 1.57; x.beginPath(); x.moveTo(cx, -170); x.lineTo(cx + d * Math.cos(a) * 70, -170 + Math.sin(a) * 70); x.stroke(); } for (let r2 = 20; r2 <= 60; r2 += 20) { x.beginPath(); for (let k = 0; k <= 4; k++) { const a = k / 4 * 1.57, px = cx + d * Math.cos(a) * r2, py = -170 + Math.sin(a) * r2; k ? x.quadraticCurveTo(cx + d * Math.cos(a - .2) * r2 * .85, -170 + Math.sin(a - .2) * r2 * .85, px, py) : x.moveTo(px, py); } x.stroke(); } }
+}
+function tombstone(x, sk, p) {
+  const [px, py, r, kind] = p;
+  if (kind) {   // rote Bumper: Kerzen
+    x.fillStyle = '#f4e9c8'; sk.lineWidth = 2.4; sk.strokeStyle = INK; sk.beginPath(); sk.moveTo(px - r, py + r); sk.lineTo(px - r, py - r * .6); sk.lineTo(px + r, py - r * .6); sk.lineTo(px + r, py + r); sk.closePath(); sk.fill(); sk.stroke();
+    sk.lineWidth = 1.6; sk.strokeStyle = 'rgba(224,83,58,.8)'; sk.beginPath(); sk.arc(px, py, r + 5, 0, 7); sk.stroke(); sk.strokeStyle = INK; return;
+  }
+  x.fillStyle = '#b9b6c9'; sk.lineWidth = 2.4; sk.strokeStyle = INK;
+  sk.beginPath(); sk.moveTo(px - r, py + r); sk.lineTo(px - r, py - r * .3); sk.quadraticCurveTo(px - r, py - r * 1.3, px, py - r * 1.3); sk.quadraticCurveTo(px + r, py - r * 1.3, px + r, py - r * .3); sk.lineTo(px + r, py + r); sk.closePath(); sk.fill(); sk.stroke();
+  sk.lineWidth = 1.5; sk.beginPath(); sk.moveTo(px, py - r * .7); sk.lineTo(px, py + r * .35); sk.moveTo(px - r * .45, py - r * .25); sk.lineTo(px + r * .45, py - r * .25); sk.stroke();
+}
 // Handgezeichnete Besonderheiten der Dropper (Gitter, Körbe, Gitterablagen, Block, Flummi, Kanonen)
 function wob(sk, pts, close) { sk.beginPath(); pts.forEach((q, i) => i ? sk.lineTo(q[0], q[1]) : sk.moveTo(q[0], q[1])); if (close) sk.closePath(); }
 function drawDropperDecor(x, sk, L) {
@@ -107,7 +133,13 @@ function drawDropperDecor(x, sk, L) {
     sk.beginPath(); sk.moveTo(r[0] + 3, r[1] + 5); sk.lineTo(r[2] - 3, r[1] + 5); sk.stroke();
     sk.strokeStyle = INK;
   }
-  if (L.cups) for (const c of L.cups) {   // Fangkörbe: geflochten
+  if (L.cups && L.theme === 'halloween') for (const c of L.cups) {   // Hexenkessel
+    const w = c.x1 - c.x0, h = c.y1 - c.y0, cx = (c.x0 + c.x1) / 2;
+    shape([[c.x0 + 3, c.y0 - 2], [c.x1 - 3, c.y0 - 2], [c.x1 + 2, c.y0 + h * .5], [c.x1 - 5, c.y1 - 1], [c.x0 + 5, c.y1 - 1], [c.x0 - 2, c.y0 + h * .5]], '#2b2b36');
+    x.fillStyle = '#7ad66a'; sk.lineWidth = 2.4; sk.strokeStyle = INK; sk.beginPath(); sk.moveTo(c.x0 + 2, c.y0 - 2); sk.quadraticCurveTo(cx, c.y0 + 7, c.x1 - 2, c.y0 - 2); sk.quadraticCurveTo(cx, c.y0 - 7, c.x0 + 2, c.y0 - 2); sk.fill(); sk.stroke();
+    sk.lineWidth = 2.6; sk.beginPath(); sk.moveTo(c.x0 + 8, c.y1); sk.lineTo(c.x0 + 5, c.y1 + 6); sk.moveTo(c.x1 - 8, c.y1); sk.lineTo(c.x1 - 5, c.y1 + 6); sk.stroke();
+  }
+  else if (L.cups) for (const c of L.cups) {   // Fangkörbe: geflochten
     shape([[c.x0, c.y0 - 4], [c.x0, c.y1], [c.x1, c.y1], [c.x1, c.y0 - 4], [c.x1 - 5, c.y0 - 4], [c.x1 - 5, c.y1 - 5], [c.x0 + 5, c.y1 - 5], [c.x0 + 5, c.y0 - 4]], '#c98b3a');
     sk.lineWidth = 1.6; sk.strokeStyle = '#7a4a21'; for (let yy = c.y0 + 4; yy < c.y1; yy += 6) { sk.beginPath(); sk.moveTo(c.x0 + 1, yy); sk.lineTo(c.x1 - 1, yy + 2); sk.stroke(); }
     sk.strokeStyle = INK;
@@ -123,7 +155,20 @@ function drawDropperDecor(x, sk, L) {
     rect(r[0], r[1], r[2], r[3], '#e8d9a8');
     sk.lineWidth = 1.6; sk.beginPath(); sk.moveTo(r[0] + 4, (r[1] + r[3]) / 2); sk.lineTo(r[2] - 4, (r[1] + r[3]) / 2); sk.stroke();
   }
-  if (L.flum) for (const f of L.flum) {   // Flummi-Bumper
+  if (L.webs) for (const w of L.webs) {   // Spinnennetze
+    x.strokeStyle = 'rgba(255,255,255,.85)'; sk.strokeStyle = 'rgba(255,255,255,.9)'; sk.lineWidth = 1.6;
+    for (let k = 0; k < 8; k++) { const a = k / 8 * 6.2832; sk.beginPath(); sk.moveTo(w.x, w.y); sk.lineTo(w.x + Math.cos(a) * w.r, w.y + Math.sin(a) * w.r); sk.stroke(); }
+    for (let r2 = w.r * .3; r2 <= w.r; r2 += w.r * .24) { sk.beginPath(); for (let k = 0; k <= 8; k++) { const a = k / 8 * 6.2832, rr = r2 * (k % 2 ? .93 : 1); k ? sk.lineTo(w.x + Math.cos(a) * rr, w.y + Math.sin(a) * rr) : sk.moveTo(w.x + Math.cos(a) * rr, w.y + Math.sin(a) * rr); } sk.stroke(); }
+    sk.strokeStyle = INK; x.strokeStyle = INK;
+  }
+  if (L.flum && L.theme === 'halloween') for (const f of L.flum) {   // Kürbis-Flummis
+    x.fillStyle = '#f58a1f'; sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.ellipse(f[0], f[1], f[2] * 1.08, f[2], 0, 0, 7); sk.fill(); sk.stroke();
+    sk.lineWidth = 1.8; sk.strokeStyle = '#b4560c'; sk.beginPath(); sk.moveTo(f[0], f[1] - f[2]); sk.quadraticCurveTo(f[0] - f[2] * .55, f[1], f[0], f[1] + f[2]); sk.moveTo(f[0], f[1] - f[2]); sk.quadraticCurveTo(f[0] + f[2] * .55, f[1], f[0], f[1] + f[2]); sk.stroke();
+    x.fillStyle = '#3a2a24'; sk.strokeStyle = INK; sk.lineWidth = 1.4; [[-.42, -.2], [.42, -.2]].forEach(q => { sk.beginPath(); sk.moveTo(f[0] + q[0] * f[2] - 3, f[1] + q[1] * f[2] + 3); sk.lineTo(f[0] + q[0] * f[2], f[1] + q[1] * f[2] - 3); sk.lineTo(f[0] + q[0] * f[2] + 3, f[1] + q[1] * f[2] + 3); sk.closePath(); sk.fill(); sk.stroke(); });
+    sk.beginPath(); sk.moveTo(f[0] - f[2] * .5, f[1] + f[2] * .35); sk.lineTo(f[0] - f[2] * .25, f[1] + f[2] * .55); sk.lineTo(f[0], f[1] + f[2] * .35); sk.lineTo(f[0] + f[2] * .25, f[1] + f[2] * .55); sk.lineTo(f[0] + f[2] * .5, f[1] + f[2] * .35); sk.stroke();
+    x.fillStyle = '#5cae4a'; sk.lineWidth = 2; sk.beginPath(); sk.moveTo(f[0] - 2, f[1] - f[2]); sk.lineTo(f[0] - 1, f[1] - f[2] - 6); sk.lineTo(f[0] + 4, f[1] - f[2] - 5); sk.lineTo(f[0] + 3, f[1] - f[2]); sk.closePath(); sk.fill(); sk.stroke();
+  }
+  else if (L.flum) for (const f of L.flum) {   // Flummi-Bumper
     x.fillStyle = '#ff6fb0'; sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.fill(); sk.stroke();
     x.fillStyle = '#fff'; sk.lineWidth = 2; sk.beginPath(); sk.arc(f[0], f[1], f[2] * .55, 0, 7); sk.fill(); sk.stroke();
   }
@@ -146,9 +191,11 @@ function boardSprite(col, L) {
     const sk = sketchCtx(x, strSeed(col) + f * 1.9, 120); x.strokeStyle = INK; x.lineWidth = 3.6; sk.lineWidth = 3.6;
     // Hintergrund in Boxfarbe, begrenzt durch Wände
     x.save(); x.beginPath(); L.poly.forEach((q, i) => i ? x.lineTo(q[0], Math.max(q[1], -TOP)) : x.moveTo(q[0], Math.max(q[1], -TOP))); x.closePath(); x.clip();
-    x.fillStyle = '#f6efd9'; x.fillRect(-20, -TOP, W, H);
-    x.globalAlpha = .22; x.fillStyle = col; x.fillRect(-20, -TOP, W, H); x.globalAlpha = 1;
-    x.strokeStyle = 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; for (let i = -TOP; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
+    const night = L.theme === 'halloween';
+    if (night) { const ng = x.createLinearGradient(0, -TOP, 0, 400); ng.addColorStop(0, '#2d2350'); ng.addColorStop(.55, '#4d3b82'); ng.addColorStop(1, '#6b4a8c'); x.fillStyle = ng; x.fillRect(-20, -TOP, W, H); nightDecor(x, sk, f); }
+    else { x.fillStyle = '#f6efd9'; x.fillRect(-20, -TOP, W, H);
+    x.globalAlpha = .22; x.fillStyle = col; x.fillRect(-20, -TOP, W, H); x.globalAlpha = 1; }
+    x.strokeStyle = night ? 'rgba(255,255,255,.05)' : 'rgba(29,39,66,.08)'; x.lineWidth = 1.5; for (let i = -TOP; i < 420; i += 22) { x.beginPath(); x.moveTo(-20, i); x.lineTo(BW + 20, i + 10); x.stroke(); }
     // Zielzone: Streifen zum Becher
     x.globalAlpha = .18; x.fillStyle = '#ffd45a'; x.fillRect(L.goal[0], L.goal[1], L.goal[2], L.goal[3]); x.globalAlpha = 1;
     x.restore();
@@ -166,6 +213,7 @@ function boardSprite(col, L) {
     }
     x.strokeStyle = INK; x.lineWidth = 3.6;
     L.pegs.forEach(p => {
+      if (L.theme === 'halloween') { tombstone(x, sk, p); return; }
       x.beginPath(); x.arc(p[0], p[1], p[2], 0, 7); x.fillStyle = p[3] ? '#e0533a' : '#d9c9a0'; x.fill();
       sk.beginPath(); sk.arc(p[0], p[1], p[2], 0, 7); sk.lineWidth = 2.4; sk.stroke();
       if (p[3]) { sk.beginPath(); sk.arc(p[0], p[1], p[2] + 4.5, 0, 7); sk.lineWidth = 1.6; sk.strokeStyle = 'rgba(224,83,58,.7)'; sk.stroke(); sk.strokeStyle = INK; x.fillStyle = '#fff'; x.beginPath(); x.arc(p[0], p[1], p[2] * .38, 0, 7); x.fill(); }
@@ -221,8 +269,34 @@ export function drawBox(g, W, s, cands, tm, tf, hi, col, boxId) {
       star(g, cx + (c.tx - cx) / d * 26, cy + (c.ty - cy) / d * 26, 9 * k + 3, '#ffe14a', tm * 6);
     }
   }
+  if (L.portals) for (const p of L.portals) {   // Geister-Portale: drehende Wirbel
+    const gl = p.hit !== undefined && s.step - p.hit < 20 ? 1 + (20 - (s.step - p.hit)) / 20 * .35 : 1;
+    for (const [px, py] of [[p.ax, p.ay], [p.bx, p.by]]) {
+      g.save(); g.translate(px, py); g.scale(gl, gl); g.lineCap = 'round'; const sk = sketchCtx(g, 5.5 + (tf % 3) * 1.713, 24); g.lineWidth = 2.6; sk.lineWidth = 2.6;
+      g.fillStyle = 'rgba(60,20,110,.75)'; g.strokeStyle = INK; sk.beginPath(); sk.arc(0, 0, p.r, 0, 7); sk.fill(); sk.stroke();
+      g.strokeStyle = '#c9a6ff'; g.lineWidth = 2; sk.lineWidth = 2;
+      for (let i = 0; i < 2; i++) { const a0 = tm * 3.2 + i * 3.14; sk.beginPath(); for (let k = 0; k <= 14; k++) { const t2 = k / 14, rr = p.r * (.15 + .75 * t2), aa = a0 + t2 * 5; k ? sk.lineTo(Math.cos(aa) * rr, Math.sin(aa) * rr) : sk.moveTo(Math.cos(aa) * rr, Math.sin(aa) * rr); } sk.stroke(); }
+      g.restore();
+    }
+  }
+  if (L.theme === 'halloween') {   // Kerzenflammen und Spinnen an den Netzen
+    for (const p of L.pegs) if (p[3]) { const fl = 1 + Math.sin(tm * 11 + p[0]) * .22; g.save(); g.translate(p[0], p[1] - p[2] * .6); g.scale(fl, fl); g.fillStyle = '#ffb02e'; g.strokeStyle = INK; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-3, 0); g.quadraticCurveTo(-3, -7, 0, -11); g.quadraticCurveTo(4, -6, 3, 0); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#ffe14a'; g.beginPath(); g.ellipse(0, -3, 1.4, 3, 0, 0, 7); g.fill(); g.restore(); }
+    if (L.webs) for (const w of L.webs) { const sy2 = w.y - w.r - 4 + Math.abs(Math.sin(tm * 1.3 + w.x)) * 14; g.save(); g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1.2; g.beginPath(); g.moveTo(w.x, w.y - w.r - 18); g.lineTo(w.x, sy2); g.stroke(); g.fillStyle = '#2a2236'; g.strokeStyle = INK; g.lineWidth = 1.4; g.beginPath(); g.arc(w.x, sy2 + 3, 3.6, 0, 7); g.fill(); g.stroke(); for (let k = -2; k <= 2; k++) { if (!k) continue; g.beginPath(); g.moveTo(w.x, sy2 + 3); g.lineTo(w.x + k * 3.6, sy2 + 3 + Math.abs(k) * 1.6 + 2); g.stroke(); } g.restore(); }
+  }
   for (const sp of L.spinners) {
     const a = s.t * sp.om;
+    if (L.theme === 'halloween') {   // Fledermaus: zwei Flügel, die sich mit dem Propeller drehen
+      g.save(); g.translate(sp.x, sp.y); g.lineCap = g.lineJoin = 'round';
+      for (let i = 0; i < 2; i++) {
+        g.save(); g.rotate(a + i * Math.PI); const sk = sketchCtx(g, 6.3 + ((tf + i) % 3) * 1.9, 40); g.lineWidth = 3; sk.lineWidth = 3; g.strokeStyle = INK; g.fillStyle = '#3a2a5c';
+        const L2 = sp.len, W2 = sp.w * 2.2;
+        sk.beginPath(); sk.moveTo(4, -2); sk.lineTo(L2 * .35, -W2); sk.quadraticCurveTo(L2 * .5, -W2 * .2, L2 * .62, -W2 * .9); sk.quadraticCurveTo(L2 * .78, -W2 * .1, L2, -W2 * .6); sk.quadraticCurveTo(L2 * .92, W2 * .5, L2 * .72, W2 * .7); sk.quadraticCurveTo(L2 * .58, W2 * .3, L2 * .45, W2 * .9); sk.quadraticCurveTo(L2 * .3, W2 * .3, 4, 3); sk.closePath(); sk.fill(); sk.stroke();
+        g.restore();
+      }
+      const sk0 = sketchCtx(g, 6.9 + (tf % 3) * 1.9, 20); g.lineWidth = 3; sk0.lineWidth = 3; g.strokeStyle = INK; g.fillStyle = '#2a1f45'; sk0.beginPath(); sk0.arc(0, 0, 8, 0, 7); sk0.fill(); sk0.stroke();
+      g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(-3, -1, 1.7, 0, 7); g.arc(3, -1, 1.7, 0, 7); g.fill();
+      g.restore(); continue;
+    }
     g.save(); g.translate(sp.x, sp.y); g.lineCap = 'round'; g.lineJoin = 'round';
     for (let i = 0; i < 2; i++) {
       g.save(); g.rotate(a + i * Math.PI);
