@@ -201,3 +201,35 @@ for (const id of Object.keys(SKIN)) {
 SKIN.gefuehl.flum = (x, sk, f) => { x.fillStyle = '#ffd45a'; sk.lineWidth = 3.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(f[0], f[1], f[2], 0, 7); sk.fill(); sk.stroke(); x.fillStyle = INK; x.beginPath(); x.arc(f[0] - f[2] * .35, f[1] - f[2] * .2, f[2] * .12, 0, 7); x.arc(f[0] + f[2] * .35, f[1] - f[2] * .2, f[2] * .12, 0, 7); x.fill(); sk.lineWidth = 2; sk.beginPath(); sk.arc(f[0], f[1] + f[2] * .05, f[2] * .5, .25, 2.9); sk.stroke(); };
 SKIN.gefuehl.grate = (x, sk, r, rect) => { rect(r[0], r[1], r[2], r[3], '#ffe6f0'); const cols = ['#ff7a9a', '#ffd45a', '#7bd36a', '#5fb6ff']; let i = 0; sk.lineWidth = 2.6; for (let gx = r[0] + 7; gx < r[2] - 3; gx += 12) { sk.strokeStyle = cols[i++ % 4]; sk.beginPath(); sk.moveTo(gx, r[1] + 3); sk.lineTo(gx, r[3] - 3); sk.stroke(); } sk.strokeStyle = INK; };
 SKIN.gefuehl.grid = (x, sk, g, shape) => { const dx = g[2] - g[0], dy = g[3] - g[1], hgt = 30; shape([[g[0], g[1]], [g[2], g[3]], [g[2], g[3] + hgt], [g[0], g[1] + hgt]], 'rgba(255,255,255,.75)', 3.4); const cols = ['#ff7a9a', '#ffd45a', '#7bd36a', '#5fb6ff']; sk.lineWidth = 2.4; for (let i = 1; i < 6; i++) { const t = i / 6; sk.strokeStyle = cols[i % 4]; sk.beginPath(); sk.moveTo(g[0] + dx * t, g[1] + dy * t + 2); sk.lineTo(g[0] + dx * t, g[1] + dy * t + hgt - 1); sk.stroke(); } sk.strokeStyle = INK; };
+
+/* ---------- Wände: Material und Verzierung je Thema (gleiche Linie wie die Physik, nur anderes Aussehen) ---------- */
+const WALLS = {
+  weltraum: { col: '#8f9bb8', step: 26, dec(x, sk, p, a, i) { x.fillStyle = i % 5 === 0 ? '#6fe0ff' : '#e3e9f7'; sk.lineWidth = 1.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(p[0], p[1], i % 5 === 0 ? 2.2 : 1.6, 0, 7); sk.fill(); sk.stroke(); } },
+  kueche: { col: '#f4f1ea', step: 16, dec(x, sk, p, a) { sk.lineWidth = 1.6; sk.strokeStyle = 'rgba(110,150,175,.8)'; sk.beginPath(); sk.moveTo(p[0] - Math.sin(a) * 4, p[1] + Math.cos(a) * 4); sk.lineTo(p[0] + Math.sin(a) * 4, p[1] - Math.cos(a) * 4); sk.stroke(); sk.strokeStyle = INK; } },
+  sport: { col: '#ffffff', step: 24, dec(x, sk, p, a, i) { if (i % 2) return; sk.lineWidth = 5; sk.strokeStyle = '#e0453a'; sk.beginPath(); sk.moveTo(p[0] - Math.cos(a) * 6, p[1] - Math.sin(a) * 6); sk.lineTo(p[0] + Math.cos(a) * 6, p[1] + Math.sin(a) * 6); sk.stroke(); sk.strokeStyle = INK; } },
+  elemente: { col: '#a9a49a', step: 34, dec(x, sk, p, a, i) { sk.lineWidth = 2; sk.strokeStyle = i % 2 ? '#ff8a2a' : '#4aa8ff'; sk.beginPath(); sk.moveTo(p[0] - Math.cos(a) * 7, p[1] - Math.sin(a) * 7); sk.lineTo(p[0] + Math.sin(a) * 2, p[1] - Math.cos(a) * 2); sk.lineTo(p[0] + Math.cos(a) * 7, p[1] + Math.sin(a) * 7); sk.stroke(); sk.strokeStyle = INK; } },
+  ozean: { col: '#ff8f7a', step: 15, dec(x, sk, p, a, i) { x.fillStyle = i % 2 ? '#ffc2b0' : '#ff6a5a'; sk.lineWidth = 1.4; sk.strokeStyle = INK; sk.beginPath(); sk.arc(p[0] + Math.sin(a) * (i % 3 - 1) * 3, p[1] - Math.cos(a) * (i % 3 - 1) * 3, 3.4, 0, 7); sk.fill(); sk.stroke(); } },
+  suess: { col: '#fff0f6', step: 14, dec(x, sk, p, a, i) { x.fillStyle = ['#ff6aa0', '#5fb6ff', '#ffd45a', '#7bd36a', '#b38aef'][i % 5]; sk.lineWidth = 1.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(p[0], p[1], 2.8, 0, 7); sk.fill(); sk.stroke(); } },
+  familie: { col: '#c98b5a', step: 44, dec(x, sk, p, a, i) { if (i % 2) { x.fillStyle = '#e0453a'; sk.lineWidth = 1.2; sk.strokeStyle = INK; heart(sk, p[0], p[1], 3.6); sk.fill(); sk.stroke(); } else { x.fillStyle = '#6a3a1e'; sk.beginPath(); sk.arc(p[0], p[1], 1.5, 0, 7); sk.fill(); } } },
+  gefuehl: { col: '#ffffff', step: 15, dec(x, sk, p, a, i) { x.fillStyle = ['#ff7a9a', '#ffd45a', '#7bd36a', '#5fb6ff', '#b38aef'][i % 5]; sk.lineWidth = 1.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(p[0], p[1], 3, 0, 7); sk.fill(); sk.stroke(); } },
+  dino: { col: '#b8a888', step: 20, dec(x, sk, p, a, i) { x.fillStyle = i % 2 ? '#8a7a5e' : '#d2c6a6'; sk.lineWidth = 1.4; sk.strokeStyle = INK; sk.beginPath(); sk.ellipse(p[0], p[1], 3.8 + (i % 3), 2.8, a, 0, 7); sk.fill(); sk.stroke(); } },
+  herbst: { col: '#9a6a3c', step: 30, dec(x, sk, p, a, i) { x.save(); x.translate(p[0], p[1]); x.rotate(a + i); x.fillStyle = ['#d9452a', '#f2c13a', '#e8923a'][i % 3]; sk.lineWidth = 1.2; sk.strokeStyle = INK; sk.beginPath(); sk.moveTo(0, -4); sk.quadraticCurveTo(4, 0, 0, 4); sk.quadraticCurveTo(-4, 0, 0, -4); sk.fill(); sk.stroke(); x.restore(); } },
+  sturm: { col: '#6a7a98', step: 24, dec(x, sk, p, a, i) { x.fillStyle = '#e6eefc'; sk.lineWidth = 1.2; sk.strokeStyle = INK; sk.beginPath(); sk.arc(p[0], p[1], i % 3 ? 1.5 : 2.4, 0, 7); sk.fill(); sk.stroke(); } }
+};
+// Zeichnet die Wandlinien (outline-Polylinien) als dickes Material mit Verzierung. Gibt false zurück, wenn das Thema keine eigene Wand hat.
+export function drawSkinWall(x, sk, outline, id, TOP) {
+  const w = WALLS[id]; if (!w) return false;
+  const pts = ln => ln.map(q => [q[0], Math.max(q[1], -TOP)]);
+  for (const ln of outline) {
+    const P = pts(ln);
+    for (const [lw, col] of [[11, INK], [6.4, w.col]]) { sk.lineWidth = lw; sk.strokeStyle = col; x.lineJoin = x.lineCap = 'round'; sk.beginPath(); P.forEach((q, i) => i ? sk.lineTo(q[0], q[1]) : sk.moveTo(q[0], q[1])); sk.stroke(); }
+    let carry = 0, k = 0;
+    for (let i = 1; i < P.length; i++) {
+      const dx = P[i][0] - P[i - 1][0], dy = P[i][1] - P[i - 1][1], L = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+      for (let d = w.step - carry; d <= L; d += w.step) { const t = d / L; w.dec(x, sk, [P[i - 1][0] + dx * t, P[i - 1][1] + dy * t], a, k++); carry = L - d; }
+      if (L < w.step - carry) carry += L;
+    }
+    sk.strokeStyle = INK;
+  }
+  return true;
+}

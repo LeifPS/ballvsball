@@ -7,7 +7,7 @@ import { INK, DPR, mkSprite, sketchCtx, strSeed } from './sk.js';
 import { bodySprite, drawBall, drawObj, drawFx, addFx, drawHpBar, ringJ, star, fxState, GROUND } from './art.js';
 import { R0 } from './ballart.js';
 import { drawBoxArt } from './boxart.js';
-import { SKIN } from './dropskin.js';
+import { SKIN, drawSkinWall } from './dropskin.js';
 
 export const TEAM_COL = ['#2b6fd0', '#d33a3a'];
 export const PLAYER_COL = ['#2b6fd0', '#d33a3a', '#2f9a4a', '#e0a21a'];
@@ -206,7 +206,9 @@ function boardSprite(col, L, boxId) {
     x.globalAlpha = .18; x.fillStyle = '#ffd45a'; x.fillRect(L.goal[0], L.goal[1], L.goal[2], L.goal[3]); x.globalAlpha = 1;
     x.restore();
     x.strokeStyle = INK; x.lineWidth = 3.6;
-    for (const ln of L.outline) { sk.beginPath(); ln.forEach((q, i) => i ? sk.lineTo(q[0], Math.max(q[1], -TOP)) : sk.moveTo(q[0], Math.max(q[1], -TOP))); sk.stroke(); }
+    if (!(skin && drawSkinWall(x, sk, L.outline, boxId, TOP))) {
+      for (const ln of L.outline) { sk.beginPath(); ln.forEach((q, i) => i ? sk.lineTo(q[0], Math.max(q[1], -TOP)) : sk.moveTo(q[0], Math.max(q[1], -TOP))); sk.stroke(); }
+    }
     // Ablagen: Holzbretter, handgezeichnet (wacklige Kontur, versetzte Füllung, Maserung)
     for (const sh of L.shelves) {
       if (skin && skin.shelf) { skin.shelf(x, sk, sh); x.strokeStyle = INK; continue; }
