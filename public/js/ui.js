@@ -46,7 +46,7 @@ const coinHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi(
 const tokHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('token', 22) + '</span>';
 const shardHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('shard', 22) + '</span>';
 const priceHTML = b => b.cur === 'tokens' ? tokHTML(b.price) : coinHTML(b.price);
-const rarHTML = r => '<span class="rar' + (r === 'mythisch' ? ' myth' : r === 'legendaer' ? ' leg' : '') + '" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
+const rarHTML = r => '<span class="rar' + (r === 'mythisch' ? ' myth' : r === 'legendaer' ? ' leg' : r === 'episch' ? ' epi' : '') + '" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
 const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
 
 const starsHTML = (n, size) => n ? '<span class="stars" style="white-space:nowrap">' + Array.from({ length: n }, () => gi('star', size || 15, '#ffd45a')).join('') + '</span>' : '';
@@ -638,6 +638,7 @@ const DROP_RGB = [[169, 176, 189], [59, 139, 255], [160, 80, 240], [255, 194, 26
 const dropRGB = (lv, tm) => {
   if (lv === 3) { const k = (Math.sin(tm * 3) + 1) / 2; return [217 + k * 38, 160 + k * 70, 0 + k * 128]; }   // dunkelgelb <-> hellgelb
   if (lv === 4) { const k = (tm * .6) % 3, P = [[255, 42, 42], [255, 154, 26], [255, 210, 58]], a = P[Math.floor(k)], b = P[(Math.floor(k) + 1) % 3], f = k % 1; return a.map((v, i) => v + (b[i] - v) * f); }
+  if (lv === 2) { const k = (Math.sin(tm * 1.6) + 1) / 2; return [150 + k * 22, 70 + k * 22, 232 + k * 14]; }   // ganz leichter Violett-Verlauf
   return DROP_RGB[lv];
 };
 const rgbS = (c, a, l) => { const m = l || 0, q = x => Math.max(0, Math.min(255, Math.round(m >= 0 ? x + (255 - x) * m : x * (1 + m)))); return 'rgba(' + q(c[0]) + ',' + q(c[1]) + ',' + q(c[2]) + ',' + (a == null ? 1 : a) + ')'; };   // l>0 heller, l<0 dunkler
@@ -695,7 +696,7 @@ async function openSkinDrop0() {
   const st = { clicks: 0, lv: 0, phase: 'idle', pt: 0, up: false, fin: false, cur: DROP_RGB[0].slice(), flash: 0, cam: 0, glow: 0, crackT: 1, squash: 0, ps: [], rings: [], slam: null, shown: false, fT: 0, t0: -1, nx: 0 };
   const cx = W / 2, cy = H * .37, SC = Math.min(W * .44, H * .27) / 128;
   const nm = lv => RARITY[SORT[lv]].name;
-  const label = () => { const e = $('#drar'); if (!e) return; e.innerHTML = st.lv >= 3 ? rarHTML(SORT[st.lv]) : esc(nm(st.lv)); e.style.textShadow = '2px 2px 0 #0d0a1c, 0 0 16px ' + rgbS(DROP_RGB[st.lv], 1); };
+  const label = () => { const e = $('#drar'); if (!e) return; e.innerHTML = st.lv >= 2 ? rarHTML(SORT[st.lv]) : esc(nm(st.lv)); e.style.textShadow = '2px 2px 0 #0d0a1c, 0 0 16px ' + rgbS(DROP_RGB[st.lv], 1); };
   label();
   const circ = (i, lv) => { const c = $('#dci' + i); if (!c) return; const col = DROP_RGB[lv]; c.style.background = 'radial-gradient(circle at 35% 30%,' + rgbS(col, 1, .7) + ',' + rgbS(col, 1) + ' 60%,' + rgbS(col, 1, -.35) + ')'; c.style.boxShadow = '0 0 18px ' + rgbS(col, .9) + ',inset 0 -3px 6px rgba(0,0,0,.25)'; c.style.transform = 'scale(1.4)'; setTimeout(() => { c.style.transform = ''; }, 300); };
   const P = (o) => { if (st.ps.length < 140) st.ps.push(Object.assign({ age: 0, life: 1, vx: 0, vy: 0, gr: 0, sz: 6, rot: 0, vr: 0, kind: 'dot' }, o)); };
