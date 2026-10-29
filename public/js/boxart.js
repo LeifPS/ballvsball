@@ -288,11 +288,13 @@ export function drawBoxArt(g, id, t, size, opts) {
   }
   // Körper
   if (id === 'klein') { c.beginPath(); c.moveTo(24, 50); c.lineTo(24, 80); c.quadraticCurveTo(24, 90, 50, 90); c.quadraticCurveTo(76, 90, 76, 80); c.lineTo(76, 50); c.closePath(); FS(c, th.body); }
+  else if (id === 'skin1' || id === 'skin2') { c.beginPath(); c.moveTo(18, 52); c.lineTo(82, 52); c.lineTo(80, 82); c.quadraticCurveTo(79, 90, 70, 90); c.lineTo(30, 90); c.quadraticCurveTo(21, 90, 20, 82); c.closePath(); FS(c, th.body); }   // Truhe
   else { c.beginPath(); c.rect(20, 50, 60, 38); FS(c, th.body); }
   (BODY[id] || BODY.standard)(c, T);
   // Deckel
   g.save(); g.translate(15, 52 - open * 5); g.rotate(-open * (forced ? .9 : .42));
   if (id === 'klein') { c.beginPath(); c.moveTo(6, 0); c.quadraticCurveTo(0, -10, 10, -14); c.quadraticCurveTo(35, -20, 60, -14); c.quadraticCurveTo(70, -10, 64, 0); c.closePath(); FS(c, th.lid); }
+  else if (id === 'skin1' || id === 'skin2') { c.beginPath(); c.moveTo(-2, 0); c.quadraticCurveTo(-4, -24, 35, -27); c.quadraticCurveTo(74, -24, 72, 0); c.closePath(); FS(c, th.lid); }   // runder Truhendeckel
   else { c.beginPath(); c.rect(0, -16, 70, 16); FS(c, th.lid); }
   (LID[id] || LID.standard)(c, T);
   g.restore();
@@ -301,6 +303,10 @@ export function drawBoxArt(g, id, t, size, opts) {
       const ph = (T * .5 + i / 7) % 1, x = 22 + i * 9 + Math.sin(T * 1.7 + i * 1.9) * 5, y = 90 - ph * 6 + Math.sin(T * 2 + i) * 1.5, r = 7 + (i % 3) * 2.5 + ph * 3;
       g.globalAlpha = (1 - ph) * .55 + .15; g.fillStyle = i % 2 ? '#14141c' : '#2a2a38'; c.beginPath(); c.ellipse(x, y, r * 1.5, r * .65, 0, 0, 7); c.fill();
     }
+    g.globalAlpha = 1;
+  }
+  if (id === 'skin1' || id === 'skin2') {   // Truhen glitzern immer: kreisende Sterne
+    for (let i = 0; i < 4; i++) { const a2 = T * 1.6 + i * 1.5708, rx = 46 + Math.sin(T * 2 + i) * 3; g.globalAlpha = .55 + .4 * Math.sin(T * 5 + i * 2); star4(c, 50 + Math.cos(a2) * rx, 56 + Math.sin(a2) * 30, 2.6 + (i % 2) * 1.4, i % 2 ? '#fff' : th.glow); }
     g.globalAlpha = 1;
   }
   if (id === 'halloween') bat(c, 50 + Math.cos(T * 1.3) * 38, 22 + Math.sin(T * 2.6) * 6, T);

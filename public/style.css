@@ -215,3 +215,6 @@ button.ttile:active{transform:translate(1px,2px)}
 .btn{transition:transform .07s,filter .07s}
 .btn:active:not(:disabled){transform:translateY(2px) scale(.98);filter:brightness(.97)}
 @media (prefers-reduced-motion:reduce){.sin{animation:none}.bounce,.jit{animation:none}}
+
+/* Skin-Truhen: goldener Rahmen, klar von Ballboxen unterscheidbar */
+.boxtile.skin{background:linear-gradient(180deg,rgba(255,226,122,.35),rgba(255,154,196,.25));border:3px solid #e0b030;border-radius:16px;box-shadow:0 3px 0 var(--ink)}

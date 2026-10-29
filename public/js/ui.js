@@ -486,8 +486,11 @@ function boxStats(id) {
 function boxScreen() {
   S.screen = 'box'; setView(null);
   const list = BOX_LIST.filter(b => boxActive(b.id, now()));
-  show('<div class="col">' + backBar('Ballboxen') +
-    '<div class="boxgrid">' + list.map(b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div></div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>').join('') + '</div></div>');
+  const tile = b => '<button class="boxtile' + (b.id.startsWith('skin') ? ' skin' : '') + '" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div>' + (b.id.startsWith('skin') ? '<span class="small" style="color:#fff2a0;text-shadow:1px 1px 0 var(--ink)">nur Aussehen</span>' : '') + '</div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>';
+  const balls = list.filter(b => !b.id.startsWith('skin')), skins = list.filter(b => b.id.startsWith('skin'));
+  show('<div class="col">' + backBar('Boxen') +
+    '<h3 style="color:#fff;text-shadow:2px 2px 0 var(--ink);margin:6px 2px 0">Ballboxen</h3><p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neue Bälle zum Kämpfen</p><div class="boxgrid">' + balls.map(tile).join('') + '</div>' +
+    '<h3 style="color:#ffe27a;text-shadow:2px 2px 0 var(--ink);margin:16px 2px 0">Skin-Truhen</h3><p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neues Aussehen für Bälle. Gleiche Werte, gleiche Fähigkeiten.</p><div class="boxgrid">' + skins.map(tile).join('') + '</div></div>');
 }
 function boxDetail(id) {
   const b = BOX_BY_ID[id];
@@ -497,9 +500,9 @@ function boxDetail(id) {
   const byR = SORT.map(r => [r, st.ids.filter(t => DEFS[t].rarity === r).length]).filter(x => x[1]);
   show('<div class="col">' + backBar(b.name, 'box') +
     '<div class="hero bounce" style="margin-top:6px">' + boxArt(b.id, 170) + '</div>' +
-    '<div class="panel"><h3>' + esc(b.name) + '</h3><p class="mt">' + esc(b.desc) + '</p><div class="row sb wrap mt"><span>Kosten: ' + priceHTML(b) + '</span><span>' + st.own + ' von ' + st.n + ' gesammelt</span></div><div class="progress thin"><i style="width:' + Math.round(st.own / st.n * 100) + '%;background:' + b.col + '"></i></div></div>' +
+    '<div class="panel"><h3>' + esc(b.name) + '</h3><p class="mt">' + esc(b.desc) + '</p><div class="row sb wrap mt"><span>Kosten: ' + priceHTML(b) + '</span><span>' + st.own + ' von ' + st.n + (id.startsWith('skin') ? ' Skins' : '') + ' gesammelt</span></div><div class="progress thin"><i style="width:' + Math.round(st.own / st.n * 100) + '%;background:' + b.col + '"></i></div></div>' +
     (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am ' + new Date(b.until - 1).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + '. ' + timeLeft(b.until - now()) + '.<div class="small mt">Kürbisse bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Kürbisse verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
-    '<div class="panel"><h3>Das kann drin sein</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
+    '<div class="panel"><h3>' + (id.startsWith('skin') ? 'Diese Skins sind drin' : 'Das kann drin sein') + '</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
     st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name.replace('ball', '')) : '???') + '</div></button>').join('') +
     '</div></div>' +
     '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + r[1] + ' Bälle)</span></span><span>' + ((BOX_RARITY[id] || {})[r[0]] ?? RARITY[r[0]].weight) + ' %</span></div>').join('') + '</div>' +
