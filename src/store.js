@@ -1,7 +1,7 @@
 // Datenhaltung: Konten, Bälle, Ballboxen, Markt, Handel (SQLite im Durable Object).
 // Alle Methoden sind synchron und damit atomar. Fehler werden als { err: 'code' } zurückgegeben.
 import { DurableObject } from 'cloudflare:workers';
-import { DEFS, BALL_IDS, RARITY, ballsInBox, MAX_STARS, runFight } from '../public/js/engine.js';
+import { DEFS, BALL_IDS, BOSS_IDS, RARITY, ballsInBox, MAX_STARS, runFight } from '../public/js/engine.js';
 import { mulberry } from '../public/js/core.js';
 import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
 import { simBox, layoutOf } from '../public/js/boxsim.js';
@@ -209,9 +209,11 @@ export class Store extends DurableObject {
     const w = { gewoehnlich: 3, selten: 3, episch: 2, legendaer: 1 }, wp = pool.map(id => w[DEFS[id].rarity] || 1), tot = wp.reduce((a, b) => a + b, 0);
     let x = r() * tot, opp = pool[0]; for (let i = 0; i < pool.length; i++) { x -= wp[i]; if (x <= 0) { opp = pool[i]; break; } }
     const rules = [{ id: 'any', text: 'Beliebiger Ball' }, { id: 'low', text: 'Nur gewöhnliche und seltene Bälle' }, { id: 'nostar', text: 'Nur Bälle ohne Sterne' }];
-    const bpool = BALL_IDS.filter(id => ['legendaer', 'mythisch'].includes(DEFS[id].rarity)), boss = bpool[Math.floor(r() * bpool.length)];
-    return { daily: { opp, oppStars: day % 3, rule: rules[day % 3] }, boss: { type: boss, hpMul: DEFS[boss].rarity === 'mythisch' ? 2.4 : 3.6, stars: 2 } };
+    const bpool = BOSS_IDS, boss = bpool[Math.floor(r() * bpool.length)];
+    return { daily: { opp, oppStars: day % 3, rule: rules[day % 3] }, boss: { type: boss, hpMul: DEFS[boss].bossHp, stars: 2 } };
   }
+  // Gleicher Start für alle: Seed und Startwinkel hängen nur vom Tag (und beim Boss vom Versuch) ab
+  soloSeed(day, salt) { const r = mulberry(((day * 7919 + salt * 104729) ^ 0x9e3779b9) >>> 0); return { seed: Math.floor(r() * 2000000000) + 1, d0: Math.round(r() * 3600) / 10, d1: Math.round(r() * 3600) / 10 }; }
   soloGet(userId, kind, day) {
     const r = this.q('SELECT day,data FROM solo WHERE user_id=? AND kind=?', userId, kind)[0];
     return r && r.day === day ? JSON.parse(r.data) : null;
@@ -239,7 +241,7 @@ export class Store extends DurableObject {
     const rar = DEFS[sb.ball.type].rarity;
     if (d.rule.id === 'low' && !['gewoehnlich', 'selten'].includes(rar)) return { err: 'rule' };
     if (d.rule.id === 'nostar' && sb.stars > 0) return { err: 'rule' };
-    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars, skin: this.equipMap(u.id)[sb.ball.type] }, { slot: 1, type: d.opp, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.oppStars }] };
+    const sd = this.soloSeed(day, 1), cfg = { seed: sd.seed, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: sd.d0, stars: sb.stars, skin: this.equipMap(u.id)[sb.ball.type] }, { slot: 1, type: d.opp, team: 1, deg: sd.d1, stars: d.oppStars }] };
     const res = runFight(cfg), win = res.winner === 0;
     st.tries++;
     let reward = null;
@@ -256,7 +258,7 @@ export class Store extends DurableObject {
     if (st.used.length >= 3 || st.frac <= 0) return { err: 'boss_done' };
     const sb = this.soloBall(u, uid); if (sb.err) return sb;
     if (st.used.includes(Number(uid)) || st.used.some(x => { const o = this.q('SELECT type FROM balls WHERE uid=?', x)[0]; return o && o.type === sb.ball.type; })) return { err: 'boss_used' };
-    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars, skin: this.equipMap(u.id)[sb.ball.type] }, { slot: 1, type: d.type, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.stars, hpMul: d.hpMul, hpFrac: st.frac }] };
+    const sd = this.soloSeed(day, 2 + st.used.length), cfg = { seed: sd.seed, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: sd.d0, stars: sb.stars, skin: this.equipMap(u.id)[sb.ball.type] }, { slot: 1, type: d.type, team: 1, deg: sd.d1, stars: d.stars, hpMul: d.hpMul, hpFrac: st.frac }] };
     const res = runFight(cfg), win = res.winner === 0;
     st.used.push(Number(uid)); st.frac = win ? 0 : Math.max(.02, res.frac[1] || .02);
     let reward = null;
@@ -498,7 +500,7 @@ export class Store extends DurableObject {
   marketBrowse(tk, o) {
     const u = this.userBy(tk);
     if (!u) return { err: 'auth' };
-    let types = Object.keys(DEFS);   // Bälle und Skins
+    let types = Object.keys(DEFS).filter(t => !DEFS[t].boss);   // Bälle und Skins
     if (o.rarity && RARITY[o.rarity]) types = types.filter(t => DEFS[t].rarity === o.rarity);
     if (o.q) {
       const needle = String(o.q).toLowerCase().slice(0, 20);
@@ -507,7 +509,7 @@ export class Store extends DurableObject {
     if (!types.length) return { ok: true, items: [], total: 0 };
     // SQLite erlaubt höchstens 100 Platzhalter: bei vielen Sorten lieber die ausgeschlossenen Sorten angeben
     let cond, args;
-    if (types.length > 80) { const ex = Object.keys(DEFS).filter(t => !types.includes(t)); cond = ex.length ? 'b.type NOT IN (' + ex.map(() => '?').join(',') + ')' : '1=1'; args = ex; }
+    if (types.length > 80) { const ex = Object.keys(DEFS).filter(t => !types.includes(t) && !DEFS[t].boss); cond = ex.length ? 'b.type NOT IN (' + ex.map(() => '?').join(',') + ')' : '1=1'; args = ex; }
     else { cond = 'b.type IN (' + types.map(() => '?').join(',') + ')'; args = types; }
     const order = o.sort === 'new' ? 'b.listed_at DESC' : o.sort === 'high' ? 'b.price DESC' : 'b.price ASC, b.listed_at DESC';
     const page = Math.max(0, int(o.page || 0, 0, 1000) || 0);

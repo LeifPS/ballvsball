@@ -9,6 +9,8 @@ import './balls6.js';
 import './balls7.js';
 import './balls8.js';
 import './balls9.js';
+import './balls10.js';
+export { BOSS_IDS } from './balls10.js';
 export { SKIN_IDS } from './skins.js';
 
 export { STAR_BONUS, MAX_STARS, DT, BOX, MAX_T, ENRAGE_T, DEFS, OBJS, BALL_IDS, RARITY, ballsByRarity, stepSim, BOX_IDS, ballsInBox };
