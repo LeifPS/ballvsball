@@ -101,6 +101,7 @@ async function api(path, body) {
 }
 function setMe(me) { S.me = me; if (me.now) S.skew = me.now - Date.now(); }
 const ballName = t => DEFS[t] ? DEFS[t].name : '?';
+const pl = (n, one, many) => n + ' ' + (n === 1 ? one : many);   // 1 Ball, 2 Bälle
 const SORT = ['gewoehnlich', 'selten', 'episch', 'legendaer', 'mythisch'];
 function typeCounts() {
   const c = {};
@@ -539,12 +540,12 @@ function boxDetail(id) {
   const byR = SORT.map(r => [r, st.ids.filter(t => DEFS[t].rarity === r).length]).filter(x => x[1]);
   show('<div class="col">' + backBar(b.name, 'box') +
     '<div class="hero bounce" style="margin-top:6px">' + boxArt(b.id, 170) + '</div>' +
-    '<div class="panel"><h3>' + esc(b.name) + '</h3><p class="mt">' + esc(b.desc) + '</p><div class="row sb wrap mt"><span>Kosten: ' + priceHTML(b) + '</span><span>' + st.own + ' von ' + st.n + (id.startsWith('skin') ? ' Skins' : '') + ' gesammelt</span></div><div class="progress thin"><i style="width:' + Math.round(st.own / st.n * 100) + '%;background:' + b.col + '"></i></div></div>' +
+    '<div class="panel"><h3>' + esc(b.name) + '</h3><p class="mt">' + esc(b.desc) + '</p><div class="row sb wrap mt"><span>Kosten: ' + priceHTML(b) + '</span><span>' + st.own + ' von ' + st.n + ' gesammelt</span></div><div class="progress thin"><i style="width:' + Math.round(st.own / st.n * 100) + '%;background:' + b.col + '"></i></div></div>' +
     (b.until ? '<div class="panel center" style="background:#ffd9a0">' + gi('token', 30) + ' <b>Nur kurze Zeit!</b> Die Box verschwindet am ' + new Date(b.until - 1).toLocaleDateString('de-DE', { day: 'numeric', month: 'long' }) + '. ' + timeLeft(b.until - now()) + '.<div class="small mt">Kürbisse bekommst du für Kämpfe (Sieg 3, Niederlage 1) und die Tagesbelohnung (5). Übrige Kürbisse verfallen. Die Bälle behältst du für immer.</div></div>' : '') +
     '<div class="panel"><h3>' + (id.startsWith('skin') ? 'Diese Skins sind drin' : 'Das kann drin sein') + '</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
     st.ids.sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name.replace('ball', '')) : '???') + '</div></button>').join('') +
     '</div></div>' +
-    '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + r[1] + ' Bälle)</span></span><span>' + ((BOX_RARITY[id] || {})[r[0]] ?? RARITY[r[0]].weight) + ' %</span></div>').join('') + '</div>' +
+    '<div class="panel"><h3>Chancen</h3>' + byR.map(r => '<div class="row sb"><span>' + rarHTML(r[0]) + ' <span class="small mute">(' + pl(r[1], 'Ball', 'Bälle') + ')</span></span><span>' + ((BOX_RARITY[id] || {})[r[0]] ?? RARITY[r[0]].weight) + ' %</span></div>').join('') + '</div>' +
     btn(free ? 'Gratis öffnen (' + S.me.freeBoxes + ' übrig)' : 'Öffnen für ' + priceHTML(b), 'openbox', (ok ? '' : 'disabled') + ' data-id="' + id + '"', 'pri big') +
     (ok ? '' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (b.cur === 'tokens' ? 'Dir fehlen Marken. Gewinne Kämpfe oder hole die Tagesbelohnung.' : 'Dir fehlen Münzen. Gewinne Kämpfe oder hole die Tagesbelohnung.') + '</p>') + '</div>');
 }
@@ -624,7 +625,7 @@ function skinDropPane() {
   return '<div class="hero bounce" style="margin-top:6px"><img alt="" src="' + dropImg('#8d8d8d').toDataURL() + '" style="width:150px;height:auto"></div>' +
     '<div class="panel"><h3>Skindrop</h3><p class="mt">Tippe viermal auf den Drop. Jeder Tipp kann ihn in die nächste Seltenheit aufsteigen lassen. Am Ende bekommst du einen Skin genau dieser Seltenheit.</p>' +
     '<div class="row sb wrap mt"><span>Kosten: ' + shardHTML(SKINDROP.price) + '</span><span>Du hast: ' + shardHTML(have) + '</span></div></div>' +
-    '<div class="panel"><h3>Chancen</h3>' + odds.map(o => '<div class="row sb"><span>' + rarHTML(o[0]) + ' <span class="small mute">(' + skinsBy(o[0]).length + ' Skins)</span></span><span>' + (o[1] >= 10 ? o[1].toFixed(0) : o[1] >= 1 ? o[1].toFixed(1) : o[1].toFixed(2)) + ' %</span></div>').join('') + '</div>' +
+    '<div class="panel"><h3>Chancen</h3>' + odds.map(o => '<div class="row sb"><span>' + rarHTML(o[0]) + ' <span class="small mute">(' + pl(skinsBy(o[0]).length, 'Skin', 'Skins') + ')</span></span><span>' + (o[1] >= 10 ? o[1].toFixed(0) : o[1] >= 1 ? o[1].toFixed(1) : o[1].toFixed(2)) + ' %</span></div>').join('') + '</div>' +
     '<div class="panel"><h3>Diese Skins sind drin</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
     SKIN_IDS.slice().sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name) : '???') + '</div></button>').join('') + '</div></div>' +
     btn('Öffnen für ' + shardHTML(SKINDROP.price), 'skindrop', ok ? '' : 'disabled', 'pri big') +
@@ -907,7 +908,7 @@ function multi() {
   const three = tile('k3', 'queue3', 'Zu dritt', 'Jeder gegen jeden, 3 Leben', '<span class="krow">' + B(2, 56) + '</span><span class="krow">' + B(4, 56, 1) + B(6, 56) + '</span>');
   const four = tile('k4 koff', '', 'Zu viert', 'Jeder gegen jeden', '<span class="krow">' + B(2, 46) + B(4, 46, 1) + '</span><span class="krow">' + B(6, 46) + B(8, 46, 1) + '</span>', '<span class="ktape">Wartung</span>');
   const fr = tile('kfr', 'friends', 'Mit Freunden', 'Raum mit Code, ohne Belohnung', '<span class="hv">' + gi('heart', 44, '#ff6f9a') + gi('heart', 32, '#ff9ac4') + '</span><span class="codebig jit" style="font-size:24px;letter-spacing:3px;margin-top:2px">ABCD</span>');
-  const so = tile('kso', 'solo', 'Einzelspieler', 'Tagesaufgabe und Boss', '<span class="hv">' + gi('star', 44, '#ff9a5a') + ball(topType(), 52, .7) + '</span>', S.me.freeBoxes ? '<span class="kbadge sm">' + S.me.freeBoxes + ' Gratis-Box</span>' : '');
+  const so = tile('kso', 'solo', 'Einzelspieler', 'Tagesaufgabe und Boss', '<span class="hv">' + gi('star', 44, '#ff9a5a') + ball(topType(), 52, .7) + '</span>', S.me.freeBoxes ? '<span class="kbadge sm">' + pl(S.me.freeBoxes, 'Gratis-Box', 'Gratis-Boxen') + '</span>' : '');
   show('<div class="col">' + backBar('Kampf') +
     '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 0 2px">Fehlende Spieler füllen Bots auf.</p>' + hero +
     '<div class="kgrid">' + three + four + '</div>' +
