@@ -342,7 +342,17 @@ export function drawObj(g, o, sim, tf, tm) {
 function drawObj0(g, o, sim, tf, tm, osk) {
   TF = tf;
   const f = tf + (o.owner || 0) * 3;
-  if (osk && osk.atk && o.proj && o.vx !== undefined) { skinProj(g, o, osk, tm); return; }   // Geschosse im Skin-Look
+  if (osk && osk.atk && ((o.proj && o.vx !== undefined) || ((o.k === 'bullet' || o.k === 'frost' || o.k === 'bee') && o.vx !== undefined))) { skinProj(g, o, osk, tm); return; }
+  // Episch+: eigene Modelle statt Umfärben: Stacheln als Skin-Form, Wurfobjekte (Bumerang, Säge) als kreisender Skin-Kranz
+  if (osk && osk.atk && o.k === 'spike') {
+    const a = osk.atk, c = skinCol(a.col, Math.floor(o.x / 9 + o.y / 7)), an = Math.atan2(o.ny, o.nx) + 1.5708, wob = Math.sin(tm * 5 + o.x) * .12;
+    g.save(); g.translate(o.x, o.y); g.rotate(an + wob); g.scale(1, 1.25); skinPart(g, a.kind, 0, -5, c, 8.5, 0); g.restore(); return;
+  }
+  if (osk && osk.atk && (o.k === 'boom' || o.k === 'saw')) {
+    const a = osk.atk, R = Math.max(10, o.r || 14), rot = o.rot || tm * 8;
+    for (let i = 0; i < 4; i++) { const an = rot + i * 1.5708; skinPart(g, a.kind, o.x + Math.cos(an) * R * .75, o.y + Math.sin(an) * R * .75, skinCol(a.col, i), R * .42, an * 2); }
+    skinPart(g, a.kind, o.x, o.y, skinCol(a.col2 || a.col, 2), R * .5, -rot); return;
+  }   // Geschosse im Skin-Look
   switch (o.k) {
     case 'mauer': {   // Ziegelmauer, handgezeichnet
       const dx = o.x2 - o.x1, dy = o.y2 - o.y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L * 5, ny = dx / L * 5, grow = Math.min(1, (8 - o.life) * 5 + .2), fade = Math.min(1, o.life * 1.5);
