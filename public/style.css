@@ -202,6 +202,8 @@ button.ttile:active{transform:translate(1px,2px)}
 
 /* Mythisch: animierter Rot-Orange-Verlauf */
 @keyframes mythflow{to{background-position:200% 0}}
+.rar.leg{background:linear-gradient(90deg,#b07a00,#ffe680,#d9a000,#fff2b0,#b07a00);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;animation:mythflow 2.8s linear infinite;font-weight:700}
+.rbar.r-legendaer::before,.rbar[style*="#e0a800"]::before{background:linear-gradient(90deg,#b07a00,#ffe680,#d9a000,#fff2b0,#b07a00);background-size:200% 100%;animation:mythflow 2.8s linear infinite;opacity:1}
 .rar.myth{background:linear-gradient(90deg,#ff2a2a,#ff9a1a,#ffd23a,#ff9a1a,#ff2a2a);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent!important;-webkit-text-fill-color:transparent;animation:mythflow 2.4s linear infinite;font-weight:700}
 .rbar.r-mythisch::before,.rbar[style*="#ff5a2a"]::before{background:linear-gradient(90deg,#ff2a2a,#ff9a1a,#ffd23a,#ff9a1a,#ff2a2a);background-size:200% 100%;animation:mythflow 2.4s linear infinite;opacity:1}
 .ttile[style*="#ff5a2a"]{border-bottom-color:#ff7a1a}

@@ -46,7 +46,7 @@ const coinHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi(
 const tokHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('token', 22) + '</span>';
 const shardHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('shard', 22) + '</span>';
 const priceHTML = b => b.cur === 'tokens' ? tokHTML(b.price) : coinHTML(b.price);
-const rarHTML = r => '<span class="rar' + (r === 'mythisch' ? ' myth' : '') + '" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
+const rarHTML = r => '<span class="rar' + (r === 'mythisch' ? ' myth' : r === 'legendaer' ? ' leg' : '') + '" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
 const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
 
 const starsHTML = (n, size) => n ? '<span class="stars" style="white-space:nowrap">' + Array.from({ length: n }, () => gi('star', size || 15, '#ffd45a')).join('') + '</span>' : '';
@@ -647,7 +647,7 @@ async function openSkinDrop() {
   const cv = $('#dc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const st = { clicks: 0, lv: 0, shake: 0, flash: 0, grow: 0, done: 0, ps: [], ring: [], t0: -1 };
   const stars = [];
-  const label = () => { const e = $('#drar'); if (e) { e.textContent = RARITY[SORT[st.lv]].name; e.style.color = st.lv ? '#fff' : '#e8e8e8'; e.style.textShadow = '2px 2px 0 var(--ink), 0 0 14px ' + colOf(st.lv); } };
+  const label = () => { const e = $('#drar'); if (e) { e.innerHTML = st.lv >= 3 ? rarHTML(SORT[st.lv]) : esc(RARITY[SORT[st.lv]].name); e.style.color = st.lv ? '#fff' : '#e8e8e8'; e.style.textShadow = '2px 2px 0 var(--ink), 0 0 14px ' + colOf(st.lv); } };
   label();
   const spawn = (n, col, sp, kind) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = sp * (.4 + Math.random() * .8); st.ps.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, age: 0, life: .7 + Math.random() * .6, col, kind, sz: 6 + Math.random() * 6, rot: Math.random() * 6 }); } };
   cv.onpointerdown = ev => {
