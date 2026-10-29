@@ -177,6 +177,26 @@ const ANIM = {
       g.save(); g.translate(-r * .98, r * .1); g.rotate(sw); g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, r * .22); g.stroke(); g.fillStyle = '#ffd45a'; g.lineWidth = 2; g.beginPath(); g.arc(0, r * .38, r * .17, 0, 7); g.fill(); g.stroke(); g.restore();
       const fw = Math.sin(tm * 6) * r * .18; g.save(); g.translate(r * .35, -r * 1.42); g.strokeStyle = INK; g.lineWidth = 2; g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(r * .25 + fw, -r * .6, r * .7 + fw * 1.4, -r * .5); g.quadraticCurveTo(r * .35 + fw, -r * .25, 0, r * .05); g.closePath(); g.fill(); g.stroke(); g.restore(); }
   },
+  frost: {
+    back(g, b, tm, k) { const r = b.r; g.lineJoin = g.lineCap = 'round';
+      for (let i = 0; i < 6; i++) { const a = tm * .9 + i * 1.0472, rr = r * 1.75 + Math.sin(tm * 2 + i) * r * .08, x = Math.cos(a) * rr, y = Math.sin(a) * rr * .8;
+        g.save(); g.translate(x, y); g.rotate(a * 2); g.lineWidth = 4.4; g.strokeStyle = INK; for (let q = 0; q < 3; q++) { const t = q * 1.0472; g.beginPath(); g.moveTo(-Math.cos(t) * r * .3, -Math.sin(t) * r * .3); g.lineTo(Math.cos(t) * r * .3, Math.sin(t) * r * .3); g.stroke(); }
+        g.lineWidth = 2.2; g.strokeStyle = '#e9fbff'; for (let q = 0; q < 3; q++) { const t = q * 1.0472; g.beginPath(); g.moveTo(-Math.cos(t) * r * .3, -Math.sin(t) * r * .3); g.lineTo(Math.cos(t) * r * .3, Math.sin(t) * r * .3); g.stroke(); } g.restore(); } },
+    front(g, b, tm, k) { const r = b.r, fl = Math.sin(tm * 3) * r * .06; g.lineJoin = g.lineCap = 'round'; g.lineWidth = 2.4; g.strokeStyle = INK;
+      // schwebende Kristallkrone
+      [[-.62, .9, .35], [-.3, 1.25, .42], [0, 1.5, .48], [.3, 1.25, .42], [.62, .9, .35]].forEach((c2, i) => { const x = c2[0] * r, h = c2[1] * r + fl + Math.sin(tm * 4 + i) * r * .03, w = c2[2] * r * .5; g.fillStyle = i === 2 ? '#ffffff' : '#bfeaff'; g.beginPath(); g.moveTo(x - w, -r * 1.02 + fl); g.lineTo(x, -r * 1.05 - h + fl * .5); g.lineTo(x + w, -r * 1.02 + fl); g.closePath(); g.fill(); g.stroke(); });
+      g.beginPath(); g.moveTo(-r * .85, -r * 1.0 + fl); g.lineTo(r * .85, -r * 1.0 + fl); g.lineWidth = 3.4; g.stroke(); g.lineWidth = 1.6; g.strokeStyle = '#8fd8ff'; g.stroke();
+      const sh = (tm * .9) % 1.4; g.globalAlpha = .8; star(g, -r * .6 + sh * r * 1.2, -r * 1.35 + fl, 3.6, '#ffffff', tm * 2); g.globalAlpha = 1;
+      for (let i = 0; i < 5; i++) { const ph = (tm * .5 + i * .2) % 1; g.globalAlpha = Math.sin(ph * Math.PI); star(g, Math.sin(tm + i * 2.4) * r * 1.6, -r * 1.6 + ph * r * 3.4, 2.6, '#ffffff', tm + i); } g.globalAlpha = 1; }
+  },
+  sun: {
+    back(g, b, tm, k) { const r = b.r; g.lineJoin = g.lineCap = 'round'; g.save(); g.rotate(tm * .55);
+      for (let i = 0; i < 12; i++) { const a = i / 12 * 6.283, L = r * (i % 2 ? .6 : .95) + Math.sin(tm * 5 + i) * r * .08; g.save(); g.rotate(a); g.fillStyle = i % 2 ? '#ffb02e' : '#ffd45a'; g.strokeStyle = INK; g.lineWidth = 2.4; g.beginPath(); g.moveTo(-r * .2, -r * 1.05); g.lineTo(0, -r * 1.05 - L); g.lineTo(r * .2, -r * 1.05); g.closePath(); g.fill(); g.stroke(); g.restore(); } g.restore();
+      g.save(); g.rotate(-tm * .9); g.strokeStyle = 'rgba(255,230,120,.55)'; g.lineWidth = 3; g.beginPath(); g.arc(0, 0, r * 1.55, .2, 5.4); g.stroke(); g.restore(); },
+    front(g, b, tm, k) { const r = b.r; g.lineJoin = g.lineCap = 'round';
+      for (let i = 0; i < 3; i++) { const a = tm * 2.2 + i * 2.0944, x = Math.cos(a) * r * 1.65, y = Math.sin(a) * r * 1.65; g.save(); g.translate(x, y); g.rotate(a + 1.57); g.fillStyle = '#ff7a1a'; g.strokeStyle = INK; g.lineWidth = 2; g.beginPath(); g.moveTo(-r * .2, 0); g.quadraticCurveTo(-r * .1, -r * .35, 0, -r * .55); g.quadraticCurveTo(r * .12, -r * .3, r * .2, 0); g.arc(0, 0, r * .2, 0, Math.PI); g.closePath(); g.fill(); g.stroke(); g.fillStyle = '#ffe14a'; g.beginPath(); g.arc(0, r * .02, r * .09, 0, 7); g.fill(); g.restore(); }
+      for (let i = 0; i < 4; i++) { const ph = (tm * .7 + i * .25) % 1; g.globalAlpha = Math.sin(ph * Math.PI); star(g, Math.cos(i * 1.6 + tm) * r * .9, r * .2 - ph * r * 1.8, 3, '#fff6c0', tm * 3 + i); } g.globalAlpha = 1; }
+  },
   kosmos: {
     back(g, b, tm, k) { const r = b.r; g.save(); g.rotate(tm * .5); g.scale(1, .32); g.lineWidth = 5; g.strokeStyle = INK; g.beginPath(); g.arc(0, 0, r * 1.75, Math.PI, 0); g.stroke(); g.lineWidth = 2.6; g.strokeStyle = '#ffd45a'; g.beginPath(); g.arc(0, 0, r * 1.75, Math.PI, 0); g.stroke(); g.restore(); },
     front(g, b, tm, k) { const r = b.r; g.save(); g.rotate(tm * .5); g.scale(1, .32); g.lineWidth = 5; g.strokeStyle = INK; g.beginPath(); g.arc(0, 0, r * 1.75, 0, Math.PI); g.stroke(); g.lineWidth = 2.6; g.strokeStyle = '#ffd45a'; g.beginPath(); g.arc(0, 0, r * 1.75, 0, Math.PI); g.stroke(); g.restore();
@@ -186,8 +206,8 @@ const ANIM = {
 };
 // Mythisch: Starteffekt beim Countdown (3, 2, 1) - wird einmal von der Kampfansicht aufgerufen
 export function skinStartFx(sim) {
-  for (const b of sim.balls) { const sk = b.skin && SKIN_BY_ID[b.skin]; if (!sk || sk.start !== 'portal') continue;
-    for (let i = 0; i < 3; i++) pt({ k: 'ring', x: b.x, y: b.y, age: 0, life: .55 + i * .22, r: b.r * (2.6 + i * .7), col: skinCol('rainbow', i * 2) });
+  for (const b of sim.balls) { const sk = b.skin && SKIN_BY_ID[b.skin]; if (!sk || !sk.start) continue; const fc = sk.fxcol || null;
+    for (let i = 0; i < 3; i++) pt({ k: 'ring', x: b.x, y: b.y, age: 0, life: .55 + i * .22, r: b.r * (2.6 + i * .7), col: fc ? fc[i % fc.length] : skinCol('rainbow', i * 2) });
     skinBurst(b.x, b.y, sk.atk, 18, 140, 1, 20); if (sk.snd && sk.snd.start) snd(sk.snd.start, .9); }
 }
 let sim0 = null;
@@ -450,7 +470,7 @@ export function addFx(e) {
     for (let i = 0; i < 3; i++) pt({ k: 'star', x, y, age: 0, life: .9, vx: (rnd() - .5) * 120, vy: -80 - rnd() * 60, sz: 5 + rnd() * 3 });
     fxState.shake = 8; fxState.hitstop = Math.max(fxState.hitstop, .1); fxState.ko = .9; fxState.koX = x; fxState.koY = y;
     { const sk = SKIN_BY_ID[e.e]; if (sk && sk.die === 'supernova') {
-      for (let i = 0; i < 4; i++) pt({ k: 'ring', x, y, age: 0, life: .7 + i * .15, r: e.a * (3.4 + i * 1.3), col: skinCol('rainbow', i * 2) });
+      for (let i = 0; i < 4; i++) pt({ k: 'ring', x, y, age: 0, life: .7 + i * .15, r: e.a * (3.4 + i * 1.3), col: sk.fxcol ? sk.fxcol[i % sk.fxcol.length] : skinCol('rainbow', i * 2) });
       skinBurst(x, y, sk.atk, 34, 230, 1.1, 30); fxState.shake = 11; if (sk.snd && sk.snd.die) snd(sk.snd.die, 1); } }
     snd('die');
   } else if (k === 'heal') {

@@ -1004,6 +1004,59 @@ const MODEL = {
     pl(c, [[-r * .7, -r * .62], [0, -r * 1.35], [r * .7, -r * .62], [0, -r * .45]], '#ff9a2a'); stars(c, [[0, -r * 1.5, r * .5]], '#fff2a0');
     face(c, s, { dy: .08, mouth: 'grin', er: .18 });
   },
+  herzmagier(c, s) {
+    const r = s * .36; body(c, s, '#ffb0d4');
+    pl(c, [[-r * 1.0, -r * .5], [-r * .5, -r * .75], [-r * .25, -r * 1.75], [r * .3, -r * .8], [r * .55, -r * .6], [r * 1.0, -r * .5], [0, -r * .3]], '#d6336c');
+    heart(c, -r * .02, -r * 1.05, r * .3, '#ffffff'); heart(c, r * .45, -r * .62, r * .13, '#ffd0e8');
+    c.lineWidth = s * .03; [-1, 1].forEach(d => { c.beginPath(); c.ellipse(d * r * .34, -r * .02, r * .17, r * .2, 0, 0, 7); FS(c, '#ffffff'); heart(c, d * r * .34, -r * .06, r * .13, '#ff3a7a'); });
+    c.lineWidth = s * .035; c.beginPath(); c.arc(0, r * .42, r * .2, .2, PI - .2); c.stroke(); cBlush(c, -r * .62, r * .25, s); cBlush(c, r * .62, r * .25, s);
+    thick(c, s * .05, '#a8641e', () => { c.beginPath(); c.moveTo(r * 1.2, r * .6); c.lineTo(r * 1.65, -r * .2); }); heart(c, r * 1.72, -r * .32, r * .24, '#ff5a9a');
+  },
+  gewitterfeuer(c, s) {
+    const r = s * .36;
+    [-1, 1].forEach(d => { ci(c, d * r * .85, -r * .72, r * .3, '#e6ecff'); ci(c, d * r * 1.08, -r * .5, r * .22, '#f4f7ff'); });
+    pl(c, [[-r * .45, -r * .5], [r * .05, -r * 1.15], [-r * .12, -r * 1.15], [r * .5, -r * 2.0], [-r * .65, -r * 1.0], [-r * .25, -r * 1.0], [-r * .75, -r * .5]], '#ffe14a');
+    body(c, s, '#7a84b8');
+    pl(c, [[r * .2, -r * .4], [-r * .2, r * .08], [r * .06, r * .08], [-r * .26, r * .7], [r * .4, -r * .05], [r * .12, -r * .05], [r * .5, -r * .4]], '#ffe14a');
+    face(c, s, { angry: 1, mouth: 'grin', er: .2, blush: 0 });
+  },
+  zuckerkaktus(c, s) {
+    const r = s * .36; body(c, s, '#fffaf0');
+    c.save(); c.beginPath(); c.arc(0, 0, r * .97, 0, 7); c.clip(); c.lineWidth = s * .09; c.strokeStyle = '#ff5a6a';
+    for (let k = -4; k <= 4; k++) { c.beginPath(); c.moveTo(k * r * .55 - r, -r); c.lineTo(k * r * .55 + r, r); c.stroke(); } c.restore();
+    c.lineWidth = s * .035; c.beginPath(); c.arc(0, 0, r, 0, 7); c.stroke();
+    [['#4fd45a', -.55, -.45], ['#3bb7ff', .5, -.55], ['#ffe83b', -.7, .35], ['#a77ae8', .6, .4], ['#ff9a2a', 0, .8]].forEach(p => { c.save(); c.translate(p[1] * r, p[2] * r); c.rotate(p[1] * 3); c.beginPath(); c.moveTo(-r * .1, 0); c.lineTo(r * .1, 0); c.lineWidth = s * .05; c.strokeStyle = INK; c.stroke(); c.lineWidth = s * .03; c.strokeStyle = p[0]; c.stroke(); c.restore(); });
+    ci(c, 0, -r * 1.12, r * .22, '#d6223a'); c.lineWidth = s * .03; c.beginPath(); c.moveTo(0, -r * 1.3); c.quadraticCurveTo(r * .1, -r * 1.55, r * .3, -r * 1.6); c.stroke(); dot(c, -r * .07, -r * 1.18, r * .05, '#fff');
+    face(c, s, { mouth: 'smile', er: .18 });
+  },
+  galaxiewirbel(c, s) {
+    const r = s * .36;
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, r * 1.35); g.addColorStop(0, hexA('#c8a8ff', .5)); g.addColorStop(1, hexA('#c8a8ff', 0)); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * 1.35, 0, 7); c.fill();
+    body(c, s, '#2a1f6a');
+    c.save(); c.beginPath(); c.arc(0, 0, r * .97, 0, 7); c.clip();
+    [['#b58cff', 0], ['#ff8ad8', 3.14]].forEach(a => { c.lineWidth = s * .075; c.strokeStyle = a[0]; c.globalAlpha = .75; c.beginPath(); for (let t = 0; t <= 1; t += .08) { const an = a[1] + t * 5.2, rr = r * (.15 + t * .95); const x = Math.cos(an) * rr, y = Math.sin(an) * rr; t ? c.lineTo(x, y) : c.moveTo(x, y); } c.stroke(); });
+    c.globalAlpha = 1; c.restore(); ci(c, 0, 0, r * .24, '#fff2c0');
+    stars(c, [[-r * .6, -r * .5, r * .13], [r * .55, r * .5, r * .12], [r * .5, -r * .6, r * .09], [-r * .5, r * .6, r * .1]], '#fff2a0');
+    c.lineWidth = s * .035; c.strokeStyle = INK; c.beginPath(); c.arc(0, 0, r, 0, 7); c.stroke(); face(c, s, { mouth: 'o', er: .16, dy: -.02, blush: 0 });
+  },
+  frostkoenig(c, s) {
+    const r = s * .36;
+    for (let i = 0; i < 9; i++) { const a = -PI + (i + .5) * PI / 9 * 2 * .5 + PI * .0; spike(c, Math.cos(i / 9 * 6.283) * r * .95, Math.sin(i / 9 * 6.283) * r * .95, i / 9 * 6.283 + 1.5708, s * .15, s * .055, '#f4fcff'); }
+    body(c, s, '#bfeaff');
+    c.save(); c.beginPath(); c.arc(0, 0, r * .97, 0, 7); c.clip(); c.lineWidth = s * .025; c.strokeStyle = 'rgba(255,255,255,.85)';
+    [[-.5, -.4], [.5, .3], [-.2, .6]].forEach(p => { for (let k = 0; k < 3; k++) { const a = k * 1.0472; c.beginPath(); c.moveTo(p[0] * r - Math.cos(a) * r * .22, p[1] * r - Math.sin(a) * r * .22); c.lineTo(p[0] * r + Math.cos(a) * r * .22, p[1] * r + Math.sin(a) * r * .22); c.stroke(); } }); c.restore();
+    c.lineWidth = s * .035; c.beginPath(); c.arc(0, 0, r, 0, 7); c.stroke();
+    face(c, s, { mouth: 'flat', er: .17, angry: 1 });
+  },
+  sonnenfeuer(c, s) {
+    const r = s * .36;
+    const g = c.createRadialGradient(0, 0, 0, 0, 0, r * 1.5); g.addColorStop(0, hexA('#ffe27a', .6)); g.addColorStop(1, hexA('#ffe27a', 0)); c.fillStyle = g; c.beginPath(); c.arc(0, 0, r * 1.5, 0, 7); c.fill();
+    c.beginPath(); c.moveTo(-r * .5, -r * .6); c.quadraticCurveTo(-r * .3, -r * 1.3, 0, -r * 1.55); c.quadraticCurveTo(r * .1, -r * 1.0, r * .5, -r * .6); c.closePath(); FS(c, '#ffe14a');
+    body(c, s, '#ffb52e');
+    c.beginPath(); c.ellipse(0, r * .42, r * .55, r * .38, 0, 0, 7); FS(c, '#fff0a8');
+    [-1, 1].forEach(d => cEye(c, d * r * .34, -r * .1, r * .16, 1, s)); c.lineWidth = s * .035; c.beginPath(); c.arc(0, r * .3, r * .24, .15, PI - .15); c.stroke();
+    cBlush(c, -r * .62, r * .2, s); cBlush(c, r * .62, r * .2, s);
+  },
   // ab hier Legendär/Mythisch: nur der Körper; Flügel, Flammen, Planeten usw. bewegen sich und werden live gezeichnet (art.js)
   drachenstachel(c, s) {
     const r = s * .36;
