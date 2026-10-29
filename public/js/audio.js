@@ -30,7 +30,7 @@ export function unlock() {
   apply();
 }
 /* ---------- Effekte: KI-erzeugte Samples (ElevenLabs Sound Effects, siehe public/audio) ---------- */
-const SFX_NAMES = ['skin_kosmos_cast', 'skin_kosmos_hit', 'skin_kosmos_start', 'skin_kosmos_die', 'click', 'back', 'hit', 'tick', 'hit2', 'boom', 'zap', 'die', 'block', 'heal', 'stun', 'dash', 'whoosh', 'nova', 'pop', 'coin', 'go', 'open', 'win', 'lose', 'rare', 'legend', 'helper', 'grow', 'mute', 'mood', 'bombdrop', 'shield', 'boing', 'cannon', 'grate', 'catch', 'mythic'];
+const SFX_NAMES = ['drop_tap', 'drop_up', 'drop_charge', 'drop_shatter', 'skin_kosmos_cast', 'skin_kosmos_hit', 'skin_kosmos_start', 'skin_kosmos_die', 'click', 'back', 'hit', 'tick', 'hit2', 'boom', 'zap', 'die', 'block', 'heal', 'stun', 'dash', 'whoosh', 'nova', 'pop', 'coin', 'go', 'open', 'win', 'lose', 'rare', 'legend', 'helper', 'grow', 'mute', 'mood', 'bombdrop', 'shield', 'boing', 'cannon', 'grate', 'catch', 'mythic'];
 const VARY = { hit: .06, hit2: .05, click: .04, pop: .06, tick: .03, block: .05, zap: .05, coin: .02 };   // leichte Tonhöhen-Schwankung, damit sich Wiederholungen nicht gleich anhören
 const buffers = {};
 let loading = false;
@@ -42,7 +42,7 @@ function loadSamples() {
   }
 }
 const LAST = {};
-const FALLBACK = { skin_kosmos_start: 'go', skin_kosmos_die: 'nova', portal: 'whoosh', wall: 'block', skin_kosmos_cast: 'nova', skin_kosmos_hit: 'coin', mythic: 'legend', helper: 'pop', grow: 'whoosh', mute: 'zap', mood: 'coin', bombdrop: 'tick', shield: 'block', boing: 'pop', cannon: 'boom', grate: 'block', catch: 'hit' };   // falls ein neuer Effekt noch nicht geladen ist
+const FALLBACK = { drop_tap: 'hit2', drop_up: 'rare', drop_charge: 'whoosh', drop_shatter: 'boom', skin_kosmos_start: 'go', skin_kosmos_die: 'nova', portal: 'whoosh', wall: 'block', skin_kosmos_cast: 'nova', skin_kosmos_hit: 'coin', mythic: 'legend', helper: 'pop', grow: 'whoosh', mute: 'zap', mood: 'coin', bombdrop: 'tick', shield: 'block', boing: 'pop', cannon: 'boom', grate: 'block', catch: 'hit' };   // falls ein neuer Effekt noch nicht geladen ist
 export function sfx(name, v) {
   if (!ctx || mode < 1) return;
   const buf = buffers[name] || buffers[FALLBACK[name]]; if (!buf) return;
@@ -56,7 +56,7 @@ export function sfx(name, v) {
 }
 
 /* ---------- Musik: KI-erzeugte Schleifen (ElevenLabs Music), je Szene eine, mit Überblendung ---------- */
-const TRACKS = { menu: '/audio/music_menu.mp3', fight: '/audio/music_fight.mp3' };
+const TRACKS = { menu: '/audio/music_menu.mp3', fight: '/audio/music_fight.mp3', drop: '/audio/music_drop.mp3' };
 const musicBufs = {};
 let cur = null, musicLoading = false;
 function loadMusic() {
@@ -74,7 +74,7 @@ function fadeOut(c) {
 }
 function playScene() {
   if (!ctx || mode < 2) return;
-  const want = scene === 'fight' ? 'fight' : 'menu';
+  const want = scene === 'fight' ? 'fight' : scene === 'drop' && musicBufs.drop ? 'drop' : 'menu';
   if (cur && cur.scene === want) return;
   const buf = musicBufs[want];
   if (!buf) return;   // kommt nach dem Laden nochmal hierher

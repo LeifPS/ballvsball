@@ -684,7 +684,7 @@ async function openSkinDrop0() {
   const before = new Set(S.me.balls.map(x => x.type));
   const r = await api('/api/skindrop', {});
   if (r.err) { toast(errText(r.err)); return; }
-  S.screen = 'skindrop'; setView(null); sfx('open'); SCREEN.onpointerdown = null; removeDropOverlay();
+  S.screen = 'skindrop'; setView(null); sfx('open'); setScene('drop'); SCREEN.onpointerdown = null; removeDropOverlay();
   const N = SKINDROP.clicks, W = window.innerWidth, H = window.innerHeight, DP = Math.min(2, DPR);
   const ov = document.createElement('div'); ov.id = 'dover'; ov.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:35;background:#120d24;touch-action:manipulation;user-select:none;-webkit-user-select:none;overflow:hidden';
   ov.innerHTML = '<canvas id="dc" style="position:absolute;left:0;top:0;width:100%;height:100%;cursor:pointer"></canvas>' +
@@ -706,15 +706,15 @@ async function openSkinDrop0() {
     if (ev) ev.preventDefault();
     if (st.phase !== 'idle' || st.clicks >= N) return;
     const i = st.clicks++; st.phase = 'charge'; st.pt = 0; st.up = !!r.steps[i]; st.fin = st.clicks >= N; st.crackT = 0; st.squash = 1;
-    sfx('hit2'); sfx('grate', .7); vib(st.fin ? [20, 30, 40] : 18);
-    if (st.fin) sfx('whoosh');
+    sfx('drop_tap'); vib(st.fin ? [20, 30, 40] : 18);
+    if (st.fin) sfx('drop_charge');
     const h = $('#dhint'); if (h) h.textContent = st.fin ? '' : 'Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + ' ...';
   };
   const levelUp = () => {
     st.lv++; const c = dropRGB(st.lv, 0); st.flash = 1; st.cam = .55 + st.lv * .15; st.glow = 1;
     st.rings.push({ age: 0, c, w: 12 }, { age: -.12, c, w: 7 }); burst(26 + st.lv * 10, c, 230 + st.lv * 40, 'star', 80); burst(14, c, 150, 'dot', 40);
     st.slam = { age: 0, txt: nm(st.lv).toUpperCase() + '!', lv: st.lv };
-    sfx(st.lv >= 4 ? 'mythic' : st.lv >= 3 ? 'legend' : 'rare'); if (st.lv >= 2) sfx('boom', .8); vib(st.lv >= 3 ? [30, 40, 60] : 30);
+    sfx('drop_up'); sfx(st.lv >= 4 ? 'mythic' : st.lv >= 3 ? 'legend' : 'rare', .8); vib(st.lv >= 3 ? [30, 40, 60] : 30);
     if (st.lv >= 3) confetti(40 + st.lv * 15);
     label(); circ(st.clicks - 1, st.lv);
     const h = $('#dhint'); if (h && !st.fin) h.textContent = 'Aufgestiegen! Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + ' ...';
@@ -724,7 +724,7 @@ async function openSkinDrop0() {
     st.phase = 'final'; st.fT = 0; st.flash = 1; st.cam = 1.2; const c = dropRGB(st.lv, 0);
     for (let i = 0; i < 26; i++) { const a = Math.random() * 6.283, v = 150 + Math.random() * 330; P({ x: cx + Math.cos(a) * 20 * SC, y: cy + Math.sin(a) * 30 * SC, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, gr: 520, life: 1.3 + Math.random() * .5, sz: (10 + Math.random() * 16) * SC / 1.4, rot: Math.random() * 6, vr: (Math.random() - .5) * 14, col: rgbS(c, 1, (Math.random() - .5) * .6), kind: 'shard' }); }
     burst(60 + st.lv * 15, c, 380, 'star', 100); st.rings.push({ age: 0, c, w: 16 }, { age: -.1, c, w: 9 }, { age: -.22, c, w: 5 });
-    sfx('boom'); sfx('nova'); vib([40, 30, 80]); confetti(st.lv >= 3 ? 90 : 40);
+    sfx('drop_shatter'); vib([40, 30, 80]); confetti(st.lv >= 3 ? 90 : 40);
     for (let i = 0; i < N; i++) { const el = $('#dci' + i); if (el) el.style.transform = 'scale(1.2)'; }
   };
   cv.onpointerdown = tap;
@@ -798,7 +798,7 @@ async function openSkinDrop0() {
   };
 }
 function skinDropResult(r, before) {
-  S.screen = 'skindropres'; setView(null);
+  S.screen = 'skindropres'; setView(null); setScene('menu');
   const d = DEFS[r.ball.type], isNew = !before.has(r.ball.type), rar = d.rarity, big = rar !== 'gewoehnlich' && rar !== 'selten';
   const ok = (S.me.shards || 0) >= SKINDROP.price;
   show('<div class="col res"><h1 class="jit pop" style="color:#fff;text-shadow:3px 4px 0 var(--ink)">' + esc(d.name) + '!</h1><div><span class="rarpill">' + rarHTML(rar) + '</span></div>' +
