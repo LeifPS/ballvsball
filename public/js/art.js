@@ -56,8 +56,10 @@ export function ringJ(g, x, y, r, w, col, f, seed) {
 // Handgezeichnet auch bei Partikeln: wackelige Doppellinie und versetzte Füllung (sketchCtx), das Wackeln springt im Takt der Zeichen-Frames
 let TF = 0;
 const hd = (g, k, size, amin) => sketchCtx(g, Math.sin(k * 12.9898) * 7 + (TF % 3) * 1.713, size || 14, amin == null ? .35 : amin);   // kleine Teile wackeln weniger, damit sie nicht zu Klecksen werden
+// Partikel: Wackeln relativ zur Teilchengröße, damit die Handzeichnung auch bei kleinen Teilen sichtbar bleibt
+const hdp = (g, k, sz) => sketchCtx(g, Math.sin(k * 12.9898) * 7 + (TF % 3) * 1.713, sz * 6, sz * .17);
 export function star(g, x, y, r, col, rot) {
-  g.save(); g.translate(x, y); g.rotate(rot || 0); const h = hd(g, x * .37 + y * .71 + r, 14); h.beginPath();
+  g.save(); g.translate(x, y); g.rotate(rot || 0); const h = hdp(g, x * .37 + y * .71 + r, r); h.beginPath();
   for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .45 : r; h[i ? 'lineTo' : 'moveTo'](Math.cos(a) * q, Math.sin(a) * q); }
   h.closePath(); g.fillStyle = col; h.fill(); g.lineWidth = Math.max(1, r * .18); h.lineWidth = g.lineWidth; g.strokeStyle = INK; h.stroke(); g.restore();
 }
@@ -102,7 +104,7 @@ const RB = ['#ff5a5a', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#a77ae8'];
 const skinCol = (col, i) => col === 'rainbow' ? RB[((i % RB.length) + RB.length) % RB.length] : col;
 function skinPart(g, kind, x, y, col, sz, rot) {
   if (kind === 'star') { star(g, x, y, sz, col, rot); return; }
-  g.save(); g.translate(x, y); g.rotate(rot || 0); const h = hd(g, x * .31 + y * .53 + sz, 14); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); h.lineWidth = g.lineWidth; g.lineJoin = 'round'; h.beginPath();
+  g.save(); g.translate(x, y); g.rotate(rot || 0); const h = hdp(g, x * .31 + y * .53 + sz, sz); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); h.lineWidth = g.lineWidth; g.lineJoin = 'round'; h.beginPath();
   if (kind === 'heart') { h.moveTo(0, sz * .9); h.bezierCurveTo(-sz * 1.5, -sz * .1, -sz * .9, -sz * 1.2, 0, -sz * .4); h.bezierCurveTo(sz * .9, -sz * 1.2, sz * 1.5, -sz * .1, 0, sz * .9); }
   else if (kind === 'shard') { h.moveTo(0, -sz * 1.3); h.lineTo(sz * .6, 0); h.lineTo(0, sz * 1.3); h.lineTo(-sz * .6, 0); }
   else if (kind === 'flower') { for (let i = 0; i < 5; i++) { const a = i * 1.2566; h.moveTo(0, 0); h.ellipse(Math.cos(a) * sz * .7, Math.sin(a) * sz * .7, sz * .55, sz * .38, a, 0, 7); } }
@@ -136,9 +138,9 @@ function skinAmbient(g, b, sk, tm) {
   const p = sk.part, n = p.n || 4, r = b.r;
   for (let i = 0; i < n; i++) {
     const col = skinCol(p.col, i);
-    if (p.mode === 'rise') { const ph = (tm * .55 + i / n) % 1; g.globalAlpha = Math.sin(ph * Math.PI); skinPart(g, p.kind, Math.sin(tm * 1.7 + i * 2.3) * r * .95, r * .6 - ph * r * 2.4, col, 3.4 + (i % 2) * 1.2, Math.sin(tm * 3 + i) * .6); }
+    if (p.mode === 'rise') { const ph = (tm * .55 + i / n) % 1; g.globalAlpha = Math.sin(ph * Math.PI); skinPart(g, p.kind, Math.sin(tm * 1.7 + i * 2.3) * r * .95, r * .6 - ph * r * 2.4, col, 4.6 + (i % 2) * 1.4, Math.sin(tm * 3 + i) * .6); }
     else if (p.mode === 'trail') { const v = Math.hypot(b.vx, b.vy) || 1, ph = (tm * 2.2 + i / n) % 1; g.globalAlpha = 1 - ph; skinPart(g, p.kind, -b.vx / v * (r + ph * r * 2.4) + Math.sin(tm * 9 + i * 2) * 3, -b.vy / v * (r + ph * r * 2.4) + Math.cos(tm * 8 + i * 3) * 3, col, 4.4 * (1 - ph * .5), tm * 4 + i); }
-    else { const a = tm * 1.7 + i * 6.2832 / n, rr = r * 1.45 + Math.sin(tm * 3 + i) * 2.5; skinPart(g, p.kind, Math.cos(a) * rr, Math.sin(a) * rr * .9, col, 3.6 + (i % 2) * 1.2, tm * 2 + i); }
+    else { const a = tm * 1.7 + i * 6.2832 / n, rr = r * 1.45 + Math.sin(tm * 3 + i) * 2.5; skinPart(g, p.kind, Math.cos(a) * rr, Math.sin(a) * rr * .9, col, 4.8 + (i % 2) * 1.4, tm * 2 + i); }
   }
   g.globalAlpha = 1;
 }
