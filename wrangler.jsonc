@@ -18,6 +18,15 @@
     { "tag": "v1", "new_sqlite_classes": ["Store", "Game"] }
   ],
   "preview_urls": true,
-  "previews": {},
+  "previews": {
+    // Vorschau-Branch: Der Worker liest STORE und GAME aus env, deshalb müssen die Bindings hier noch einmal stehen (sonst Fehler 1101).
+    // Jede Vorschau bekommt automatisch eigenen Speicher.
+    "durable_objects": {
+      "bindings": [
+        { "name": "STORE", "class_name": "Store" },
+        { "name": "GAME", "class_name": "Game" }
+      ]
+    }
+  },
   "observability": { "enabled": true }
 }
