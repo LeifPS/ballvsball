@@ -1037,7 +1037,7 @@ let dirDeg = 0, dirTouched = false, dirSent = false;
 function arenaSize() { return Math.min(window.innerWidth - 36, 460, Math.max(240, window.innerHeight - 330)); }
 function dirScreen(m) {
   const M = S.match; if (!M) return;
-  S.screen = 'dir'; dirSent = false; dirTouched = false;
+  S.screen = 'dir'; dirSent = false; dirTouched = false; clearFx();   // Reste vom K.o. der letzten Runde (weißer Schleier, Zoom) wegräumen
   const balls = m.balls.map(b => ({ slot: b.slot, type: b.type, team: M.players[b.slot].team, deg: 0 }));
   const sim = createSim({ seed: 1, balls, total: M.n, noFx: true });
   const my = sim.balls.find(b => b.slot === M.you), en = sim.balls.find(b => b.team !== my.team);
