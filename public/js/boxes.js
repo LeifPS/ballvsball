@@ -13,8 +13,8 @@ export const BOX_LIST = [
   { id: 'klein', name: 'Kleinbox', price: 450, cur: 'coins', col: '#3a3a48', desc: 'Winzige Bälle mit großer Wirkung, dazu ein mythischer Riese.' },
   { id: 'brainrot', name: 'Brainrot-Box', price: 300, cur: 'coins', col: '#ff4fd8', desc: 'Italienische Meme-Monster: Tralalero, Tung Tung Sahur und eine mythische Kuh.', off: true },
   { id: 'gefuehl', name: 'Gefühlsbox', price: 450, cur: 'coins', col: '#e86aa8', desc: 'Fröhlich, wütend, ängstlich ...: elf Gefühle und der Gefühlsherrscher.' },
-  { id: 'skin1', name: 'Farbtruhe', price: 300, cur: 'coins', col: '#ff9ac4', desc: 'Acht Ball-Skins: neue Farben, Funkenspuren und Sternenstaub. Ein Skin sieht anders aus, kann aber genau das Gleiche wie sein Ball.', off: true },
-  { id: 'skin2', name: 'Schatztruhe', price: 600, cur: 'coins', col: '#e0b030', desc: 'Acht Ball-Skins, darunter vier ganz neue Modelle und ein mythischer Skin mit eigenen Geräuschen.', off: true },
+  { id: 'skin1', name: 'Farbtruhe', price: 300, cur: 'coins', col: '#ff9ac4', desc: 'Acht Ball-Skins: neue Farben, Funkenspuren und Sternenstaub. Ein Skin sieht anders aus, kann aber genau das Gleiche wie sein Ball.' },
+  { id: 'skin2', name: 'Schatztruhe', price: 600, cur: 'coins', col: '#e0b030', desc: 'Acht Ball-Skins, darunter vier ganz neue Modelle und ein mythischer Skin mit eigenen Geräuschen.' },
   { id: 'herbst', name: 'Herbst-Box', price: 10, cur: 'tokens', col: '#d9822b', desc: 'Nur bis Sonntag! Laub, Pilze, ein Igel und die Vogelscheuche.', until: Date.UTC(2026, 10, 1, 23, 0, 0) },
   { id: 'sturm', name: 'Sturm-Box', price: 12, cur: 'tokens', col: '#5f7fa8', desc: 'Nur sieben Tage! Wind, Nebel, Gewitter und der Sturmkapitän.', until: Date.UTC(2026, 10, 4, 23, 0, 0) },
   { id: 'halloween', name: 'Halloween-Box', price: 10, cur: 'tokens', col: '#e8761d', desc: 'Nur bis Ende Oktober! Kostet Halloween-Marken.', until: Date.UTC(2026, 9, 31, 23, 0, 0) }
