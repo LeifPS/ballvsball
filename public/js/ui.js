@@ -633,9 +633,9 @@ function skinDropPane() {
 // Farben des Drops je Stufe (Mythisch und Legendär wandern zwischen Tönen)
 const DROP_RGB = [[169, 176, 189], [59, 139, 255], [160, 80, 240], [255, 194, 26], [255, 74, 42]];
 const dropRGB = (lv, tm) => {
-  if (lv === 3) { const k = (Math.sin(tm * 3) + 1) / 2; return [217 + k * 38, 160 + k * 70, 0 + k * 128]; }   // dunkelgelb <-> hellgelb
+  if (lv === 3) { const k = (Math.sin(tm * 3) + 1) / 2; return [232 + k * 23, 172 + k * 36, 10 + k * 60]; }   // dunkelgelb <-> hellgelb
   if (lv === 4) { const k = (tm * .6) % 3, P = [[255, 42, 42], [255, 154, 26], [255, 210, 58]], a = P[Math.floor(k)], b = P[(Math.floor(k) + 1) % 3], f = k % 1; return a.map((v, i) => v + (b[i] - v) * f); }
-  if (lv === 2) { const k = (Math.sin(tm * 1.6) + 1) / 2; return [150 + k * 22, 70 + k * 22, 232 + k * 14]; }   // ganz leichter Violett-Verlauf
+  if (lv === 2) { const k = (Math.sin(tm * 1.6) + 1) / 2; return [140 + k * 36, 60 + k * 36, 226 + k * 20]; }   // ganz leichter Violett-Verlauf
   return DROP_RGB[lv];
 };
 const rgbS = (c, a, l) => { const m = l || 0, q = x => Math.max(0, Math.min(255, Math.round(m >= 0 ? x + (255 - x) * m : x * (1 + m)))); return 'rgba(' + q(c[0]) + ',' + q(c[1]) + ',' + q(c[2]) + ',' + (a == null ? 1 : a) + ')'; };   // l>0 heller, l<0 dunkler
