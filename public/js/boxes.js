@@ -17,8 +17,8 @@ export const BOX_LIST = [
   { id: 'sturm', name: 'Sturm-Box', price: 12, cur: 'tokens', col: '#5f7fa8', desc: 'Nur sieben Tage! Wind, Nebel, Gewitter und der Sturmkapitän.', until: Date.UTC(2026, 10, 4, 23, 0, 0) },
   { id: 'halloween', name: 'Halloween-Box', price: 10, cur: 'tokens', col: '#e8761d', desc: 'Nur bis Ende Oktober! Kostet Halloween-Marken.', until: Date.UTC(2026, 9, 31, 23, 0, 0) }
 ];
-// Eigene Chancen (in %) für Boxen, denen Seltenheiten fehlen: Allesbox hat nur Selten, Episch und Mythisch; Episch und Mythisch behalten ihre Werte, Selten bekommt den Rest
-export const BOX_RARITY = { alles: { selten: 89.5, episch: 10, mythisch: .5 }, brainrot: { gewoehnlich: 45, selten: 30, episch: 17, legendaer: 7.5, mythisch: .5 } };
+// Eigene Chancen (in %) für Boxen, denen Seltenheiten fehlen: Kleinbox hat nur Selten, Episch und Mythisch (zusammen 100 %); die Allesbox hat alle fünf Seltenheiten und nimmt die normalen Werte
+export const BOX_RARITY = { klein: { selten: 89.5, episch: 10, mythisch: .5 }, brainrot: { gewoehnlich: 45, selten: 30, episch: 17, legendaer: 7.5, mythisch: .5 } };
 export const BOX_BY_ID = Object.fromEntries(BOX_LIST.map(b => [b.id, b]));
 // 1. November 2026, 00:00 Uhr deutscher Zeit
 export const EVENT_END = Math.max(...BOX_LIST.filter(b => b.until).map(b => b.until));   // Kürbis-Marken gibt es, solange irgendeine Ereignisbox läuft
