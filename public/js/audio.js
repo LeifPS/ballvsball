@@ -56,7 +56,7 @@ export function sfx(name, v) {
 }
 
 /* ---------- Musik: KI-erzeugte Schleifen (ElevenLabs Music), je Szene eine, mit Überblendung ---------- */
-const TRACKS = { menu: '/audio/music_menu.mp3', fight: '/audio/music_fight.mp3', drop: '/audio/music_drop.mp3' };
+const TRACKS = { menu: '/audio/music_menu.mp3', fight: '/audio/music_fight.mp3', drop: '/audio/music_drop.mp3', daily: '/audio/music_daily.mp3', boss: '/audio/music_boss.mp3' };
 const musicBufs = {};
 let cur = null, musicLoading = false;
 function loadMusic() {
@@ -74,7 +74,7 @@ function fadeOut(c) {
 }
 function playScene() {
   if (!ctx || mode < 2) return;
-  const want = scene === 'fight' ? 'fight' : scene === 'drop' && musicBufs.drop ? 'drop' : 'menu';
+  const want = scene === 'fight' ? 'fight' : (scene === 'daily' || scene === 'boss') ? (musicBufs[scene] ? scene : 'fight') : scene === 'drop' && musicBufs.drop ? 'drop' : 'menu';
   if (cur && cur.scene === want) return;
   const buf = musicBufs[want];
   if (!buf) return;   // kommt nach dem Laden nochmal hierher

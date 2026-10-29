@@ -338,7 +338,7 @@ async function soloFight(kind, uid) {
   closeOverlay();
   const title = kind === 'boss' ? 'Bossrennen' : 'Tägliche Herausforderung', oppName = kind === 'boss' ? 'Boss' : 'Herausforderer';
   S.match = { replay: true, solo: true, title, rec: { rounds: [1] }, idx: 0, players: [{ slot: 0, team: 0, name: 'Du' }, { slot: 1, team: 1, name: oppName }], you: 0, n: 2, ffa: false, lives: [0, 0], friendly: true, round: 1, back: () => soloResult(r, kind) };
-  fightScreen({ t: 'fight', cfg: r.cfg, steps: r.steps, winner: r.winner, losers: [], lives: [0, 0], over: false, round: 1, replay: true });
+  fightScreen({ t: 'fight', cfg: r.cfg, steps: r.steps, winner: r.winner, losers: [], lives: [0, 0], over: false, round: 1, replay: true, solo: kind });
 }
 function soloResult(r, kind) {
   S.screen = 'soloend'; setView(null); setScene('menu'); S.match = null; clearFx();
@@ -1092,7 +1092,7 @@ function hudHTML(M) {
 }
 function fightScreen(m) {
   const M = S.match; if (!M) return;
-  S.screen = 'fight'; clearFx(); setScene('fight');
+  S.screen = 'fight'; clearFx(); setScene(m.solo || 'fight');   // Tagesherausforderung und Boss haben eigene Musik
   M.round = m.round;
   const sim = createSim(m.cfg);
   sim.slotMax = {}; for (const b of sim.balls) sim.slotMax[b.slot] = (sim.slotMax[b.slot] || 0) + b.maxHp;
