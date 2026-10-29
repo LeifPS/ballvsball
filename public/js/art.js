@@ -95,7 +95,6 @@ function badge(g, x, y, txt, col, tf) {
 }
 
 /* ---------- Skins: Partikel an Geschossen und Leuchten am Ball (erst ab Selten bzw. Episch) ---------- */
-const SKIN_SOUND = false;   // Skin-Geräusche vorübergehend aus (Dateien und Code bleiben)
 const RB = ['#ff5a5a', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#a77ae8'];
 function skinPart(g, kind, x, y, col, sz, rot) {
   g.save(); g.translate(x, y); g.rotate(rot || 0); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); g.lineJoin = 'round';
@@ -375,7 +374,7 @@ export function addFx(e) {
   else if (k === 'mute') { pt({ k: 'ring', x, y, age: 0, life: .4, r: e.a * 2.2, col: '#b8b4a8' }); sparks(x, y, 6, '#d8d4c8', 70, .45, 2.8); snd('mute'); }
   else if (k === 'bombdrop') { snd('bombdrop', .8); }
   else if (k === 'wall') { sparks(x, y, 6, '#d98a5a', 70, .4, 3); puffs(x, y, 3, 'rgba(160,120,90,.8)', 40, 6); snd('block', .8); }
-  else if (k === 'skincast' || k === 'skinhit') { const sk = SKIN_BY_ID[e.e]; if (SKIN_SOUND && sk && sk.snd) snd(k === 'skincast' ? sk.snd.cast : sk.snd.hit, .8); }
+  else if (k === 'skincast' || k === 'skinhit') { const sk = SKIN_BY_ID[e.e]; if (sk && sk.snd) snd(k === 'skincast' ? sk.snd.cast : sk.snd.hit, .8); }
   else if (k === 'shield') { pt({ k: 'ring', x, y, age: 0, life: .5, r: e.a * 3, col: '#bfe4ff' }); sparks(x, y, 10, '#ffffff', 110, .5, 2.8); snd('shield'); }
 }
 export function burst(x, y, n, cols) {   // Konfetti für Sieg

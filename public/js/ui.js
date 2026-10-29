@@ -490,7 +490,7 @@ function boxScreen() {
   const balls = list.filter(b => !b.id.startsWith('skin')), skins = list.filter(b => b.id.startsWith('skin'));
   show('<div class="col">' + backBar('Boxen') +
     '<h3 style="color:#fff;text-shadow:2px 2px 0 var(--ink);margin:6px 2px 0">Ballboxen</h3><p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neue Bälle zum Kämpfen</p><div class="boxgrid">' + balls.map(tile).join('') + '</div>' +
-    '<h3 style="color:#ffe27a;text-shadow:2px 2px 0 var(--ink);margin:16px 2px 0">Skin-Truhen</h3><p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neues Aussehen für Bälle. Gleiche Werte, gleiche Fähigkeiten.</p><div class="boxgrid">' + skins.map(tile).join('') + '</div></div>');
+    (skins.length ? '<h3 style="color:#ffe27a;text-shadow:2px 2px 0 var(--ink);margin:16px 2px 0">Skin-Truhen</h3><p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neues Aussehen für Bälle. Gleiche Werte, gleiche Fähigkeiten.</p><div class="boxgrid">' + skins.map(tile).join('') + '</div>' : '') + '</div>');
 }
 function boxDetail(id) {
   const b = BOX_BY_ID[id];
