@@ -3,6 +3,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { hash } from './hash.js';
 import { runFight, DEFS, BALL_IDS, DT } from '../public/js/engine.js';
+import { SHARDS_WIN } from '../public/js/boxes.js';
 
 const LIVES = 3, LIVES_FFA = 3;   // Mehrspieler (3 oder 4 Spieler, jeder gegen jeden): weniger Leben, damit es nicht ewig dauert
 const QUEUE_WAIT = 15000;
@@ -495,15 +496,15 @@ export class Game extends DurableObject {
     const conn = p.conn;
     p.conn = null;
     if (conn) { conn.match = null; conn.p = null; }
-    let coins = 0, tokens = 0, me = null;
+    let coins = 0, tokens = 0, shards = 0, me = null;
     if (!m.friendly && !p.left) {
       const bots = m.players.some(o => o.bot);
       const table = bots ? [60, 30, 15, 8] : [90, 50, 25, 10];
       coins = table[place - 1] || 5;
-      try { tokens = await this.store().reward(p.userId, coins, place === 1, place === 1 ? (bots ? 2 : 3) : 1) || 0; } catch (e) { console.log('reward', e); }
+      try { tokens = await this.store().reward(p.userId, coins, place === 1, place === 1 ? (bots ? 2 : 3) : 1) || 0; shards = place === 1 ? SHARDS_WIN : 0; } catch (e) { console.log('reward', e); }
     }
     try { const x = await this.store().me(p.token); if (x.ok) me = x.me; } catch (e) { }
-    this.send(conn, { t: 'match_end', ffa: true, place, n: m.n, win: place === 1, winnerTeam: -1, coins, tokens, friendly: m.friendly, me });
+    this.send(conn, { t: 'match_end', ffa: true, place, n: m.n, win: place === 1, winnerTeam: -1, coins, tokens, shards, friendly: m.friendly, me });
   }
 
   async finishMatch(m, winnerTeam) {
@@ -515,20 +516,20 @@ export class Game extends DurableObject {
       this.userMatch.delete(p.userId);
       const win = p.team === winnerTeam;
       this.logFor(m, p, win, 0);
-      let coins = 0, tokens = 0;
+      let coins = 0, tokens = 0, shards = 0;
       if (!m.friendly && !p.left) {
         const botOpp = m.players.some(o => o.bot && o.team !== p.team);
         coins = win ? (botOpp ? 40 : 60) : (botOpp ? 10 : 20);   // Münzen pro Kampf: gegen Bot 40 / 10, gegen Menschen 60 / 20
-        try { tokens = await this.store().reward(p.userId, coins, win, win ? (botOpp ? 2 : 3) : 1) || 0; } catch (e) { console.log('reward', e); }
+        try { tokens = await this.store().reward(p.userId, coins, win, win ? (botOpp ? 2 : 3) : 1) || 0; shards = win ? SHARDS_WIN : 0; } catch (e) { console.log('reward', e); }
       }
-      results.push({ p, win, coins, tokens });
+      results.push({ p, win, coins, tokens, shards });
     }
     for (const r of results) {
       let me = null;
       try { const x = await this.store().me(r.p.token); if (x.ok) me = x.me; } catch (e) { }
       if (r.p.conn) {
         r.p.conn.match = null; r.p.conn.p = null;
-        this.send(r.p.conn, { t: 'match_end', winnerTeam, win: r.win, coins: r.coins, tokens: r.tokens, friendly: m.friendly, me });
+        this.send(r.p.conn, { t: 'match_end', winnerTeam, win: r.win, coins: r.coins, tokens: r.tokens, shards: r.shards, friendly: m.friendly, me });
       }
     }
   }

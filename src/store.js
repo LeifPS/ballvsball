@@ -3,7 +3,7 @@
 import { DurableObject } from 'cloudflare:workers';
 import { DEFS, BALL_IDS, BOSS_IDS, SKIN_IDS, RARITY, ballsInBox, MAX_STARS, runFight } from '../public/js/engine.js';
 import { mulberry } from '../public/js/core.js';
-import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST, SKINDROP } from '../public/js/boxes.js';
+import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST, SKINDROP, SHARDS_WIN } from '../public/js/boxes.js';
 import { simBox, layoutOf } from '../public/js/boxsim.js';
 
 const START_COINS = 300;     // genau drei Standard-Boxen für das Tutorial
@@ -402,7 +402,7 @@ export class Store extends DurableObject {
   }
   reward(userId, coins, win, tokens) {
     const tk = eventActive(Date.now()) ? (tokens || 0) : 0;
-    this.q('UPDATE users SET coins=coins+?, tokens=tokens+?, wins=wins+?, losses=losses+? WHERE id=?', coins, tk, win ? 1 : 0, win ? 0 : 1, userId);
+    this.q('UPDATE users SET coins=coins+?, tokens=tokens+?, shards=shards+?, wins=wins+?, losses=losses+? WHERE id=?', coins, tk, win ? SHARDS_WIN : 0, win ? 1 : 0, win ? 0 : 1, userId);
     return tk;
   }
 

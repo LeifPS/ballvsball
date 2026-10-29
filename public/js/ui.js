@@ -1146,7 +1146,7 @@ function matchEndFfa(m) {
   show('<div class="col center res"><h1 class="jit pop" style="color:' + (m.win ? '#fff' : '#ffd0c8') + ';text-shadow:3px 4px 0 var(--ink)">' + (m.win ? 'Sieg!' : ord + ' Platz') + '</h1>' +
     '<div class="hero ' + (m.win ? 'bounce' : '') + '">' + (m.win ? '<div class="rays"></div>' : '') + '<div style="position:relative">' + ball(topType(), 180, .62) + '</div></div>' +
     (m.win ? '' : '<div class="panel"><p>Du bist als ' + ord + ' von ' + m.n + ' Spielern ausgeschieden.</p></div>') +
-    (m.friendly ? '<div class="panel"><p>Freundschaftsspiel - keine Belohnung.</p></div>' : '<div class="panel pop"><p>Belohnung</p><div class="big">' + coinHTML('+' + m.coins) + '</div>' + (m.tokens ? '<div class="big" style="font-size:38px;margin-top:4px">' + tokHTML('+' + m.tokens) + '</div>' : '') + '</div>') +
+    (m.friendly ? '<div class="panel"><p>Freundschaftsspiel - keine Belohnung.</p></div>' : '<div class="panel pop"><p>Belohnung</p><div class="big">' + coinHTML('+' + m.coins) + '</div>' + (m.tokens ? '<div class="big" style="font-size:38px;margin-top:4px">' + tokHTML('+' + m.tokens) + '</div>' : '') + (m.shards ? '<div class="big" style="font-size:38px;margin-top:4px">' + shardHTML('+' + m.shards) + '</div>' : '') + '</div>') +
     btn('Nochmal kämpfen', 'queue' + m.n, '', 'pri') + btn('Zur Startseite', 'home') + '</div>');
   if (m.win) { confetti(60); sfx('win'); } else sfx('lose');
 }
@@ -1156,7 +1156,7 @@ function matchEnd(m) {
   if (m.me) setMe(m.me);
   show('<div class="col center res"><h1 class="jit pop" style="color:' + (m.win ? '#fff' : '#ffd0c8') + ';text-shadow:3px 4px 0 var(--ink)">' + (m.win ? 'Sieg!' : 'Niederlage') + '</h1>' +
     '<div class="hero ' + (m.win ? 'bounce' : '') + '">' + (m.win ? '<div class="rays"></div>' : '') + '<div style="position:relative">' + ball(topType(), 180, .62) + '</div></div>' +
-    (m.friendly ? '<div class="panel"><p>Freundschaftsspiel - keine Belohnung.</p></div>' : '<div class="panel pop"><p>Belohnung</p><div class="big">' + coinHTML('+' + m.coins) + '</div>' + (m.tokens ? '<div class="big" style="font-size:38px;margin-top:4px">' + tokHTML('+' + m.tokens) + '</div>' : '') + '</div>') +
+    (m.friendly ? '<div class="panel"><p>Freundschaftsspiel - keine Belohnung.</p></div>' : '<div class="panel pop"><p>Belohnung</p><div class="big">' + coinHTML('+' + m.coins) + '</div>' + (m.tokens ? '<div class="big" style="font-size:38px;margin-top:4px">' + tokHTML('+' + m.tokens) + '</div>' : '') + (m.shards ? '<div class="big" style="font-size:38px;margin-top:4px">' + shardHTML('+' + m.shards) + '</div>' : '') + '</div>') +
     btn('Nochmal kämpfen', 'queue1', '', 'pri') + btn('Zur Startseite', 'home') + '</div>');
   if (m.win) { confetti(60); sfx('win'); } else sfx('lose');
 }

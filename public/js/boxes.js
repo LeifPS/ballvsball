@@ -38,3 +38,6 @@ export const UP_COST = {
 // Skindrop: 4 Klicks, jeder steigt mit der Chance q[Stufe] eine Seltenheit auf (Start: gewöhnlich). Bezahlt mit Skin-Splittern.
 export const SKINDROP = { price: 100, q: [.2, .25, .4, .5], clicks: 4 };   // q[Stufe]: Chance pro Tipp, von dieser Stufe aufzusteigen (ergibt ca. 41 / 37 / 15,5 / 5,3 / 1 %)
 export function skindropOdds() { let d = [1, 0, 0, 0, 0]; for (let i = 0; i < SKINDROP.clicks; i++) { const n = [0, 0, 0, 0, 0]; d.forEach((p, L) => { if (L < 4) { n[L + 1] += p * SKINDROP.q[L]; n[L] += p * (1 - SKINDROP.q[L]); } else n[L] += p; }); d = n; } return d.map(x => x * 100); }
+
+// Skin-Splitter pro gewonnenem Kampf (nicht bei Freundschaftsspielen, bei Niederlage nichts)
+export const SHARDS_WIN = 10;
