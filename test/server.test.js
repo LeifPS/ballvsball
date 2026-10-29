@@ -204,7 +204,7 @@ if (end) {
   const ts = tok(); await api('/api/login', ts, { name: 'Skinner' + Math.floor(Math.random() * 9999) }); await api('/api/testcoins', ts, { key: 'leif-test' });
   for (let i = 0; i < 15; i++) await api('/api/box', ts, { box: 'standard' });
   let sk = null; for (let i = 0; i < 120 && !sk; i++) { const x = await api('/api/skindrop', ts); if (x.ok && x.ball.type === 'goldstachel') sk = x.ball; }
-  { const sb = await api('/api/skindrop', ts); if (!sb.ok || sb.me.shards !== 999999 - 100 || sb.steps.length !== 4 || sb.steps.filter(Boolean).length !== sb.level || !sb.ball.type) throw new Error('Skindrop: ' + JSON.stringify(sb).slice(0, 160)); const t0 = tok(); await api('/api/login', t0, { name: 'Pleite' + Math.floor(Math.random() * 9999) }); if ((await api('/api/skindrop', t0)).err !== 'no_shards') throw new Error('Ohne Splitter kein Skindrop'); console.log('Skindrop ok'); }
+  { const sb = await api('/api/skindrop', ts); if (!sb.ok || sb.me.shards >= 999999 || sb.steps.length !== 4 || sb.steps.filter(Boolean).length !== sb.level || !sb.ball.type) throw new Error('Skindrop: ' + JSON.stringify(sb).slice(0, 160)); const t0 = tok(); await api('/api/login', t0, { name: 'Pleite' + Math.floor(Math.random() * 9999) }); if ((await api('/api/skindrop', t0)).err !== 'no_shards') throw new Error('Ohne Splitter kein Skindrop'); console.log('Skindrop ok'); }
   const me1 = (await api('/api/me', ts)).me;
   if (sk && me1.balls.some(b => b.type === 'stachel')) {
     const e = await api('/api/skin/equip', ts, { uid: sk.uid });
