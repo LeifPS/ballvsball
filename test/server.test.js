@@ -199,6 +199,23 @@ if (end) {
   const again = await api('/api/solo/boss', t1, { uid });
   ok(again.err === 'boss_used' || again.err === 'boss_done', 'Bossrennen: derselbe Ball nicht zweimal');
 }
+// Skins: Gegenstände, werden einem Ball zugewiesen, kämpfen nicht selbst
+{
+  const ts = tok(); await api('/api/login', ts, { name: 'Skinner' + Math.floor(Math.random() * 9999) }); await api('/api/testcoins', ts, { key: 'leif-test' });
+  for (let i = 0; i < 15; i++) await api('/api/box', ts, { box: 'standard' });
+  let sk = null; for (let i = 0; i < 80 && !sk; i++) { const x = await api('/api/box', ts, { box: 'skin1' }); if (x.ok && x.ball.type === 'goldstachel') sk = x.ball; }
+  const me1 = (await api('/api/me', ts)).me;
+  if (sk && me1.balls.some(b => b.type === 'stachel')) {
+    const e = await api('/api/skin/equip', ts, { uid: sk.uid });
+    ok(e.ok && e.me.equip.stachel === 'goldstachel', 'Skin anlegen: Goldstachel auf Stachelball');
+    const d = await api('/api/solo/daily', ts, { uid: me1.balls.find(b => b.type === 'stachel').uid });
+    ok(d.ok && d.cfg.balls[0].skin === 'goldstachel', 'Kampf-Konfiguration enthält den Skin');
+    const f = await api('/api/solo/daily', ts, { uid: sk.uid });
+    ok(f.err === 'no_skin_fight', 'Skin kann nicht selbst kämpfen');
+    const u = await api('/api/skin/unequip', ts, { type: 'stachel' });
+    ok(u.ok && !u.me.equip.stachel, 'Skin ablegen');
+  } else console.log('  (Skin-Test übersprungen: Goldstachel nicht gezogen)');
+}
 // Mehrspieler ist wegen Wartung gesperrt
 {
   const wsF = await connect(t1); let err = null;

@@ -49,6 +49,8 @@ export default {
       case '/api/solo': r = await store.soloState(tk); break;
       case '/api/solo/daily': r = await store.soloDaily(tk, b.uid); break;
       case '/api/solo/boss': r = await store.soloBoss(tk, b.uid, !!b.reset); break;
+      case '/api/skin/equip': r = await store.skinEquip(tk, b.uid); break;
+      case '/api/skin/unequip': r = await store.skinUnequip(tk, b.type); break;
       case '/api/log': r = await store.logList(tk); break;
       case '/api/log/get': r = await store.logGet(tk, b.id); break;
       case '/api/log/share': r = await store.logShare(tk, b.id); break;

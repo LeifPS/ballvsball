@@ -1,10 +1,10 @@
 // Oberfläche: Anmeldung, Startseite, Sammlung, Ballboxen, Markt, Handel, Freunde und Kampfablauf.
-import { DEFS, BALL_IDS, RARITY, DT, BOX, MAX_STARS, STAR_BONUS, createSim, stepSim, ballsInBox } from './engine.js';
+import { DEFS, BALL_IDS, SKIN_IDS, RARITY, DT, BOX, MAX_STARS, STAR_BONUS, createSim, stepSim, ballsInBox } from './engine.js';
 import { createBox, stepBox, BW, layoutOf } from './boxsim.js';
 import { BOX_LIST, BOX_BY_ID, BOX_RARITY, boxActive, UP_COST } from './boxes.js';
 import { DPR, INK, gi, mkSprite, spr } from './sk.js';
 import { boxArt } from './boxart.js';
-import { drawBallIn, clearFx, fxState, burst, star } from './art.js';
+import { drawBallIn, clearFx, fxState, burst, star, skinStartFx } from './art.js';
 import { drawArena, drawBox, BOX_H, TEAM_COL, PLAYER_COL } from './render.js';
 import { unlock, sfx, getMode, setMode, setScene } from './audio.js';
 
@@ -28,7 +28,7 @@ const ERR = {
   net: 'Keine Verbindung zum Server.', auth: 'Anmeldung fehlgeschlagen.', need_name: 'Bitte wähle einen Namen.',
   name_invalid: 'Name: 3 bis 16 Zeichen, nur Buchstaben, Zahlen, Leerzeichen, - und _.', name_taken: 'Dieser Name ist schon vergeben.',
   code_bad: 'Der Code stimmt nicht oder ist abgelaufen.', has_progress: 'Dieses Gerät hat schon einen Spielstand mit Kämpfen. Lösche zuerst dort das Konto.',
-  maintenance: 'Mehrspieler ist wegen Wartungsarbeiten gerade gesperrt.', boss_done: 'Starte einen neuen Versuch.', boss_used: 'Diesen Ball hast du schon benutzt.', rule: 'Dieser Ball erfüllt die Regel nicht.', daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
+  no_base: 'Du brauchst erst den passenden Ball.', no_skin: 'Das ist kein Skin.', no_skin_fight: 'Skins kämpfen nicht selbst.', maintenance: 'Mehrspieler ist wegen Wartungsarbeiten gerade gesperrt.', boss_done: 'Starte einen neuen Versuch.', boss_used: 'Diesen Ball hast du schon benutzt.', rule: 'Dieser Ball erfüllt die Regel nicht.', daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
   price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
   not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 verschiedene freie Bälle behalten.',
   gone: 'Das gibt es nicht mehr.', own: 'Das ist dein eigener Ball.', no_player: 'Spieler nicht gefunden.', self: 'Das bist du selbst.',
@@ -105,9 +105,11 @@ function typeCounts() {
   for (const b of S.me.balls) { c[b.type] = c[b.type] || { n: 0, free: 0, list: [] }; c[b.type].n++; if (!b.lock) c[b.type].free++; c[b.type].list.push(b); }
   return c;
 }
+const isSkin = t => !!(DEFS[t] && DEFS[t].skin);
+const realBalls = () => S.me.balls.filter(b => !isSkin(b.type));   // Skins sind Gegenstände, keine Bälle
 function topType() {
   let best = null, bo = -1;
-  for (const b of S.me.balls) { const o = RARITY[DEFS[b.type].rarity].order; if (o > bo) { bo = o; best = b.type; } }
+  for (const b of realBalls()) { const o = RARITY[DEFS[b.type].rarity].order; if (o > bo) { bo = o; best = b.type; } }
   return best || 'stachel';
 }
 function wallet() {
@@ -257,17 +259,17 @@ function onMsg(m) {
 /* ================= Startseite ================= */
 function tutorial() {
   S.screen = 'tutorial'; setView(null); closeOverlay(); setScene('menu');
-  const n = new Set(S.me.balls.map(b => b.type)).size, b = BOX_BY_ID.standard;
+  const n = new Set(realBalls().map(b => b.type)).size, b = BOX_BY_ID.standard;
   show('<div class="col center" style="padding-top:2px"><div class="row" style="justify-content:flex-end;padding-right:50px">' + wallet() + '</div><h1 class="jit">Willkommen!</h1>' +
     '<div class="hero bounce">' + boxArt('standard', 160) + '</div>' +
     '<div class="panel"><p>Du brauchst drei verschiedene Bälle zum Kämpfen. Öffne drei Standard-Boxen, jede enthält einen neuen Ball.</p><p class="mt"><b>' + n + ' von 3</b> Bällen geöffnet</p></div>' +
     btn('Standard-Box öffnen (' + priceHTML(b) + ')', 'openbox', 'data-id="standard"', 'pri big') + '</div>');
 }
 function home() {
-  if (new Set(S.me.balls.map(b => b.type)).size < 3) return tutorial();
+  if (new Set(realBalls().map(b => b.type)).size < 3) return tutorial();
   S.screen = 'home'; setView(null); closeOverlay(); setScene('menu');
-  const me = S.me, types = new Set(me.balls.map(b => b.type)).size, ev = eventLive();
-  const top3 = [...new Set(me.balls.map(b => b.type))].sort((x, y) => RARITY[DEFS[y].rarity].order - RARITY[DEFS[x].rarity].order).slice(0, 3);
+  const me = S.me, types = new Set(realBalls().map(b => b.type)).size, ev = eventLive();
+  const top3 = [...new Set(realBalls().map(b => b.type))].sort((x, y) => RARITY[DEFS[y].rarity].order - RARITY[DEFS[x].rarity].order).slice(0, 3);
   show('<div class="col" style="padding-top:2px"><div class="row sb" style="padding-right:50px"><div class="pill">' + esc(me.name) + '</div><button class="btn sm" style="min-height:40px;padding:4px 10px" data-act="settings" aria-label="Einstellungen">' + gi('gear', 26) + '</button></div><div class="row" style="justify-content:flex-end;margin-top:-6px">' + wallet() + '</div>' +
     '<h1 class="jit">Ball gegen Ball</h1>' +
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
@@ -315,7 +317,7 @@ async function soloScreen() {
 function soloPick(kind) {
   const r = S.solo, usedTypes = new Set((r.boss.used || []).map(u => { const bb = S.me.balls.find(x => x.uid === u); return bb && bb.type; }));
   const seen = new Set(), list = [];
-  for (const b of S.me.balls) {
+  for (const b of realBalls()) {
     if (b.lock || seen.has(b.type)) continue;
     const rar = DEFS[b.type].rarity;
     if (kind === 'daily' && r.daily.rule.id === 'low' && !['gewoehnlich', 'selten'].includes(rar)) continue;
@@ -407,7 +409,8 @@ function replayRound(rec, idx, back) {
 /* ================= Sammlung ================= */
 function sortedIds() {
   const c = typeCounts(), f = S.col, q = f.q.trim().toLowerCase();
-  let ids = BALL_IDS.filter(id => {
+  const pool = f.box === 'skin1' || f.box === 'skin2' ? SKIN_IDS : BALL_IDS;   // Skins nur im Skin-Truhen-Filter
+  let ids = pool.filter(id => {
     const d = DEFS[id];
     if (f.rar !== 'all' && d.rarity !== f.rar) return false;
     if (f.box !== 'all' && d.box !== f.box) return false;
@@ -446,11 +449,11 @@ function upAllPlan() {
 }
 function collection(keep) {
   S.screen = 'collection'; setView(null);
-  const c = typeCounts(), have = Object.keys(c).length, f = S.col;
+  const c = typeCounts(), have = Object.keys(c).filter(t => !isSkin(t)).length, f = S.col;
   const tabs = [['all', 'Alle']].concat(SORT.map(r => [r, RARITY[r].name]));
-  const boxes = [['all', 'Alle Boxen']].concat(BOX_LIST.map(b => [b.id, b.name.replace('-Box', '')]));
+  const boxes = [['all', 'Alle Boxen']].concat(BOX_LIST.filter(b => !b.off).map(b => [b.id, b.name.replace('-Box', '')]));
   show('<div class="col">' + backBar('Sammlung') +
-    '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + BALL_IDS.length + ' Bällen</span><span>' + S.me.balls.length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
+    '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + BALL_IDS.length + ' Bällen</span><span>' + realBalls().length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
     (upAllPlan().steps ? btn(gi('star', 24, '#ffd45a') + ' Alles maximal verbessern', 'upall', '', 'green') : '') +
     '<div class="row gap6"><div class="inp grow row" style="padding-left:8px">' + gi('search', 24) + '<input id="cq" placeholder="Ball suchen" value="' + esc(f.q) + '" autocomplete="off"></div></div>' +
     '<div class="tabs">' + tabs.map(t => '<button class="tab' + (f.rar === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="rar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
@@ -458,6 +461,16 @@ function collection(keep) {
     '<div class="tabs"><button class="tab' + (f.sort === 'rar' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="rar">Nach Seltenheit</button><button class="tab' + (f.sort === 'name' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="name">A bis Z</button><button class="tab' + (f.sort === 'own' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="own">Meiste</button><button class="tab' + (f.own ? ' on' : '') + '" data-act="cown">Nur meine</button></div>' +
     '<div class="grid3" id="cgrid">' + colGrid() + '</div></div>');
   const q = $('#cq'); if (q) q.oninput = () => { S.col.q = q.value; const g = $('#cgrid'); if (g) { g.innerHTML = colGrid(); decorate(g); } };
+}
+const FEAT_ALL = ['Farbschema', 'Modell', 'Partikel', 'Angriffseffekte', 'Animationen', 'Geräusche', 'Todeseffekt', 'Starteffekt'];
+const FEAT_BY = { gewoehnlich: [0], selten: [0, 2], episch: [0, 1, 2, 3], legendaer: [0, 1, 2, 3, 4], mythisch: [0, 1, 2, 3, 4, 5, 6, 7] };
+const skinFeatures = r => FEAT_BY[r].map(i => FEAT_ALL[i]);
+function skinPicker(base) {
+  const cur = S.me.equip && S.me.equip[base], seen = new Map();
+  for (const b of S.me.balls) if (!b.lock && isSkin(b.type) && DEFS[b.type].base === base && !seen.has(b.type)) seen.set(b.type, b);
+  overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Skin für ' + esc(DEFS[base].name) + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
+    '<div class="grid3" style="grid-template-columns:repeat(3,1fr);gap:6px"><button class="card cell' + (!cur ? ' on' : '') + '" style="min-height:0;padding:8px 4px" data-act="unequip" data-t="' + base + '" data-back="' + base + '">' + ball(base, 70, .66) + '<div class="small">Ohne Skin</div></button>' +
+    [...seen.values()].map(b => { const d = DEFS[b.type]; return '<button class="card cell rbar r-' + d.rarity + (cur === b.type ? ' on' : '') + '" style="--rc:' + RARITY[d.rarity].color + ';min-height:0;padding:12px 4px 8px" data-act="equip" data-uid="' + b.uid + '" data-back="' + base + '">' + ball(b.type, 70, .66) + '<div class="small">' + esc(d.name) + '</div></button>'; }).join('') + '</div></div>');
 }
 function detail(type) {
   const d = DEFS[type], c = typeCounts()[type], box = BOX_BY_ID[d.box];
@@ -482,13 +495,23 @@ function detail(type) {
       else r = '<div class="inp" style="width:90px"><input type="number" inputmode="numeric" min="10" id="pr' + b.uid + '" value="' + sugg + '"></div><button class="btn sm pri" data-act="mklist" data-uid="' + b.uid + '">Verkaufen</button>';
       return '<div class="card col" style="gap:6px"><div class="listrow" style="padding:0"><span class="small grow">Exemplar Nr. ' + b.uid + '</span>' + r + '</div></div>';
     }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden und gilt für die ganze Sorte, egal wie viele Exemplare du hast. Zum Verbessern werden gleiche Bälle verbraucht. Drei verschiedene freie Bälle musst du immer behalten.</p>';
-  } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.</p>';
+  } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (d.skin ? 'Diesen Skin hast du noch nicht. Öffne Skin-Truhen oder kaufe ihn auf dem Markt.' : 'Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.') + '</p>';
   const known = !!c;
+  // Skins: was steckt drin, und anlegen / ablegen
+  let skinBlock = '';
+  if (d.skin) {
+    const feats = skinFeatures(d.rarity), freeSkin = c && c.list.find(x => !x.lock), baseOwned = !!typeCounts()[d.base], on = S.me.equip && S.me.equip[d.base] === type;
+    skinBlock = '<div class="panel"><p><b>Skin für ' + esc(DEFS[d.base].name) + '</b></p><p class="small mute mt">Ein Skin ändert nur das Aussehen und die Effekte, nicht die Werte.</p><div class="row gap6 wrap mt">' + feats.map(f => '<span class="rarpill small" style="font-size:15px">' + f + '</span>').join('') + '</div>' +
+      (!c ? '' : on ? '<p class="mt">Angelegt auf ' + esc(DEFS[d.base].name) + '.</p>' + btn('Ablegen', 'unequip', 'data-t="' + d.base + '" data-back="' + type + '"') : !baseOwned ? '<p class="mt small mute">Du brauchst erst den Ball ' + esc(DEFS[d.base].name) + '.</p>' : freeSkin ? btn('Auf ' + esc(DEFS[d.base].name) + ' anlegen', 'equip', 'data-uid="' + freeSkin.uid + '" data-back="' + type + '"', 'pri') : '') + '</div>';
+  } else if (c) {
+    const mySkins = [...new Set(S.me.balls.filter(b => !b.lock && isSkin(b.type) && DEFS[b.type].base === type).map(b => b.type))], cur = S.me.equip && S.me.equip[type];
+    if (mySkins.length || cur) skinBlock = '<div class="panel"><p><b>Skin:</b> ' + (cur ? esc(DEFS[cur].name) : 'keiner') + '</p>' + btn('Skin wählen', 'skinpick', 'data-t="' + type + '"') + '</div>';
+  }
   overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + (known ? esc(d.name) : '???') + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
-    '<div class="hero pop">' + ball(type, 230, .66, known ? '' : 'data-dark="1"') + '</div>' +
+    '<div class="hero pop">' + ball(!d.skin && S.me.equip && S.me.equip[type] ? S.me.equip[type] : type, 230, .66, known ? '' : 'data-dark="1"') + '</div>' +
     '<div class="panel"><div class="row sb wrap">' + rarHTML(d.rarity) + (known ? '<span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span>' : '') + '</div>' + (known ? '<p class="mt">' + esc(d.desc) + '</p>' : '<p class="mt mute">Noch nicht entdeckt. Finde diesen Ball, um mehr zu erfahren.</p>') +
     (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
-    (known ? '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' : '') + own + '</div>');
+    (known ? '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' : '') + skinBlock + own + '</div>');
 }
 
 /* ================= Ballboxen ================= */
@@ -564,7 +587,7 @@ function boxResult(r, s, before, b) {
     (isNew ? '<div class="center"><span class="tag" style="font-size:24px;padding:2px 14px">Neu in deiner Sammlung!</span></div>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast ihn schon (Duplikat). Verkaufe oder tausche ihn.</p>') +
     '<div class="panel" style="text-align:left"><div class="row sb wrap"><span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
     (near.length ? '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Knapp daneben: ' + near.map(t => '<b style="color:' + RARITY[DEFS[t].rarity].color + ';background:var(--paper);padding:0 6px;border-radius:6px">' + esc(ballName(t)) + '</b>').join(' und ') + ' lag auch vorn!</p>' : '') +
-    (new Set(S.me.balls.map(x => x.type)).size < 3 ? btn('Weiter', 'home', '', 'pri big') : btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box')) + '</div>');
+    (new Set(realBalls().map(x => x.type)).size < 3 ? btn('Weiter', 'home', '', 'pri big') : btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box')) + '</div>');
   sfx(rar === 'mythisch' ? 'mythic' : rar === 'legendaer' ? 'legend' : big ? 'rare' : 'coin');
   if (big) confetti(rar === 'mythisch' ? 110 : rar === 'legendaer' ? 70 : 40);
 }
@@ -646,7 +669,7 @@ async function trades() {
 /* ================= Mehrspieler ================= */
 function multi() {
   S.screen = 'multi'; setView(null);
-  const owned = [...new Set(S.me.balls.map(b => b.type))], pick = i => owned[(i * 7 + 3) % owned.length] || 'stachel';
+  const owned = [...new Set(realBalls().map(b => b.type))], pick = i => owned[(i * 7 + 3) % owned.length] || 'stachel';
   const grp = (n, act, title, sub, tc) => {
     const bs = []; for (let i = 0; i < n; i++) bs.push('<span class="mb">' + ball(pick(i + n), 66, .7, i % 2 ? 'data-dark="1"' : '') + '</span>');
     const arr = n === 2 ? bs[0] + '<span class="mvs jit">VS</span>' + bs[1] : n === 3 ? '<span class="mrow">' + bs[0] + '</span><span class="mrow">' + bs[1] + bs[2] + '</span>' : '<span class="mrow">' + bs[0] + bs[1] + '</span><span class="mrow">' + bs[2] + bs[3] + '</span>';
@@ -747,7 +770,7 @@ function pickScreen(m) {
   show('<div class="col">' + matchHeader() + '<h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Wähle deinen Ball</h2><p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dein Gegner sieht ihn erst, wenn alle gewählt haben.</p><div id="cd" class="timer" style="color:#fff;text-shadow:2px 2px 0 var(--ink)"></div>' +
     m.hand.map(h => {
       const d = DEFS[h.type];
-      return '<button class="card pickrow rbar slide" style="--rc:' + RARITY[d.rarity].color + '" data-act="pick" data-uid="' + h.uid + '">' + ball(h.type, 96, .66) +
+      return '<button class="card pickrow rbar slide" style="--rc:' + RARITY[d.rarity].color + '" data-act="pick" data-uid="' + h.uid + '">' + ball(h.skin || h.type, 96, .66) +
         '<div class="txt"><b style="font:400 25px var(--f-display)">' + esc(d.name) + '</b>' + rarHTML(d.rarity) + (h.stars ? '<span>' + starsHTML(h.stars, 17) + '</span>' : '') + '<span class="small">' + gi('heart', 18) + ' ' + d.hp + '   ' + gi('sword', 18) + ' ' + d.dmg + '</span><span class="small mute">' + esc(d.desc.split('.')[0]) + '.</span></div></button>';
     }).join('') + '<div id="pickbtn">' + btn('Diesen Ball wählen', 'pickgo', 'disabled', 'pri') + '</div></div>');
   startCountdown(m.secs);
@@ -820,8 +843,8 @@ function fightScreen(m) {
     '<div id="fbtn" class="row gap6"></div></div>');
   const cv = $('#fc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
   const hp = {}; SCREEN.querySelectorAll('.hp').forEach(el => { hp[el.dataset.slot] = { bar: el.querySelector('i'), bn: el.querySelector('.bn') }; });
-  for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.skin || b.type].name;
-  let acc = 0, phase = 'count', t0 = 0, koT = 0, sentReady = false, cdN = 4, tPhase = 0, resShown = false;
+  for (const b of sim.balls) if (hp[b.slot]) hp[b.slot].bn.textContent = DEFS[b.type].name;
+  let acc = 0, phase = 'count', t0 = 0, koT = 0, sentReady = false, cdN = 4, tPhase = 0, resShown = false, startFx = false;
   const cdw = $('#cdwrap');
   const NB = () => m.replay ? (M.idx + 1 < M.rec.rounds.length ? btn('Nächste Runde', 'replaynext', '', 'pri') : '') + btn(M.solo ? 'Weiter' : 'Zurück', 'replayback', '', M.solo ? 'pri' : '') : btn('Weiter', 'fightnext', '', 'pri');
   const finish = () => {
@@ -863,6 +886,7 @@ function fightScreen(m) {
       const ctx = cv.getContext('2d'); ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); ctx.scale(DPR, DPR);
       let sdt = Math.min(dt, .05);
       if (phase === 'count') {
+        if (!startFx) { startFx = true; skinStartFx(sim); }   // Mythische Skins: Starteffekt zum Countdown
         tPhase += sdt;
         const n = 3 - Math.floor(tPhase / .75);
         if (n !== cdN) { cdN = n; if (n > 0) { cdw.innerHTML = '<div id="cdnum">' + n + '</div>'; sfx('tick'); } else if (n === 0) { cdw.innerHTML = '<div id="cdnum" style="font-size:90px">Los!</div>'; sfx('go'); } }
@@ -953,6 +977,9 @@ const ACT = {
   solopick(d) { soloPick(d.k); },
   solofight(d) { return soloFight(d.k, d.uid); },
   async bossreset() { const r = await api('/api/solo/boss', { reset: true }); if (r.err) { toast(errText(r.err)); return; } soloScreen(); },
+  skinpick(d) { skinPicker(d.t); },
+  async equip(d) { const r = await api('/api/skin/equip', { uid: Number(d.uid) }); if (r.err) { toast(errText(r.err)); return; } sfx('coin'); detail(d.back); },
+  async unequip(d) { const r = await api('/api/skin/unequip', { type: d.t }); if (r.err) { toast(errText(r.err)); return; } detail(d.back); },
   log() { S.logItems = null; logScreen('list'); },
   logtab(d) { logScreen(d.t); },
   logopen(d) { logDetail(Number(d.id)); },

@@ -94,33 +94,81 @@ function badge(g, x, y, txt, col, tf) {
   g.fillStyle = '#fff'; g.strokeStyle = INK; g.lineWidth = 2.4; g.strokeText(txt, x, y + 1); g.fillText(txt, x, y + 1); g.restore();
 }
 
-/* ---------- Skins: Partikel an Geschossen und Leuchten am Ball (erst ab Selten bzw. Episch) ---------- */
+/* ---------- Skins: Partikel (ab Selten), Angriffs- und Heileffekte (ab Episch), Animationen (ab Legendär), Start-, Todeseffekt (Mythisch) ---------- */
 const RB = ['#ff5a5a', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#a77ae8'];
+const skinCol = (col, i) => col === 'rainbow' ? RB[((i % RB.length) + RB.length) % RB.length] : col;
 function skinPart(g, kind, x, y, col, sz, rot) {
-  g.save(); g.translate(x, y); g.rotate(rot || 0); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); g.lineJoin = 'round';
-  if (kind === 'star') { g.restore(); star(g, x, y, sz, col, rot); return; }
-  g.beginPath();
+  if (kind === 'star') { star(g, x, y, sz, col, rot); return; }
+  g.save(); g.translate(x, y); g.rotate(rot || 0); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); g.lineJoin = 'round'; g.beginPath();
   if (kind === 'heart') { g.moveTo(0, sz * .9); g.bezierCurveTo(-sz * 1.5, -sz * .1, -sz * .9, -sz * 1.2, 0, -sz * .4); g.bezierCurveTo(sz * .9, -sz * 1.2, sz * 1.5, -sz * .1, 0, sz * .9); }
   else if (kind === 'shard') { g.moveTo(0, -sz * 1.3); g.lineTo(sz * .6, 0); g.lineTo(0, sz * 1.3); g.lineTo(-sz * .6, 0); }
   else if (kind === 'flower') { for (let i = 0; i < 5; i++) { const a = i * 1.2566; g.moveTo(0, 0); g.ellipse(Math.cos(a) * sz * .7, Math.sin(a) * sz * .7, sz * .55, sz * .38, a, 0, 7); } }
-  else g.arc(0, 0, kind === 'ember' ? sz * .7 : sz * .6, 0, 7);
-  g.closePath(); g.fill(); g.stroke(); g.restore();
+  else if (kind === 'ember') { g.moveTo(0, -sz * 1.2); g.quadraticCurveTo(sz * .9, -sz * .1, 0, sz * .8); g.quadraticCurveTo(-sz * .9, -sz * .1, 0, -sz * 1.2); }
+  else g.arc(0, 0, kind === 'coin' ? sz * .8 : sz * .6, 0, 7);
+  g.closePath(); g.fill(); g.stroke();
+  if (kind === 'coin') { g.beginPath(); g.arc(0, 0, sz * .42, 0, 7); g.stroke(); }
+  g.restore();
 }
-const skinCol = (col, i) => col === 'rainbow' ? RB[((i % RB.length) + RB.length) % RB.length] : col;
-function skinTrail(g, o, tm) {
-  const b = sim0 && sim0.byId ? sim0.byId[o.owner] : null, sk = b && b.skin && SKIN_BY_ID[b.skin];
-  if (!sk || !sk.trail) return;
-  const sp = Math.hypot(o.vx, o.vy) || 1, ux = o.vx / sp, uy = o.vy / sp;
-  for (let i = 1; i <= 3; i++) { const k = i * 7, jx = Math.sin(tm * 9 + i * 2 + o.x * .1) * 3, jy = Math.cos(tm * 8 + i * 3 + o.y * .1) * 3; g.globalAlpha = .85 - i * .22; skinPart(g, sk.trail.kind, o.x - ux * k + jx, o.y - uy * k + jy, skinCol(sk.trail.col, i + (o.owner | 0)), 5 - i * .8, tm * 3 + i); }
+const ownerSkin = (sim, id) => { const b = sim && sim.byId ? sim.byId[id] : null; return b && b.skin ? SKIN_BY_ID[b.skin] : null; };
+// Partikel am Ball: kreisen (orbit), steigen auf (rise) oder bleiben hinter dem Ball zurück (trail)
+function skinAmbient(g, b, sk, tm) {
+  const p = sk.part, n = p.n || 4, r = b.r;
+  for (let i = 0; i < n; i++) {
+    const col = skinCol(p.col, i);
+    if (p.mode === 'rise') { const ph = (tm * .55 + i / n) % 1; g.globalAlpha = Math.sin(ph * Math.PI); skinPart(g, p.kind, Math.sin(tm * 1.7 + i * 2.3) * r * .95, r * .6 - ph * r * 2.4, col, 3.4 + (i % 2) * 1.2, Math.sin(tm * 3 + i) * .6); }
+    else if (p.mode === 'trail') { const v = Math.hypot(b.vx, b.vy) || 1, ph = (tm * 2.2 + i / n) % 1; g.globalAlpha = 1 - ph; skinPart(g, p.kind, -b.vx / v * (r + ph * r * 2.4) + Math.sin(tm * 9 + i * 2) * 3, -b.vy / v * (r + ph * r * 2.4) + Math.cos(tm * 8 + i * 3) * 3, col, 4.4 * (1 - ph * .5), tm * 4 + i); }
+    else { const a = tm * 1.7 + i * 6.2832 / n, rr = r * 1.45 + Math.sin(tm * 3 + i) * 2.5; skinPart(g, p.kind, Math.cos(a) * rr, Math.sin(a) * rr * .9, col, 3.6 + (i % 2) * 1.2, tm * 2 + i); }
+  }
   g.globalAlpha = 1;
 }
-function skinAura(g, b, sk, tm) {
-  const n = sk.aura.n || 4;
-  for (let i = 0; i < n; i++) { const a = tm * 1.7 + i * 6.2832 / n, rr = b.r * 1.45 + Math.sin(tm * 3 + i) * 2.5; skinPart(g, sk.aura.kind, Math.cos(a) * rr, Math.sin(a) * rr * .9, skinCol(sk.aura.col, i), 3.6 + (i % 2) * 1.2, tm * 2 + i); }
+// Ein Burst aus Skin-Partikeln (Treffer, Heilung, Start, Tod)
+function skinBurst(x, y, atk, n, speed, life, up) {
+  for (let i = 0; i < n; i++) { const a = rnd() * 6.2832, v = speed * (.35 + rnd() * .75); pt({ k: 'sp', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (up || 0), age: 0, life: life * (.7 + rnd() * .5), shape: atk.kind, col: skinCol(atk.col, i), sz: 3 + rnd() * 2.6, rot: rnd() * 6 }); }
+}
+// Angriffe eines Skin-Balls: Geschoss sieht neu aus, Zonen und Wellen bekommen Skin-Partikel
+function skinProj(g, o, sk, tm) {
+  const a = sk.atk, sp = Math.hypot(o.vx, o.vy) || 1, ux = o.vx / sp, uy = o.vy / sp, sz = Math.max(5, o.r * 1.5);
+  for (let i = 3; i >= 1; i--) { g.globalAlpha = .75 - i * .18; skinPart(g, a.kind, o.x - ux * i * 8 + Math.sin(tm * 9 + i * 2) * 2, o.y - uy * i * 8 + Math.cos(tm * 8 + i * 3) * 2, skinCol(a.col2 || a.col, i), sz * (1 - i * .16), tm * 4 + i); }
+  g.globalAlpha = 1; skinPart(g, a.kind, o.x, o.y, skinCol(a.col, Math.floor(tm * 6)), sz, tm * 5);
+}
+function skinZone(g, o, sk, tm) {
+  const a = sk.atk, rr = Math.max(14, o.r || 20);
+  for (let i = 0; i < 5; i++) { const an = tm * 2 + i * 1.2566; skinPart(g, a.kind, o.x + Math.cos(an) * rr * .8, o.y + Math.sin(an) * rr * .8, skinCol(a.col, i), 3.2, tm * 3 + i); }
+}
+// Animationen (Legendär und höher): bewegliche Teile hinter oder vor dem Ball
+const ANIM = {
+  dragon: {
+    back(g, b, tm, k) { const r = b.r, fl = Math.sin(tm * 8) * .5; g.lineJoin = g.lineCap = 'round'; g.lineWidth = 2.6; g.strokeStyle = INK;
+      [-1, 1].forEach(d => { g.save(); g.translate(d * r * .75, -r * .2); g.rotate(d * (.35 + fl)); g.scale(d, 1); g.fillStyle = '#3a8a3a'; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(r * .9, -r * 1.5, r * 1.9, -r * .4); g.quadraticCurveTo(r * 1.45, -r * .35, r * 1.4, r * .15); g.quadraticCurveTo(r * .95, 0, r * .8, r * .45); g.quadraticCurveTo(r * .5, r * .1, 0, r * .3); g.closePath(); g.fill(); g.stroke(); g.restore(); }); }
+  },
+  phoenix: {
+    back(g, b, tm, k) { const r = b.r, fl = Math.sin(tm * 5) * .35; g.lineJoin = g.lineCap = 'round'; g.lineWidth = 2.4; g.strokeStyle = INK;
+      [-1, 1].forEach(d => { g.save(); g.translate(d * r * .7, -r * .1); g.rotate(d * (.25 + fl)); g.scale(d, 1);
+        [['#ff5a1a', 1], ['#ff9a2a', .8], ['#ffd45a', .55]].forEach(([col, sc]) => { g.fillStyle = col; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(r * .9 * sc, -r * 1.4 * sc, r * 1.9 * sc, -r * .5 * sc + Math.sin(tm * 9) * 2); g.quadraticCurveTo(r * 1.4 * sc, -r * .1, r * 1.3 * sc, r * .5 * sc); g.quadraticCurveTo(r * .8 * sc, r * .1, 0, r * .3 * sc); g.closePath(); g.fill(); if (sc === 1) g.stroke(); });
+        g.restore(); }); },
+    front(g, b, tm, k) { const r = b.r; g.lineJoin = g.lineCap = 'round'; g.lineWidth = 2.2; g.strokeStyle = INK;
+      [[-.55, .9, 0], [0, 1.25, 1], [.55, .9, 2]].forEach(([dx, h, i]) => { const w = Math.sin(tm * 9 + i * 2) * r * .12, hh = r * h + Math.sin(tm * 11 + i) * r * .12; g.fillStyle = i === 1 ? '#ffd24a' : '#ff9a2a'; g.beginPath(); g.moveTo(dx * r - r * .28, -r * .75); g.quadraticCurveTo(dx * r - r * .3 + w, -r * .75 - hh * .6, dx * r + w, -r * .75 - hh); g.quadraticCurveTo(dx * r + r * .32, -r * .75 - hh * .5, dx * r + r * .28, -r * .75); g.closePath(); g.fill(); g.stroke(); }); }
+  },
+  pirate: {
+    front(g, b, tm, k) { const r = b.r, sw = Math.sin(tm * 3.2) * .55; g.lineJoin = g.lineCap = 'round';
+      g.save(); g.translate(-r * .98, r * .1); g.rotate(sw); g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, r * .22); g.stroke(); g.fillStyle = '#ffd45a'; g.lineWidth = 2; g.beginPath(); g.arc(0, r * .38, r * .17, 0, 7); g.fill(); g.stroke(); g.restore();
+      const fw = Math.sin(tm * 6) * r * .18; g.save(); g.translate(r * .35, -r * 1.42); g.strokeStyle = INK; g.lineWidth = 2; g.fillStyle = '#e0453a'; g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(r * .25 + fw, -r * .6, r * .7 + fw * 1.4, -r * .5); g.quadraticCurveTo(r * .35 + fw, -r * .25, 0, r * .05); g.closePath(); g.fill(); g.stroke(); g.restore(); }
+  },
+  kosmos: {
+    back(g, b, tm, k) { const r = b.r; g.save(); g.rotate(tm * .5); g.scale(1, .32); g.lineWidth = 5; g.strokeStyle = INK; g.beginPath(); g.arc(0, 0, r * 1.75, Math.PI, 0); g.stroke(); g.lineWidth = 2.6; g.strokeStyle = '#ffd45a'; g.beginPath(); g.arc(0, 0, r * 1.75, Math.PI, 0); g.stroke(); g.restore(); },
+    front(g, b, tm, k) { const r = b.r; g.save(); g.rotate(tm * .5); g.scale(1, .32); g.lineWidth = 5; g.strokeStyle = INK; g.beginPath(); g.arc(0, 0, r * 1.75, 0, Math.PI); g.stroke(); g.lineWidth = 2.6; g.strokeStyle = '#ffd45a'; g.beginPath(); g.arc(0, 0, r * 1.75, 0, Math.PI); g.stroke(); g.restore();
+      const a = tm * 2.4; g.fillStyle = '#6ad0ff'; g.strokeStyle = INK; g.lineWidth = 1.8; g.beginPath(); g.arc(Math.cos(a) * r * 1.5, Math.sin(a) * r * .8, r * .2, 0, 7); g.fill(); g.stroke(); const a2 = -tm * 1.7 + 2; g.fillStyle = '#ff7ad8'; g.beginPath(); g.arc(Math.cos(a2) * r * 1.3, Math.sin(a2) * r * 1.05, r * .14, 0, 7); g.fill(); g.stroke();
+      for (let i = 0; i < 3; i++) { g.globalAlpha = .5 + .5 * Math.sin(tm * 4 + i * 2); star(g, Math.cos(i * 2.1 + tm * .8) * r * .9, -r * 1.15 + Math.sin(i * 2.1) * r * .25, 2.6, '#fff2a0', tm); } g.globalAlpha = 1; }
+  }
+};
+// Mythisch: Starteffekt beim Countdown (3, 2, 1) - wird einmal von der Kampfansicht aufgerufen
+export function skinStartFx(sim) {
+  for (const b of sim.balls) { const sk = b.skin && SKIN_BY_ID[b.skin]; if (!sk || sk.start !== 'portal') continue;
+    for (let i = 0; i < 3; i++) pt({ k: 'ring', x: b.x, y: b.y, age: 0, life: .55 + i * .22, r: b.r * (2.6 + i * .7), col: skinCol('rainbow', i * 2) });
+    skinBurst(b.x, b.y, sk.atk, 18, 140, 1, 20); if (sk.snd && sk.snd.start) snd(sk.snd.start, .9); }
 }
 let sim0 = null;
 export function drawBall(g, b, sim, tf, tm, tint) {
-  sim0 = sim;
   const d = b.def, st = b.st || {}, v = vstate(b), f = tf + b.id, type = b.type;
   const k = b.r / R0 * (KS[type] || 1), x = b.x, y = b.y;
   if (b.vx * v.pvx < 0 || b.vy * v.pvy < 0) { v.sq = .16; v.ax = (b.vx * v.pvx < 0) ? 0 : 1; }
@@ -148,6 +196,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   else if (type === 'supernova' && st.ch > 0) { const rr = b.r * (1.5 + st.ch * 2), gr = g.createRadialGradient(0, 0, 0, 0, 0, rr); gr.addColorStop(0, 'rgba(255,240,150,' + (.15 + st.ch * .5) + ')'); gr.addColorStop(1, 'rgba(255,240,150,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rr, 0, 7); g.fill(); }
   else if (type === 'schwarzloch') { ringJ(g, 0, 0, 38 + Math.sin(tm * 3) * 4, 1.2, 'rgba(139,79,201,.4)', tf, b.id); }
   else if (type === 'tornado') { const p = partSprite('swirl'); spr(g, p, 0, 0, f, (b.r + 14) / p.rad, tm * 4, .55); }
+  { const sk = b.skin && SKIN_BY_ID[b.skin], an = sk && sk.anim && ANIM[sk.anim]; if (an && an.back) { g.save(); an.back(g, b, tm, k); g.restore(); } }   // Skin-Animationen hinter dem Ball
   /* Körper */
   g.save(); g.rotate(type === 'blauast' && !b.preview ? tm * 4 : tilt); g.scale(sx * bob * k, sy * bob * k);
   if (type === 'herrscher') {   // Regenbogen-Körper, dreht sich langsam
@@ -169,7 +218,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   }
   g.restore();
   g.globalAlpha = ghost ? .45 : 1;
-  if (b.skin && SKIN_BY_ID[b.skin] && SKIN_BY_ID[b.skin].aura) skinAura(g, b, SKIN_BY_ID[b.skin], tm);
+  { const sk = b.skin && SKIN_BY_ID[b.skin]; if (sk) { if (sk.part) skinAmbient(g, b, sk, tm); const an = sk.anim && ANIM[sk.anim]; if (an && an.front) { g.save(); an.front(g, b, tm, k); g.restore(); } } }
   /* vorne */
   if (type === 'schwert') {
     const n = st.n || 1, ang = st.ang || 0, p = partSprite('dagger');
@@ -258,7 +307,8 @@ const ZONE = { rain: 'rainZone', lava: 'lavaZone', dust: 'dustZone', egg: 'eggZo
 export const GROUND = { puddle: 1, fire: 1, spike: 1, bomb: 1, meteor: 1, mine: 1, wave: 1 };
 export function drawObj(g, o, sim, tf, tm) {
   const f = tf + (o.owner || 0) * 3;
-  sim0 = sim; if (o.proj && o.vx !== undefined) skinTrail(g, o, tm);
+  const osk = o.owner ? ownerSkin(sim, o.owner) : null;
+  if (osk && osk.atk && o.proj && o.vx !== undefined) { skinProj(g, o, osk, tm); return; }   // Geschosse im Skin-Look
   switch (o.k) {
     case 'mauer': {   // Ziegelmauer, handgezeichnet
       const dx = o.x2 - o.x1, dy = o.y2 - o.y1, L = Math.hypot(dx, dy) || 1, nx = -dy / L * 5, ny = dx / L * 5, grow = Math.min(1, (8 - o.life) * 5 + .2), fade = Math.min(1, o.life * 1.5);
@@ -317,6 +367,7 @@ export function drawObj(g, o, sim, tf, tm) {
       break;
     }
   }
+  if (osk && osk.atk && !o.proj && (o.k === 'puddle' || o.k === 'fire' || o.k === 'wave' || o.k === 'boom' || o.k === 'meteor' || o.k === 'frost')) skinZone(g, o, osk, tm);   // Zonen und Wellen im Skin-Look
 }
 
 /* ---------- Effekte (Funken, Ringe, Zahlen) ---------- */
@@ -354,10 +405,14 @@ export function addFx(e) {
     sparks(x, y, 22, '#ffd45a', 200, .9, 4.2); puffs(x, y, 10, 'rgba(255,255,255,.9)', 110, 9);
     for (let i = 0; i < 3; i++) pt({ k: 'star', x, y, age: 0, life: .9, vx: (rnd() - .5) * 120, vy: -80 - rnd() * 60, sz: 5 + rnd() * 3 });
     fxState.shake = 8; fxState.hitstop = Math.max(fxState.hitstop, .1); fxState.ko = .9; fxState.koX = x; fxState.koY = y;
+    { const sk = SKIN_BY_ID[e.e]; if (sk && sk.die === 'supernova') {
+      for (let i = 0; i < 4; i++) pt({ k: 'ring', x, y, age: 0, life: .7 + i * .15, r: e.a * (3.4 + i * 1.3), col: skinCol('rainbow', i * 2) });
+      skinBurst(x, y, sk.atk, 34, 230, 1.1, 30); fxState.shake = 11; if (sk.snd && sk.snd.die) snd(sk.snd.die, 1); } }
     snd('die');
   } else if (k === 'heal') {
     for (let i = 0; i < 2; i++) pt({ k: 'plus', x: x + (rnd() - .5) * 16, y, age: 0, life: .8, vy: -22 });
     if (e.a >= 3) pt({ k: 'num', x, y: y - 14, age: 0, life: .8, txt: '+' + Math.round(e.a), sz: 10, col: '#6fdc7a' });
+    { const sk = e.e && SKIN_BY_ID[e.e]; if (sk && sk.atk) skinBurst(x, y, sk.atk, 6, 40, .9, 40); }
     snd('heal', .5);
   } else if (k === 'block') { pt({ k: 'ring', x, y, age: 0, life: .25, r: 12, col: '#ffffff' }); sparks(x, y, 4, '#cfe4ff', 80, .25, 2.4); snd('block'); }
   else if (k === 'stun') { sparks(x, y, 5, '#ffe14a', 60, .5, 3); snd('stun'); }
@@ -374,7 +429,11 @@ export function addFx(e) {
   else if (k === 'mute') { pt({ k: 'ring', x, y, age: 0, life: .4, r: e.a * 2.2, col: '#b8b4a8' }); sparks(x, y, 6, '#d8d4c8', 70, .45, 2.8); snd('mute'); }
   else if (k === 'bombdrop') { snd('bombdrop', .8); }
   else if (k === 'wall') { sparks(x, y, 6, '#d98a5a', 70, .4, 3); puffs(x, y, 3, 'rgba(160,120,90,.8)', 40, 6); snd('block', .8); }
-  else if (k === 'skincast' || k === 'skinhit') { const sk = SKIN_BY_ID[e.e]; if (sk && sk.snd) snd(k === 'skincast' ? sk.snd.cast : sk.snd.hit, .8); }
+  else if (k === 'skincast' || k === 'skinhit') {
+    const sk = SKIN_BY_ID[e.e];
+    if (sk && sk.atk) { if (k === 'skinhit') { pt({ k: 'ring', x, y, age: 0, life: .3, r: e.a === 0 ? 20 : 14, col: skinCol(sk.atk.col, 0) }); skinBurst(x, y, sk.atk, e.a === 0 ? 9 : 6, 110, .6, 10); } else skinBurst(x, y, sk.atk, 3, 60, .4, 0); }
+    if (sk && sk.snd) snd(k === 'skincast' ? sk.snd.cast : sk.snd.hit, .8);
+  }
   else if (k === 'shield') { pt({ k: 'ring', x, y, age: 0, life: .5, r: e.a * 3, col: '#bfe4ff' }); sparks(x, y, 10, '#ffffff', 110, .5, 2.8); snd('shield'); }
 }
 export function burst(x, y, n, cols) {   // Konfetti für Sieg
@@ -388,6 +447,7 @@ export function drawFx(g, dt, tf) {
     switch (e.k) {
       case 'spark': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 180 * dt; star(g, e.x, e.y, e.sz * (1 - p * .6), e.col, e.rot + e.age * 6); break;
       case 'puff': e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= .94; e.vy *= .94; g.save(); g.globalAlpha = (1 - p) * .85; g.fillStyle = e.col; g.strokeStyle = INK; g.lineWidth = 1.2; g.beginPath(); g.arc(e.x, e.y, e.sz * (.6 + p * .9), 0, 7); g.fill(); g.stroke(); g.restore(); break;
+      case 'sp': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 90 * dt; e.vx *= .985; g.save(); g.globalAlpha = Math.min(1, (1 - p) * 1.6); skinPart(g, e.shape, e.x, e.y, e.col, e.sz * (1 - p * .4), e.rot + e.age * 5); g.restore(); break;
       case 'ring': g.save(); g.globalAlpha = 1 - p; ringJ(g, e.x, e.y, e.r * (.25 + .75 * Math.sqrt(p)), 4 * (1 - p) + .8, e.col, tf, 3); g.restore(); break;
       case 'star': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 140 * dt; star(g, e.x, e.y, e.sz, '#ffd45a', e.age * 5); break;
       case 'conf': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 380 * dt; e.vx *= .985; g.save(); g.translate(e.x, e.y); g.rotate(e.rot + e.age * 8); g.globalAlpha = Math.min(1, (1 - p) * 2); g.fillStyle = e.col; g.strokeStyle = INK; g.lineWidth = 1; g.beginPath(); g.rect(-e.sz, -e.sz * .6, e.sz * 2, e.sz * 1.2); g.fill(); g.stroke(); g.restore(); break;

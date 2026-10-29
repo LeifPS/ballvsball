@@ -1,24 +1,28 @@
-// Ball-Skins: gleiche Werte und Fähigkeiten wie der Grundball, nur anderes Aussehen. Je seltener der Skin, desto mehr ist neu:
-// gewöhnlich: andere Farbe | selten: dazu eigene Partikel an den Geschossen | episch: dazu ein Leuchten und Schimmern am Ball
-// legendär: dazu ein ganz neues Modell | mythisch: dazu eigene Geräusche
+// Ball-Skins: Gegenstände, die man einem Ball (nach Sorte) zuweist. Gleiche Werte, nur Aussehen und Effekte. Je seltener, desto mehr ist neu:
+//   gewöhnlich: Farbschema (Teilfarben)          selten: + Partikel am Ball       episch: + Modell + Angriffseffekte
+//   legendär: + Animationen                     mythisch: + Geräusche, Todeseffekt, Starteffekt
+// pal: Teilfarben des Grundballs (siehe K() in ballart.js) | part: Partikel am Ball | atk: Aussehen aller Angriffe und Heilung
+// anim: Name der Animation | snd/die/start: nur Mythisch
 export const SKINS = [
-  // Farbtruhe
-  { id: 'goldstachel', base: 'stachel', name: 'Goldstachel', rarity: 'gewoehnlich', box: 'skin1', tint: '#ffd24a', a: .55, desc: 'Der Stachelball in glänzendem Gold.' },
-  { id: 'eisfeuer', base: 'feuer', name: 'Eisfeuer', rarity: 'gewoehnlich', box: 'skin1', tint: '#6fd8ff', a: .6, desc: 'Der Feuerball mit eiskalter blauer Flamme.' },
-  { id: 'minzkaktus', base: 'kaktus', name: 'Minzkaktus', rarity: 'gewoehnlich', box: 'skin1', tint: '#8ff0c0', a: .5, desc: 'Der Kaktusball in frischem Minzgrün.' },
-  { id: 'rosabumerang', base: 'bumerang', name: 'Rosa Bumerang', rarity: 'selten', box: 'skin1', tint: '#ff7ab8', a: .55, trail: { col: '#ff7ab8', kind: 'heart' }, desc: 'Der Bumerang in Rosa, seine Geschosse hinterlassen Herzen.' },
-  { id: 'lavarakete', base: 'rakete', name: 'Lavarakete', rarity: 'selten', box: 'skin1', tint: '#c0301e', a: .55, trail: { col: '#ff8a2a', kind: 'ember' }, desc: 'Der Raketenball glüht wie Lava und sprüht Funken.' },
-  { id: 'neonwirbel', base: 'wirbel', name: 'Neonwirbel', rarity: 'selten', box: 'skin1', tint: '#3dff7a', a: .5, trail: { col: '#3dff7a', kind: 'dot' }, desc: 'Der Wirbelball in grellem Neon, mit leuchtender Spur.' },
-  { id: 'mondmagier', base: 'magier', name: 'Mondmagier', rarity: 'episch', box: 'skin1', tint: '#3a4a9a', a: .5, trail: { col: '#cfe0ff', kind: 'star' }, aura: { col: '#cfe0ff', kind: 'star', n: 4 }, desc: 'Der Magier im Mondlicht, umgeben von Sternenstaub.' },
-  { id: 'regenbogenstachel', base: 'stachel', name: 'Regenbogenstachel', rarity: 'episch', box: 'skin1', tint: 'rainbow', a: .55, trail: { col: 'rainbow', kind: 'star' }, aura: { col: 'rainbow', kind: 'star', n: 4 }, desc: 'Der Stachelball in allen Farben, mit funkelnden Sternen.' },
-  // Schatztruhe
-  { id: 'kristallkaktus', base: 'kaktus', name: 'Kristallkaktus', rarity: 'selten', box: 'skin2', tint: '#b8e8ff', a: .6, trail: { col: '#b8e8ff', kind: 'shard' }, desc: 'Der Kaktus aus Eis, seine Stacheln splittern wie Kristall.' },
-  { id: 'schattenfeuer', base: 'feuer', name: 'Schattenfeuer', rarity: 'selten', box: 'skin2', tint: '#6a2a9a', a: .6, trail: { col: '#b36cff', kind: 'ember' }, desc: 'Der Feuerball mit violetter Schattenflamme.' },
-  { id: 'bluetenbumerang', base: 'bumerang', name: 'Blütenbumerang', rarity: 'episch', box: 'skin2', tint: '#ffb0d0', a: .55, trail: { col: '#ff9ac4', kind: 'flower' }, aura: { col: '#ffd0e4', kind: 'flower', n: 4 }, desc: 'Der Bumerang im Frühling: Blütenblätter wirbeln um ihn.' },
-  { id: 'sternenrakete', base: 'rakete', name: 'Sternenrakete', rarity: 'episch', box: 'skin2', tint: '#ffd45a', a: .5, trail: { col: '#ffe27a', kind: 'star' }, aura: { col: '#fff2a0', kind: 'star', n: 4 }, desc: 'Der Raketenball in Gold, eine Sternschnuppe auf Besuch.' },
-  { id: 'drachenstachel', base: 'stachel', name: 'Drachenstachel', rarity: 'legendaer', box: 'skin2', model: true, trail: { col: '#ff6a2a', kind: 'ember' }, aura: { col: '#ffb04a', kind: 'ember', n: 5 }, desc: 'Ein kleiner Drache mit Flügeln statt Stacheln. Neues Modell.' },
-  { id: 'phoenixfeuer', base: 'feuer', name: 'Phönixfeuer', rarity: 'legendaer', box: 'skin2', model: true, trail: { col: '#ffb02a', kind: 'ember' }, aura: { col: '#ffd45a', kind: 'ember', n: 5 }, desc: 'Der Feuerball als Feuervogel. Neues Modell.' },
-  { id: 'piratenbumerang', base: 'bumerang', name: 'Piratenbumerang', rarity: 'legendaer', box: 'skin2', model: true, trail: { col: '#ffe14a', kind: 'dot' }, aura: { col: '#ffe14a', kind: 'star', n: 3 }, desc: 'Der Bumerang als Piratenkapitän mit Augenklappe. Neues Modell.' },
-  { id: 'kosmosmagier', base: 'magier', name: 'Kosmosmagier', rarity: 'mythisch', box: 'skin2', model: true, trail: { col: 'rainbow', kind: 'star' }, aura: { col: 'rainbow', kind: 'star', n: 7 }, snd: { cast: 'skin_kosmos_cast', hit: 'skin_kosmos_hit' }, desc: 'Der Magier, der die Sterne selbst ruft. Neues Modell und eigene Geräusche.' }
+  // ---- Farbtruhe ----
+  { id: 'goldstachel', base: 'stachel', name: 'Goldstachel', rarity: 'gewoehnlich', box: 'skin1', desc: 'Der Stachelball in Gold: goldene Stacheln, cremiger Körper.', pal: { spike: '#f0c040', body: '#fff0b8' } },
+  { id: 'eisfeuer', base: 'feuer', name: 'Eisfeuer', rarity: 'gewoehnlich', box: 'skin1', desc: 'Der Feuerball mit eiskalter blauer Flamme.', pal: { flame: '#8fe4ff', body: '#4fa8e8' } },
+  { id: 'minzkaktus', base: 'kaktus', name: 'Minzkaktus', rarity: 'gewoehnlich', box: 'skin1', desc: 'Der Kaktusball in frischem Minzgrün mit rosa Blüten.', pal: { body: '#8fe8c4', stripe: 'rgba(40,140,110,.55)', spine: '#ffffff', flower: '#ffd0e8', center: '#fff59a' } },
+  { id: 'rosabumerang', base: 'bumerang', name: 'Rosa Bumerang', rarity: 'selten', box: 'skin1', desc: 'Der Bumerang in Rosa, um ihn steigen Herzen auf.', pal: { body: '#ffc0dc', band: '#e8508c' }, part: { kind: 'heart', col: '#ff7ab8', mode: 'rise', n: 4 } },
+  { id: 'lavarakete', base: 'rakete', name: 'Lavarakete', rarity: 'selten', box: 'skin1', desc: 'Der Raketenball glüht wie Lava und sprüht Funken hinter sich her.', pal: { flame1: '#ff3a1a', flame2: '#ffd23a', fin: '#5a1a14', body: '#4a3434' }, part: { kind: 'ember', col: '#ff8a2a', mode: 'trail', n: 5 } },
+  { id: 'neonwirbel', base: 'wirbel', name: 'Neonwirbel', rarity: 'selten', box: 'skin1', desc: 'Der Wirbelball in grellem Neon, kleine Lichter kreisen um ihn.', pal: { body: '#6bff9a', swirl: 'rgba(255,60,200,.8)' }, part: { kind: 'dot', col: '#ff3cc8', mode: 'orbit', n: 4 } },
+  { id: 'mondmagier', base: 'magier', name: 'Mondmagier', rarity: 'episch', box: 'skin1', model: true, desc: 'Magier im Mondlicht: neuer Hut mit Mondsichel, Sternenstaub, Mond-Funken bei allen Angriffen.', part: { kind: 'star', col: '#cfe0ff', mode: 'orbit', n: 4 }, atk: { kind: 'star', col: '#cfe0ff', col2: '#8aa8ff' } },
+  { id: 'regenbogenstachel', base: 'stachel', name: 'Regenbogenstachel', rarity: 'episch', box: 'skin1', model: true, desc: 'Jeder Stachel in einer anderen Farbe, Angriffe hinterlassen bunte Sterne.', part: { kind: 'star', col: 'rainbow', mode: 'orbit', n: 5 }, atk: { kind: 'star', col: 'rainbow', col2: '#ffffff' } },
+  // ---- Schatztruhe ----
+  { id: 'kristallkaktus', base: 'kaktus', name: 'Kristallkaktus', rarity: 'selten', box: 'skin2', desc: 'Der Kaktus aus Eis, Kristallsplitter kreisen um ihn.', pal: { body: '#b8e8ff', stripe: 'rgba(80,140,200,.55)', spine: '#ffffff', flower: '#c8a8ff', center: '#ffffff' }, part: { kind: 'shard', col: '#d8f4ff', mode: 'orbit', n: 4 } },
+  { id: 'schattenfeuer', base: 'feuer', name: 'Schattenfeuer', rarity: 'selten', box: 'skin2', desc: 'Der Feuerball mit violetter Schattenflamme, dunkle Funken steigen auf.', pal: { flame: '#a05cff', body: '#3a1a5a' }, part: { kind: 'ember', col: '#b36cff', mode: 'rise', n: 4 } },
+  { id: 'bluetenbumerang', base: 'bumerang', name: 'Blütenbumerang', rarity: 'episch', box: 'skin2', model: true, desc: 'Der Bumerang mit Blütenkranz: Blütenblätter fallen, Angriffe sehen aus wie Blütenregen.', part: { kind: 'flower', col: '#ff9ac4', mode: 'rise', n: 4 }, atk: { kind: 'flower', col: '#ff9ac4', col2: '#fff0f6' } },
+  { id: 'sternenrakete', base: 'rakete', name: 'Sternenrakete', rarity: 'episch', box: 'skin2', model: true, desc: 'Goldene Rakete mit Sternenspitze, Angriffe sind Sternschnuppen.', part: { kind: 'star', col: '#ffe27a', mode: 'trail', n: 5 }, atk: { kind: 'star', col: '#ffe27a', col2: '#ff9a2a' } },
+  { id: 'drachenstachel', base: 'stachel', name: 'Drachenstachel', rarity: 'legendaer', box: 'skin2', model: true, anim: 'dragon', desc: 'Ein kleiner Drache mit schlagenden Flügeln, jeder Angriff ist Drachenfeuer.', part: { kind: 'ember', col: '#ff8a2a', mode: 'rise', n: 5 }, atk: { kind: 'ember', col: '#ff6a2a', col2: '#ffd24a' } },
+  { id: 'phoenixfeuer', base: 'feuer', name: 'Phönixfeuer', rarity: 'legendaer', box: 'skin2', model: true, anim: 'phoenix', desc: 'Der Feuerball als Feuervogel mit echter, flackernder Flammenkrone.', part: { kind: 'ember', col: '#ffd45a', mode: 'rise', n: 5 }, atk: { kind: 'ember', col: '#ffb02a', col2: '#ff5a1a' } },
+  { id: 'piratenbumerang', base: 'bumerang', name: 'Piratenbumerang', rarity: 'legendaer', box: 'skin2', model: true, anim: 'pirate', desc: 'Der Bumerang als Piratenkapitän: schaukelnder Ohrring, Goldmünzen kreisen um ihn.', part: { kind: 'coin', col: '#ffd45a', mode: 'orbit', n: 3 }, atk: { kind: 'coin', col: '#ffd45a', col2: '#fff2a0' } },
+  { id: 'kosmosmagier', base: 'magier', name: 'Kosmosmagier', rarity: 'mythisch', box: 'skin2', model: true, anim: 'kosmos', desc: 'Der Magier, der die Sterne selbst ruft: kreisende Planeten, Sternen-Start, Supernova beim Abtreten, eigene Geräusche.', part: { kind: 'star', col: 'rainbow', mode: 'orbit', n: 7 }, atk: { kind: 'star', col: 'rainbow', col2: '#e0b8ff' },
+    snd: { cast: 'skin_kosmos_cast', hit: 'skin_kosmos_hit', start: 'skin_kosmos_start', die: 'skin_kosmos_die' }, die: 'supernova', start: 'portal' }
 ];
 export const SKIN_BY_ID = Object.fromEntries(SKINS.map(s => [s.id, s]));
+export const SKIN_IDS = SKINS.map(s => s.id);

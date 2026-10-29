@@ -52,7 +52,7 @@ export function makeSim(cfg, DEFS, OBJS) {
   sim.elim = [];   // Reihenfolge, in der Teams komplett besiegt wurden: { team, step }
   cfg.balls.forEach((c, i) => {
     const slot = c.slot != null ? c.slot : i, p = POS[slot];
-    const nb = addBall(sim, c.type, c.team, slot, p[0] * BOX, p[1] * BOX, c.deg || 0, { stars: Math.max(0, Math.min(MAX_STARS, c.stars | 0)) });
+    const nb = addBall(sim, c.type, c.team, slot, p[0] * BOX, p[1] * BOX, c.deg || 0, { stars: Math.max(0, Math.min(MAX_STARS, c.stars | 0)), skin: c.skin });
     // Einzelspieler-Bosse: mehr Leben (hpMul) und mitgebrachter Lebensanteil (hpFrac)
     if (c.hpMul > 0) { nb.maxHp *= c.hpMul; nb.hp = nb.maxHp; }
     if (c.hpFrac > 0 && c.hpFrac < 1) nb.hp = Math.max(1, nb.maxHp * c.hpFrac);
@@ -62,9 +62,8 @@ export function makeSim(cfg, DEFS, OBJS) {
 }
 
 export function addBall(sim, type, team, slot, x, y, deg, opt) {
-  // Skins verhalten sich wie ihr Grundball; nur das Aussehen (b.skin) bleibt erhalten
-  let skin = null; const d0 = sim.DEFS[type]; if (d0 && d0.base) { skin = type; type = d0.base; }
   const def = sim.DEFS[type];
+  const sd = opt && opt.skin && sim.DEFS[opt.skin], skin = sd && sd.base === type ? opt.skin : null;   // angelegter Skin: nur Aussehen und Effekte, keine Werte
   const d = dirOf(deg);
   const b = {
     id: sim.nextId++, type, def, team, slot, x, y, vx: 0, vy: 0, speed: def.speed, r: def.r,
@@ -135,7 +134,7 @@ export function hurt(sim, t, amt, src, kind) {
   t.hp -= amt;
   if (kind !== 'dot') t.flash = .12;
   if (src) sim.dealt[src.team] = (sim.dealt[src.team] || 0) + amt;
-  if (kind !== 'dot') { fx(sim, 'hit', t.x, t.y, amt); if (src && src.skin) fx(sim, 'skinhit', t.x, t.y, 0, src.skin); }
+  if (kind !== 'dot') { fx(sim, 'hit', t.x, t.y, amt); if (src && src.skin) fx(sim, 'skinhit', t.x, t.y, kind === 'contact' ? 0 : 1, src.skin); }
   else {   // Dauerschaden (Feuerspur, Regen, Brennen ...): Ball blinkt rot und zeigt alle paar Zehntelsekunden die Summe
     t.dotT = .2; t.dotAcc = (t.dotAcc || 0) + amt;
     if (sim.t >= (t.dotNext || 0)) { fx(sim, 'tick', t.x, t.y, t.dotAcc); t.dotAcc = 0; t.dotNext = sim.t + .5; }
@@ -147,7 +146,7 @@ export function hurt(sim, t, amt, src, kind) {
 export function heal(sim, b, amt) {
   if (b.dead || amt <= 0) return;
   b.hp = Math.min(b.maxHp, b.hp + amt);
-  fx(sim, 'heal', b.x, b.y, amt);
+  fx(sim, 'heal', b.x, b.y, amt, b.skin);
 }
 export function burn(sim, t, src, secs, dps) {
   if (t.dead) return;
@@ -197,7 +196,7 @@ function dealContact(sim, a, b) {
 function kill(sim, b) {
   if (b.def.onDeath && b.def.onDeath(b, sim) === true) return;
   b.dead = true; b.hp = 0;
-  fx(sim, 'die', b.x, b.y, b.r, b.type);
+  fx(sim, 'die', b.x, b.y, b.r, b.skin || b.type);
 }
 
 export function stepSim(sim) {
@@ -265,7 +264,7 @@ export function stepSim(sim) {
   // Minihelfer zählen nicht als Team-Mitglied: ist ihr Herr besiegt, verschwinden sie
   for (let i = 0; i < balls.length; i++) {
     const b = balls[i];
-    if (!b.dead && b.def.minion) { const o = sim.byId[b.st.boss]; if (!o || o.dead) { b.dead = true; b.hp = 0; fx(sim, 'die', b.x, b.y, b.r, b.type); } }
+    if (!b.dead && b.def.minion) { const o = sim.byId[b.st.boss]; if (!o || o.dead) { b.dead = true; b.hp = 0; fx(sim, 'die', b.x, b.y, b.r, b.skin || b.type); } }
   }
   // Sieger?
   const alive = {};

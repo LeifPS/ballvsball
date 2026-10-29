@@ -375,7 +375,7 @@ export class Game extends DurableObject {
     for (const p of live) if (!p.pick) p.pick = p.hand[rint(p.hand.length)];
     m.phase = 'dir';
     m.deadline = Date.now() + DIR_SECS * 1000;
-    const balls = live.map(p => ({ slot: p.slot, type: p.pick.type }));
+    const balls = live.map(p => ({ slot: p.slot, type: p.pick.type, ...(p.pick.skin ? { skin: p.pick.skin } : {}) }));
     for (const p of live) {
       if (p.bot || p.left) { p.dir = rnd() * 360; continue; }
       p.last = { t: 'reveal', round: m.round, balls, secs: DIR_SECS };
@@ -402,7 +402,7 @@ export class Game extends DurableObject {
     // Winkel auf 0,1 Grad runden, damit JSON-Zahlen sicher gleich bleiben
     const cfg = {
       seed: rint(2000000000) + 1, total: m.n,
-      balls: live.map(p => ({ slot: p.slot, type: p.pick.type, team: p.team, deg: Math.round(p.dir * 10) / 10, stars: p.pick.stars || 0 }))
+      balls: live.map(p => ({ slot: p.slot, type: p.pick.type, team: p.team, deg: Math.round(p.dir * 10) / 10, stars: p.pick.stars || 0, ...(p.pick.skin ? { skin: p.pick.skin } : {}) }))
     };
     const res = runFight(cfg);
     if (m.ffa) {

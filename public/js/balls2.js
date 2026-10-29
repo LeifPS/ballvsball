@@ -627,4 +627,4 @@ for (const box in BOX_OF) for (const id of BOX_OF[box]) {
 }
 export const BOXES = BOX_OF;
 export const BOX_IDS = ['standard', 'weltraum', 'kueche', 'sport', 'elemente', 'ozean', 'suess', 'familie', 'dino', 'alles', 'klein', 'gefuehl', 'brainrot', 'halloween', 'herbst', 'sturm', 'skin1', 'skin2'];
-export function ballsInBox(box) { return BALL_IDS.filter(id => DEFS[id].box === box); }
+export function ballsInBox(box) { return Object.keys(DEFS).filter(id => DEFS[id].box === box); }   // enthält auch Skins (Skin-Truhen)

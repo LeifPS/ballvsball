@@ -78,6 +78,7 @@ export class Store extends DurableObject {
     this.sql.exec(`CREATE TABLE IF NOT EXISTS battles(id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, ts INTEGER NOT NULL, sum TEXT NOT NULL, rec TEXT NOT NULL, share TEXT)`);
     this.sql.exec('CREATE INDEX IF NOT EXISTS battles_user ON battles(user_id, id)');
     if (!cols.includes('free_boxes')) this.sql.exec('ALTER TABLE users ADD COLUMN free_boxes INTEGER NOT NULL DEFAULT 0');
+    this.sql.exec('CREATE TABLE IF NOT EXISTS equip(owner INTEGER NOT NULL, type TEXT NOT NULL, skin_uid INTEGER NOT NULL, PRIMARY KEY(owner,type))');
     this.sql.exec('CREATE TABLE IF NOT EXISTS solo(user_id INTEGER NOT NULL, kind TEXT NOT NULL, day INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY(user_id,kind))');
     if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
   }
@@ -89,8 +90,8 @@ export class Store extends DurableObject {
   // Anzahl verschiedener Sorten unter den freien Bällen nach einer Änderung (drei verschiedene braucht jeder für die Auswahl)
   freeTypesAfter(id, remove, add) {
     const rm = new Set(remove || []), types = new Set();
-    for (const b of this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', id)) if (!rm.has(b.uid)) types.add(b.type);
-    for (const uid of add || []) { const b = this.q('SELECT type FROM balls WHERE uid=?', uid)[0]; if (b) types.add(b.type); }
+    for (const b of this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', id)) if (!rm.has(b.uid) && !DEFS[b.type].skin) types.add(b.type);
+    for (const uid of add || []) { const b = this.q('SELECT type FROM balls WHERE uid=?', uid)[0]; if (b && !DEFS[b.type].skin) types.add(b.type); }
     return types.size;
   }
   levels(owner) {
@@ -113,7 +114,7 @@ export class Store extends DurableObject {
     if (!live && u.tokens) this.q('UPDATE users SET tokens=0 WHERE id=?', u.id);
     return {
       id: u.id, name: u.name, coins: u.coins, tokens: live ? u.tokens : 0, wins: u.wins, losses: u.losses, boxes: u.boxes, streak: u.streak,
-      dailyReady: u.last_daily < today, freeBoxes: u.free_boxes || 0, balls, now, eventEnd: EVENT_END
+      dailyReady: u.last_daily < today, freeBoxes: u.free_boxes || 0, equip: this.equipMap(u.id), balls, now, eventEnd: EVENT_END
     };
   }
 
@@ -227,6 +228,7 @@ export class Store extends DurableObject {
     const b = this.q('SELECT * FROM balls WHERE uid=?', Number(uid))[0];
     if (!b || b.owner !== u.id) return { err: 'not_yours' };
     if (b.lock !== 0) return { err: 'locked' };
+    if (DEFS[b.type].skin) return { err: 'no_skin_fight' };
     return { ball: b, stars: this.levels(u.id)[b.type] || 0 };
   }
   soloDaily(tk, uid) {
@@ -237,7 +239,7 @@ export class Store extends DurableObject {
     const rar = DEFS[sb.ball.type].rarity;
     if (d.rule.id === 'low' && !['gewoehnlich', 'selten'].includes(rar)) return { err: 'rule' };
     if (d.rule.id === 'nostar' && sb.stars > 0) return { err: 'rule' };
-    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars }, { slot: 1, type: d.opp, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.oppStars }] };
+    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars, skin: this.equipMap(u.id)[sb.ball.type] }, { slot: 1, type: d.opp, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.oppStars }] };
     const res = runFight(cfg), win = res.winner === 0;
     st.tries++;
     let reward = null;
@@ -254,13 +256,37 @@ export class Store extends DurableObject {
     if (st.used.length >= 3 || st.frac <= 0) return { err: 'boss_done' };
     const sb = this.soloBall(u, uid); if (sb.err) return sb;
     if (st.used.includes(Number(uid)) || st.used.some(x => { const o = this.q('SELECT type FROM balls WHERE uid=?', x)[0]; return o && o.type === sb.ball.type; })) return { err: 'boss_used' };
-    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars }, { slot: 1, type: d.type, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.stars, hpMul: d.hpMul, hpFrac: st.frac }] };
+    const cfg = { seed: Math.floor(Math.random() * 2000000000) + 1, total: 2, balls: [{ slot: 0, type: sb.ball.type, team: 0, deg: Math.round(Math.random() * 3600) / 10, stars: sb.stars, skin: this.equipMap(u.id)[sb.ball.type] }, { slot: 1, type: d.type, team: 1, deg: Math.round(Math.random() * 3600) / 10, stars: d.stars, hpMul: d.hpMul, hpFrac: st.frac }] };
     const res = runFight(cfg), win = res.winner === 0;
     st.used.push(Number(uid)); st.frac = win ? 0 : Math.max(.02, res.frac[1] || .02);
     let reward = null;
     if (win && !st.claimed) { st.claimed = true; reward = { coins: 150, freeBox: 1 }; this.q('UPDATE users SET coins=coins+?, free_boxes=free_boxes+? WHERE id=?', 150, 1, u.id); }
     this.soloPut(u.id, 'boss', day, st);
     return { ok: true, cfg, steps: res.steps, winner: res.winner, reward, state: this.soloState(tk), me: this.profile(this.userBy(tk)) };
+  }
+  /* ---------- Skins: Gegenstände, die man einem Ball (nach Sorte) zuweist ---------- */
+  equipMap(owner) {
+    const m = {};
+    for (const r of this.q('SELECT e.type AS type, b.type AS skin FROM equip e JOIN balls b ON b.uid=e.skin_uid WHERE e.owner=? AND b.owner=? AND b.lock=0', owner, owner)) { const d = DEFS[r.skin]; if (d && d.base === r.type) m[r.type] = r.skin; }
+    return m;
+  }
+  skinEquip(tk, uid) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const b = this.q('SELECT * FROM balls WHERE uid=?', Number(uid))[0];
+    if (!b || b.owner !== u.id) return { err: 'not_yours' };
+    const d = DEFS[b.type];
+    if (!d || !d.skin) return { err: 'no_skin' };
+    if (b.lock !== 0) return { err: 'locked' };
+    if (!this.q('SELECT 1 FROM balls WHERE owner=? AND type=?', u.id, d.base).length) return { err: 'no_base' };
+    this.q('INSERT INTO equip(owner,type,skin_uid) VALUES(?,?,?) ON CONFLICT(owner,type) DO UPDATE SET skin_uid=excluded.skin_uid', u.id, d.base, b.uid);
+    return { ok: true, me: this.profile(this.userBy(tk)) };
+  }
+  skinUnequip(tk, type) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    this.q('DELETE FROM equip WHERE owner=? AND type=?', u.id, String(type));
+    return { ok: true, me: this.profile(this.userBy(tk)) };
   }
   /* ---------- Kampflog: alle vergangenen Spiele, Wiederholung und Teilen ---------- */
   logBattle(userId, rec) {
@@ -355,8 +381,8 @@ export class Store extends DurableObject {
     return { ok: true, steps, used, me: this.profile(this.userBy(tk)) };
   }
   inventory(userId) {
-    const lv = this.levels(userId);
-    return this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', userId).map(b => ({ ...b, stars: lv[b.type] || 0 }));
+    const lv = this.levels(userId), eq = this.equipMap(userId);
+    return this.q('SELECT uid,type FROM balls WHERE owner=? AND lock=0', userId).filter(b => !DEFS[b.type].skin).map(b => ({ ...b, stars: lv[b.type] || 0, ...(eq[b.type] ? { skin: eq[b.type] } : {}) }));
   }
   reward(userId, coins, win, tokens) {
     const tk = eventActive(Date.now()) ? (tokens || 0) : 0;
@@ -375,7 +401,7 @@ export class Store extends DurableObject {
     const have = cfg.cur === 'tokens' ? u.tokens : u.coins;
     if (!useFree && have < cfg.price) return { err: cfg.cur === 'tokens' ? 'no_tokens' : 'no_coins' };
     // Tutorial: wer noch keine drei Bälle hat, öffnet nur Standard-Boxen und bekommt nacheinander Stachel, Feuer und Bumerang
-    const owned = new Set(this.q('SELECT type FROM balls WHERE owner=?', u.id).map(x => x.type));
+    const owned = new Set(this.q('SELECT type FROM balls WHERE owner=?', u.id).map(x => x.type).filter(t => !DEFS[t].skin));
     const tutorial = owned.size < MIN_FREE;
     if (tutorial && boxId !== 'standard') return { err: 'tutorial_box' };
     const present = RAR_KEYS.map(k => ballsInBox(boxId).some(id => DEFS[id].rarity === k));   // nur Seltenheiten, die diese Box wirklich hat
@@ -472,7 +498,7 @@ export class Store extends DurableObject {
   marketBrowse(tk, o) {
     const u = this.userBy(tk);
     if (!u) return { err: 'auth' };
-    let types = BALL_IDS;
+    let types = Object.keys(DEFS);   // Bälle und Skins
     if (o.rarity && RARITY[o.rarity]) types = types.filter(t => DEFS[t].rarity === o.rarity);
     if (o.q) {
       const needle = String(o.q).toLowerCase().slice(0, 20);
@@ -481,7 +507,7 @@ export class Store extends DurableObject {
     if (!types.length) return { ok: true, items: [], total: 0 };
     // SQLite erlaubt höchstens 100 Platzhalter: bei vielen Sorten lieber die ausgeschlossenen Sorten angeben
     let cond, args;
-    if (types.length > 80) { const ex = BALL_IDS.filter(t => !types.includes(t)); cond = ex.length ? 'b.type NOT IN (' + ex.map(() => '?').join(',') + ')' : '1=1'; args = ex; }
+    if (types.length > 80) { const ex = Object.keys(DEFS).filter(t => !types.includes(t)); cond = ex.length ? 'b.type NOT IN (' + ex.map(() => '?').join(',') + ')' : '1=1'; args = ex; }
     else { cond = 'b.type IN (' + types.map(() => '?').join(',') + ')'; args = types; }
     const order = o.sort === 'new' ? 'b.listed_at DESC' : o.sort === 'high' ? 'b.price DESC' : 'b.price ASC, b.listed_at DESC';
     const page = Math.max(0, int(o.page || 0, 0, 1000) || 0);

@@ -85,16 +85,20 @@ function erikArt(c, s, emo) {
 export const VARIANTS = { erik_w: (c, s) => erikArt(c, s, 'w'), erik_f: (c, s) => erikArt(c, s, 'f'), erik_t: (c, s) => erikArt(c, s, 't'), erik_a: (c, s) => erikArt(c, s, 'a') };
 
 /* ---------- Die Bälle ---------- */
+// Farbpalette für Skins: Teilfarben der Grundbälle (K('teil','standardfarbe')); nur während des Zeichnens eines Skins gesetzt
+let PAL = null;
+const K = (n, d) => (PAL && PAL[n]) || d;
+export const withPal = (pal, fn) => { const o = PAL; PAL = pal; try { fn(); } finally { PAL = o; } };
 export const BALLS = {
   /* ===== Standard ===== */
-  stachel(c, s) { const r = s * .36; for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; spike(c, Math.cos(a) * r * .95, Math.sin(a) * r * .95, a + 1.5708, s * .17, s * .07, '#d6dae2'); } body(c, s, '#e4e1da'); face(c, s, { angry: 1, mouth: 'flat', blush: 0 }); },
+  stachel(c, s) { const r = s * .36; for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; spike(c, Math.cos(a) * r * .95, Math.sin(a) * r * .95, a + 1.5708, s * .17, s * .07, K('spike','#d6dae2')); } body(c, s, K('body','#e4e1da')); face(c, s, { angry: 1, mouth: 'flat', blush: 0 }); },
   turret(c, s) { const r = s * .36; if (!NOHELD) { c.save(); c.rotate(-.5); c.beginPath(); c.rect(r * .6, -s * .06, s * .3, s * .12); FS(c, '#9aa1ad'); c.restore(); } body(c, s, '#c4cad4'); face(c, s, {}); },
   ramm(c, s) { const r = s * .36;[-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .4, -r * .8); c.quadraticCurveTo(d * r * .9, -r * 1.3, d * r * 1.05, -r * .75); c.lineTo(d * r * .8, -r * .5); c.closePath(); FS(c, '#f3ead2'); }); body(c, s, '#c98b5a', { rx: 1.08, ry: 1.02 }); face(c, s, { angry: 1, mouth: 'frown', er: .17 }); },
   glas(c, s) { c.globalAlpha = .85; body(c, s, '#cbeefa', { rx: .78, ry: .78 }); c.globalAlpha = 1; c.lineWidth = s * .03; c.beginPath(); c.moveTo(s * .03, -s * .22); c.lineTo(s * .09, -s * .08); c.lineTo(s * .02, s * .02); c.stroke(); face(c, s, { mouth: 'o', sp: .38, er: .22 }); },
-  feuer(c, s) { const r = s * .36; c.beginPath(); c.moveTo(-r * .5, -r * .6); c.quadraticCurveTo(-r * .3, -r * 1.3, 0, -r * 1.5); c.quadraticCurveTo(r * .1, -r * 1.0, r * .5, -r * .6); c.closePath(); FS(c, '#ffb62e'); body(c, s, '#f26a3a'); face(c, s, { mouth: 'grin' }); },
+  feuer(c, s) { const r = s * .36; c.beginPath(); c.moveTo(-r * .5, -r * .6); c.quadraticCurveTo(-r * .3, -r * 1.3, 0, -r * 1.5); c.quadraticCurveTo(r * .1, -r * 1.0, r * .5, -r * .6); c.closePath(); FS(c, K('flame','#ffb62e')); body(c, s, K('body','#f26a3a')); face(c, s, { mouth: 'grin' }); },
   bumerang(c, s) {
-    const r = s * .36; body(c, s, '#ffe08a');
-    thick(c, s * .1, '#b9803a', () => { c.beginPath(); c.moveTo(-r * .85, -r * .72); c.quadraticCurveTo(-r * .1, -r * 1.35, r * .85, -r * .6); });
+    const r = s * .36; body(c, s, K('body','#ffe08a'));
+    thick(c, s * .1, K('band','#b9803a'), () => { c.beginPath(); c.moveTo(-r * .85, -r * .72); c.quadraticCurveTo(-r * .1, -r * 1.35, r * .85, -r * .6); });
     face(c, s, { dy: .0 });
   },
   magnet(c, s) {
@@ -178,11 +182,11 @@ export const BALLS = {
   drache(c, s) { const r = s * .36; glow(c, s, '#ffd24a');[-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .45, -r * .75); c.lineTo(d * r * .7, -r * 1.45); c.lineTo(d * r * .95, -r * .55); c.closePath(); FS(c, '#fff0c0'); c.beginPath(); c.moveTo(d * r * .9, r * .1); c.quadraticCurveTo(d * r * 1.9, -r * .9, d * r * 1.8, r * .5); c.quadraticCurveTo(d * r * 1.4, r * .2, d * r * 1.1, r * .6); c.closePath(); FS(c, '#c2431f'); }); body(c, s, '#e8603a'); el(c, 0, r * .42, r * .42, r * .28, '#f4a074'); c.fillStyle = INK;[-1, 1].forEach(d => { c.beginPath(); c.arc(d * r * .14, r * .42, r * .05, 0, 7); c.fill(); });[-1, 1].forEach(d => cEye(c, d * r * .38, -r * .15, r * .18, 1, s)); c.lineWidth = s * .05;[-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .6, -r * .5); c.lineTo(d * r * .2, -r * .32); c.stroke(); }); },
   phoenix(c, s) { const r = s * .36; glow(c, s, '#ff7a1a');[-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .8, 0); c.quadraticCurveTo(d * r * 1.7, -r * 1.1, d * r * 1.9, r * .2); c.quadraticCurveTo(d * r * 1.5, 0, d * r * 1.4, r * .5); c.quadraticCurveTo(d * r * 1.1, r * .1, d * r * .9, r * .5); c.closePath(); FS(c, '#ff8a2a'); });[-1, 0, 1].forEach((d, i) => { c.beginPath(); c.moveTo(d * r * .35 - r * .2, -r * .75); c.quadraticCurveTo(d * r * .6, -r * (1.7 - Math.abs(d) * .3), d * r * .35 + r * .2, -r * .75); c.closePath(); FS(c, i === 1 ? '#ffd24a' : '#ff6a1a'); }); body(c, s, '#ffbe3a'); face(c, s, { angry: 1, mouth: 'flat', er: .17 }); c.beginPath(); c.moveTo(-r * .12, r * .2); c.lineTo(r * .12, r * .2); c.lineTo(0, r * .45); c.closePath(); FS(c, '#ff7a1a'); },
   kaktus(c, s) {
-    const r = s * .36; body(c, s, '#6fbf5a');
-    c.save(); c.beginPath(); c.arc(0, 0, r * .97, 0, 7); c.clip(); c.lineWidth = s * .03; c.strokeStyle = 'rgba(30,90,40,.55)';
+    const r = s * .36; body(c, s, K('body','#6fbf5a'));
+    c.save(); c.beginPath(); c.arc(0, 0, r * .97, 0, 7); c.clip(); c.lineWidth = s * .03; c.strokeStyle = K('stripe','rgba(30,90,40,.55)');
     [-.6, -.2, .2, .6].forEach(k => { c.beginPath(); c.moveTo(k * r, -r); c.quadraticCurveTo(k * r * 1.5, 0, k * r, r); c.stroke(); }); c.restore();
-    c.lineWidth = s * .03; [[-.9, -.2], [.9, .1], [-.7, .6], [.75, .6], [0, 1.0], [-.3, -.95], [.5, -.85]].forEach(p => { ln(c, p[0] * r, p[1] * r, p[0] * r * 1.18, p[1] * r * 1.18, s * .035, '#fffbe0'); });
-    [-1, 1].forEach(d => { c.beginPath(); c.arc(d * r * .25, -r * 1.0, r * .2, 0, 7); FS(c, '#ff7aa8'); }); dot(c, 0, -r * 1.05, r * .09, '#ffe36a');
+    c.lineWidth = s * .03; [[-.9, -.2], [.9, .1], [-.7, .6], [.75, .6], [0, 1.0], [-.3, -.95], [.5, -.85]].forEach(p => { ln(c, p[0] * r, p[1] * r, p[0] * r * 1.18, p[1] * r * 1.18, s * .035, K('spine','#fffbe0')); });
+    [-1, 1].forEach(d => { c.beginPath(); c.arc(d * r * .25, -r * 1.0, r * .2, 0, 7); FS(c, K('flower','#ff7aa8')); }); dot(c, 0, -r * 1.05, r * .09, K('center','#ffe36a'));
     c.lineWidth = s * .06; face(c, s, { mouth: 'flat', dy: -.0 });
   },
   pfeil(c, s) {
@@ -195,24 +199,24 @@ export const BALLS = {
     face(c, s, { dy: .02, angry: 1 });
   },
   rakete(c, s) {
-    const r = s * .36; flame(c, 0, r * 1.7, r * .5, r * 1.0, '#ff8a2a', '#ffd24a');
-    [-1, 1].forEach(d => pl(c, [[d * r * .75, r * .2], [d * r * 1.35, r * 1.0], [d * r * .7, r * .95]], '#d33a3a'));
-    body(c, s, '#f1f3f8', { ry: 1.08 });
-    pl(c, [[-r * .72, -r * .62], [0, -r * 1.55], [r * .72, -r * .62], [0, -r * .45]], '#d33a3a');
+    const r = s * .36; flame(c, 0, r * 1.7, r * .5, r * 1.0, K('flame1','#ff8a2a'), K('flame2','#ffd24a'));
+    [-1, 1].forEach(d => pl(c, [[d * r * .75, r * .2], [d * r * 1.35, r * 1.0], [d * r * .7, r * .95]], K('fin','#d33a3a')));
+    body(c, s, K('body','#f1f3f8'), { ry: 1.08 });
+    pl(c, [[-r * .72, -r * .62], [0, -r * 1.55], [r * .72, -r * .62], [0, -r * .45]], K('fin','#d33a3a'));
     face(c, s, { dy: .08, angry: 1, mouth: 'grin' });
   },
   wirbel(c, s) {
-    const r = s * .36; body(c, s, '#b7ece3');
-    c.save(); c.beginPath(); c.arc(0, 0, r * .98, 0, 7); c.clip(); c.lineWidth = s * .04; c.strokeStyle = 'rgba(40,130,130,.65)';
+    const r = s * .36; body(c, s, K('body','#b7ece3'));
+    c.save(); c.beginPath(); c.arc(0, 0, r * .98, 0, 7); c.clip(); c.lineWidth = s * .04; c.strokeStyle = K('swirl','rgba(40,130,130,.65)');
     for (let k = 0; k < 3; k++) { c.beginPath(); c.arc(r * .1, r * .1, r * (.25 + k * .3), k, k + 3.6); c.stroke(); } c.restore();
     c.lineWidth = s * .06; face(c, s, { mouth: 'o', dy: -.02 });
   },
   magier(c, s) {
-    const r = s * .36; body(c, s, '#a98ae0');
-    pl(c, [[-r * 1.0, -r * .5], [-r * .5, -r * .75], [-r * .25, -r * 1.9], [r * .3, -r * .8], [r * .55, -r * .6], [r * 1.0, -r * .5], [0, -r * .3]], '#4b3a8c');
-    stars(c, [[-r * .05, -r * 1.2, s * .08], [r * .35, -r * .65, s * .05]], '#ffd45a');
+    const r = s * .36; body(c, s, K('body','#a98ae0'));
+    pl(c, [[-r * 1.0, -r * .5], [-r * .5, -r * .75], [-r * .25, -r * 1.9], [r * .3, -r * .8], [r * .55, -r * .6], [r * 1.0, -r * .5], [0, -r * .3]], K('hat','#4b3a8c'));
+    stars(c, [[-r * .05, -r * 1.2, s * .08], [r * .35, -r * .65, s * .05]], K('star','#ffd45a'));
     face(c, s, { dy: .08, mouth: 'smile' });
-    thick(c, s * .05, '#7a4a21', () => { c.beginPath(); c.moveTo(r * 1.2, r * .6); c.lineTo(r * 1.65, -r * .2); }); stars(c, [[r * 1.7, -r * .3, s * .08]], '#ffe14a');
+    thick(c, s * .05, K('staff','#7a4a21'), () => { c.beginPath(); c.moveTo(r * 1.2, r * .6); c.lineTo(r * 1.65, -r * .2); }); stars(c, [[r * 1.7, -r * .3, s * .08]], K('star2','#ffe14a'));
   },
   /* ===== Weltraum ===== */
   mond(c, s) {
@@ -962,18 +966,44 @@ Object.assign(BALLS, {
   }
 });
 
-/* ---------- Skins: Farbe über den Grundball, bei Legendär und Mythisch ein eigenes Modell ---------- */
+/* ---------- Skins: Teilfarben über die Grundbälle (K) oder ein eigenes Modell (Episch und höher) ---------- */
 const RAINBOW = ['#ff5a5a', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#a77ae8'];
-const tinted = sk => (c, s) => {
-  BALLS[sk.base](c, s);
-  c.save(); c.globalCompositeOperation = 'source-atop'; c.globalAlpha = sk.a || .5;
-  if (sk.tint === 'rainbow') { const g = c.createLinearGradient(-s * .4, -s * .4, s * .4, s * .4); RAINBOW.forEach((col, i) => g.addColorStop(i / (RAINBOW.length - 1), col)); c.fillStyle = g; } else c.fillStyle = sk.tint;
-  c.fillRect(-s, -s, s * 2, s * 2); c.restore();
-};
+const palArt = sk => (c, s) => withPal(sk.pal, () => BALLS[sk.base](c, s));
 const MODEL = {
+  mondmagier(c, s) {
+    const r = s * .36; body(c, s, '#2a3a7a');
+    stars(c, [[-r * .55, r * .35, r * .16], [r * .55, r * .2, r * .12], [r * .1, r * .72, r * .1]], '#fff2a0');
+    c.beginPath(); c.moveTo(-r * .45, r * .3); c.quadraticCurveTo(0, r * 1.3, r * .45, r * .3); c.quadraticCurveTo(0, r * .55, -r * .45, r * .3); FS(c, '#f4f4ff');
+    pl(c, [[-r * 1.05, -r * .5], [-r * .5, -r * .75], [-r * .2, -r * 2.0], [r * .3, -r * .8], [r * .55, -r * .6], [r * 1.05, -r * .5], [0, -r * .3]], '#1a2250');
+    ci(c, -r * .05, -r * 1.25, r * .3, '#fff2a0'); ci(c, r * .08, -r * 1.32, r * .26, '#1a2250');
+    c.lineWidth = s * .035; [-1, 1].forEach(d => { c.beginPath(); c.arc(d * r * .34, -r * .02, r * .17, .2, PI - .2); c.stroke(); });
+    thick(c, s * .045, '#7a4a21', () => { c.beginPath(); c.moveTo(r * 1.25, r * .7); c.lineTo(r * 1.65, -r * .25); }); ci(c, r * 1.7, -r * .35, r * .22, '#fff2a0'); ci(c, r * 1.78, -r * .4, r * .18, '#2a3a7a');
+  },
+  regenbogenstachel(c, s) {
+    const r = s * .36;
+    for (let i = 0; i < 10; i++) { const a = i / 10 * 6.283; spike(c, Math.cos(a) * r * .95, Math.sin(a) * r * .95, a + 1.5708, s * .18, s * .07, RAINBOW[i % 6]); }
+    body(c, s, '#fffaf0');
+    c.save(); c.beginPath(); c.arc(0, 0, r * .97, 0, 7); c.clip(); c.globalAlpha = .55; RAINBOW.forEach((col, i) => { c.fillStyle = col; c.beginPath(); c.moveTo(-r * 1.5 + i * r * .52, -r * 1.2); c.lineTo(-r * 1.0 + i * r * .52, -r * 1.2); c.lineTo(-r * .3 + i * r * .52, r * 1.2); c.lineTo(-r * .8 + i * r * .52, r * 1.2); c.closePath(); c.fill(); }); c.restore();
+    c.beginPath(); c.arc(0, 0, r, 0, 7); c.stroke(); face(c, s, { mouth: 'smile', er: .18 }); stars(c, [[r * .55, -r * .55, r * .13]], '#fff');
+  },
+  bluetenbumerang(c, s) {
+    const r = s * .36;
+    for (let i = 0; i < 8; i++) { const a = i / 8 * 6.283; c.save(); c.translate(Math.cos(a) * r * 1.0, Math.sin(a) * r * 1.0); c.rotate(a); c.beginPath(); c.ellipse(0, 0, r * .5, r * .28, 0, 0, 7); FS(c, i % 2 ? '#ffc8de' : '#ff9ac4'); c.restore(); }
+    body(c, s, '#ffe08a');
+    thick(c, s * .09, '#e8508c', () => { c.beginPath(); c.moveTo(-r * .85, -r * .72); c.quadraticCurveTo(-r * .1, -r * 1.35, r * .85, -r * .6); });
+    ci(c, -r * .6, -r * .95, r * .18, '#fff'); ci(c, r * .6, -r * .9, r * .16, '#ffd0e4');
+    face(c, s, { mouth: 'smile', er: .17 });
+  },
+  sternenrakete(c, s) {
+    const r = s * .36; flame(c, 0, r * 1.7, r * .5, r * 1.0, '#ff7a2a', '#ffe27a');
+    [-1, 1].forEach(d => stars(c, [[d * r * 1.15, r * .75, r * .5]], '#ffb02e'));
+    body(c, s, '#ffd45a', { ry: 1.08 });
+    pl(c, [[-r * .7, -r * .62], [0, -r * 1.35], [r * .7, -r * .62], [0, -r * .45]], '#ff9a2a'); stars(c, [[0, -r * 1.5, r * .5]], '#fff2a0');
+    face(c, s, { dy: .08, mouth: 'grin', er: .18 });
+  },
+  // ab hier Legendär/Mythisch: nur der Körper; Flügel, Flammen, Planeten usw. bewegen sich und werden live gezeichnet (art.js)
   drachenstachel(c, s) {
     const r = s * .36;
-    [-1, 1].forEach(d => wing(c, d, r, '#3a8a3a', { k: .8 }));
     for (let i = 0; i < 5; i++) { const a = -PI + (i + .5) * PI / 5; spike(c, Math.cos(a) * r * .9, Math.sin(a) * r * .9, a + PI / 2, r * .42, r * .16, '#ff9a2a'); }
     body(c, s, '#4fb04a');
     c.beginPath(); c.ellipse(0, r * .35, r * .62, r * .5, 0, 0, 7); FS(c, '#e8e08a');
@@ -981,10 +1011,7 @@ const MODEL = {
     c.lineWidth = s * .04; c.beginPath(); c.arc(0, r * .3, r * .26, .2, PI - .2); c.stroke(); [-1, 1].forEach(d => pl(c, [[d * r * .15, r * .38], [d * r * .24, r * .38], [d * r * .19, r * .5]], '#fff')); ci(c, -r * .15, r * .1, r * .04, INK); ci(c, r * .15, r * .1, r * .04, INK);
   },
   phoenixfeuer(c, s) {
-    const r = s * .36;
-    [-1, 1].forEach(d => { c.beginPath(); c.moveTo(d * r * .7, -r * .1); c.quadraticCurveTo(d * r * 1.7, -r * 1.2, d * r * 1.75, r * .3); c.quadraticCurveTo(d * r * 1.3, r * .1, d * r * 1.1, r * .55); c.quadraticCurveTo(d * r * .95, r * .3, d * r * .75, r * .35); c.closePath(); FS(c, '#ff7a1a'); });
-    flame(c, 0, -r * .6, r * 1.1, r * 1.1, '#ff6a2a', '#ffd24a'); flame(c, -r * .5, -r * .6, r * .55, r * .8, '#ff9a2a', '#ffe27a'); flame(c, r * .5, -r * .6, r * .55, r * .8, '#ff9a2a', '#ffe27a');
-    body(c, s, '#ff8a2a');
+    const r = s * .36; body(c, s, '#ff8a2a');
     c.beginPath(); c.ellipse(0, r * .45, r * .6, r * .4, 0, 0, 7); FS(c, '#ffd86a');
     [-1, 1].forEach(d => cEye(c, d * r * .34, -r * .1, r * .15, 1, s)); pl(c, [[-r * .14, r * .1], [r * .14, r * .1], [0, r * .38]], '#ffe14a');
   },
@@ -993,7 +1020,7 @@ const MODEL = {
     c.beginPath(); c.moveTo(-r * 1.1, -r * .5); c.quadraticCurveTo(0, -r * 1.95, r * 1.1, -r * .5); c.quadraticCurveTo(0, -r * .75, -r * 1.1, -r * .5); c.closePath(); FS(c, '#1d2742');
     ci(c, 0, -r * 1.05, r * .17, '#f4ecd0'); c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .5, -r * .62); c.lineTo(r * .5, -r * .62); c.stroke();
     cEye(c, r * .36, -r * .05, r * .15, 1, s); c.beginPath(); c.ellipse(-r * .36, -r * .05, r * .2, r * .17, 0, 0, 7); FS(c, '#1d2742'); c.lineWidth = s * .03; c.beginPath(); c.moveTo(-r * .9, -r * .5); c.lineTo(-r * .2, r * .15); c.stroke();
-    c.beginPath(); c.arc(0, r * .38, r * .3, .1, PI - .1); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.stroke(); ci(c, -r * .95, r * .35, r * .1, '#ffe14a');
+    c.beginPath(); c.arc(0, r * .38, r * .3, .1, PI - .1); c.closePath(); c.fillStyle = '#fff'; c.fill(); c.stroke();
   },
   kosmosmagier(c, s) {
     const r = s * .36;
@@ -1007,4 +1034,4 @@ const MODEL = {
     c.lineWidth = s * .035; c.beginPath(); c.arc(0, r * .42, r * .22, .2, PI - .2); c.stroke();
   }
 };
-for (const sk of SKINS) BALLS[sk.id] = sk.model && MODEL[sk.id] ? MODEL[sk.id] : tinted(sk);
+for (const sk of SKINS) BALLS[sk.id] = sk.model && MODEL[sk.id] ? MODEL[sk.id] : palArt(sk);
