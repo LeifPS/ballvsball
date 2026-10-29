@@ -1,8 +1,8 @@
 // Oberfläche: Anmeldung, Startseite, Sammlung, Ballboxen, Markt, Handel, Freunde und Kampfablauf.
 import { DEFS, BALL_IDS, SKIN_IDS, RARITY, DT, BOX, MAX_STARS, STAR_BONUS, createSim, stepSim, ballsInBox } from './engine.js';
 import { createBox, stepBox, BW, layoutOf } from './boxsim.js';
-import { BOX_LIST, BOX_BY_ID, BOX_RARITY, boxActive, UP_COST } from './boxes.js';
-import { DPR, INK, gi, mkSprite, spr } from './sk.js';
+import { BOX_LIST, BOX_BY_ID, BOX_RARITY, boxActive, UP_COST, SKINDROP } from './boxes.js';
+import { DPR, INK, gi, mkSprite, spr, sketchCtx } from './sk.js';
 import { boxArt } from './boxart.js';
 import { drawBallIn, clearFx, fxState, burst, star, skinStartFx } from './art.js';
 import { drawArena, drawBox, BOX_H, TEAM_COL, PLAYER_COL } from './render.js';
@@ -45,7 +45,6 @@ const BALLS = new Set();
 const coinHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('coin', 22) + '</span>';
 const tokHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('token', 22) + '</span>';
 const shardHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('shard', 22) + '</span>';
-const SKIN_PRICE = { gewoehnlich: 15, selten: 40, episch: 100, legendaer: 250, mythisch: 600 };   // wie in store.js
 const priceHTML = b => b.cur === 'tokens' ? tokHTML(b.price) : coinHTML(b.price);
 const rarHTML = r => '<span class="rar' + (r === 'mythisch' ? ' myth' : '') + '" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
 const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
@@ -279,7 +278,7 @@ function home() {
     (() => { const evs = BOX_LIST.filter(b => b.until && boxActive(b.id, now())); if (!evs.length) return ''; return '<button class="panel" style="display:flex;align-items:center;gap:8px;width:100%;min-height:0;padding:4px 12px;background:#ffe3b0;text-align:left" data-act="limited">' + gi('token', 26) + '<span class="grow"><b>Zeitlich begrenzt</b> <span class="small">' + evs.length + ' Boxen</span></span>' + gi('arrow', 16).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>'; })() +
     btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'multi', '', 'fight') +
     '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + indexIds().length + ' Bällen</span></button>' +
-    '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
+    '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Shop</b><span class="small">Ballboxen und Skindrops</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="handel"><span class="hv">' + gi('coin', 36) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 30) + '</span></span><b>Handel</b><span class="small">Markt und Tauschen</span></button>' +
       '<button class="htile" style="--tc:#e3dcf7" data-act="log"><span class="hv">' + gi('sword', 36) + '</span><b>Kampflog</b><span class="small">Wiederholen und teilen</span></button></div>' +
     (me.dailyReady ? '<button class="htile daily" data-act="daily"><span class="hv">' + gi('star', 44, '#ffd45a') + '</span><span class="grow"><b>Tagesbelohnung abholen</b><span class="small">' + (ev ? 'Münzen und +5 Kürbisse' : 'Münzen für heute') + '</span></span></button>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
@@ -291,15 +290,7 @@ function handelScreen() {
   S.screen = 'handel'; setView(null); closeOverlay(); setScene('menu');
   show('<div class="col">' + backBar('Handel') +
     '<button class="htile mode" style="--tc:#cdeec4" data-act="market"><span class="mart"><span class="hv">' + gi('coin', 44) + gi('coin', 32) + '</span></span><span class="grow"><b>Markt</b><span class="small">Bälle kaufen und verkaufen</span></span></button>' +
-    '<button class="htile mode" style="--tc:#cfe0ff" data-act="skinshop"><span class="mart"><span class="hv">' + gi('shard', 44) + gi('shard', 32) + '</span></span><span class="grow"><b>Skin-Laden</b><span class="small">Skins mit Skin-Splittern kaufen</span></span></button>' +
     '<button class="htile mode" style="--tc:#f3d6f0" data-act="trades"><span class="mart"><span class="hv">' + gi('arrow', 40) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 40) + '</span></span></span><span class="grow"><b>Tauschen</b><span class="small">Bälle mit anderen Spielern tauschen</span></span></button></div>');
-}
-function skinShopScreen() {
-  S.screen = 'skinshop'; setView(null); closeOverlay(); setScene('menu');
-  const ids = SKIN_IDS.slice().sort((a, z) => RARITY[DEFS[a].rarity].order - RARITY[DEFS[z].rarity].order);
-  show('<div class="col">' + backBar('Skin-Laden', 'handel') + '<div class="row sb" style="padding:0 4px">' + wallet() + '</div>' +
-    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Kaufe Skins mit Skin-Splittern. Gekaufte Skins landen in deiner Sammlung.</p>' +
-    '<div class="boxgrid">' + ids.map(id => { const d = DEFS[id], pr = SKIN_PRICE[d.rarity], ok = (S.me.shards || 0) >= pr; return '<div class="panel col center" style="padding:8px;gap:4px">' + ball(id, 84, .7) + '<b class="small">' + esc(d.name) + '</b>' + rarHTML(d.rarity) + '<button class="btn sm" data-act="skinbuy" data-id="' + id + '"' + (ok ? '' : ' style="opacity:.55"') + '>' + shardHTML(pr) + '</button></div>'; }).join('') + '</div></div>');
 }
 function limitedScreen() {
   S.screen = 'limited'; setView(null); closeOverlay(); setScene('menu');
@@ -421,11 +412,11 @@ function replayRound(rec, idx, back) {
 const indexIds = () => { const c = typeCounts(); return BALL_IDS.filter(id => { const b = BOX_BY_ID[DEFS[id].box]; return !(b && b.off) || c[id]; }); };
 function sortedIds() {
   const c = typeCounts(), f = S.col, q = f.q.trim().toLowerCase();
-  const pool = f.box === 'skin1' || f.box === 'skin2' ? SKIN_IDS : indexIds();   // Skins nur im Skin-Truhen-Filter
+  const pool = f.box === 'skins' ? SKIN_IDS : indexIds();   // Skins nur im Skin-Filter
   let ids = pool.filter(id => {
     const d = DEFS[id];
     if (f.rar !== 'all' && d.rarity !== f.rar) return false;
-    if (f.box !== 'all' && d.box !== f.box) return false;
+    if (f.box !== 'all' && f.box !== 'skins' && d.box !== f.box) return false;
     if (f.own && !c[id]) return false;
     if (q && !d.name.toLowerCase().includes(q)) return false;
     return true;
@@ -463,7 +454,7 @@ function collection(keep) {
   S.screen = 'collection'; setView(null);
   const c = typeCounts(), have = Object.keys(c).filter(t => !isSkin(t)).length, f = S.col;
   const tabs = [['all', 'Alle']].concat(SORT.map(r => [r, RARITY[r].name]));
-  const boxes = [['all', 'Alle Boxen']].concat(BOX_LIST.filter(b => !b.off).map(b => [b.id, b.name.replace('-Box', '')]));
+  const boxes = [['all', 'Alle Boxen']].concat(BOX_LIST.filter(b => !b.off).map(b => [b.id, b.name.replace('-Box', '')])).concat([['skins', 'Skins']]);
   show('<div class="col">' + backBar('Sammlung') +
     '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + indexIds().length + ' Bällen</span><span>' + realBalls().length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
     (upAllPlan().steps ? btn(gi('star', 24, '#ffd45a') + ' Alles maximal verbessern', 'upall', '', 'green') : '') +
@@ -507,7 +498,7 @@ function detail(type) {
       else r = '<div class="inp" style="width:90px"><input type="number" inputmode="numeric" min="10" id="pr' + b.uid + '" value="' + sugg + '"></div><button class="btn sm pri" data-act="mklist" data-uid="' + b.uid + '">Verkaufen</button>';
       return '<div class="card col" style="gap:6px"><div class="listrow" style="padding:0"><span class="small grow">Exemplar Nr. ' + b.uid + '</span>' + r + '</div></div>';
     }).join('') + '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Jeder Stern gibt +' + Math.round(STAR_BONUS * 100) + ' % Leben und Schaden und gilt für die ganze Sorte, egal wie viele Exemplare du hast. Zum Verbessern werden gleiche Bälle verbraucht. Drei verschiedene freie Bälle musst du immer behalten.</p>';
-  } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (d.skin ? 'Diesen Skin hast du noch nicht. Öffne Skin-Truhen oder kaufe ihn auf dem Markt.' : 'Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.') + '</p>';
+  } else own = '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + (d.skin ? 'Diesen Skin hast du noch nicht. Öffne Skindrops oder kaufe ihn auf dem Markt.' : 'Diesen Ball hast du noch nicht. Öffne Ballboxen oder kaufe ihn auf dem Markt.') + '</p>';
   const known = !!c;
   // Skins: was steckt drin, und anlegen / ablegen
   let skinBlock = '';
@@ -522,7 +513,7 @@ function detail(type) {
   overlay('<div class="col"><div class="row sb"><h2 class="jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">' + (known ? esc(d.name) : '???') + '</h2><button class="btn sm" data-act="closeov">' + gi('cross', 24) + '</button></div>' +
     '<div class="hero pop">' + ball(!d.skin && S.me.equip && S.me.equip[type] ? S.me.equip[type] : type, 230, .66, known ? '' : 'data-dark="1"') + '</div>' +
     '<div class="panel"><div class="row sb wrap">' + rarHTML(d.rarity) + (known ? '<span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span>' : '') + '</div>' + (known ? '<p class="mt">' + esc(d.desc) + '</p>' : '<p class="mt mute">Noch nicht entdeckt. Finde diesen Ball, um mehr zu erfahren.</p>') +
-    (box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
+    (d.skin ? '<p class="small mt mute">Aus dem Skindrop</p>' : box ? '<p class="small mt mute">Aus der ' + esc(box.name) + (d.box === 'halloween' ? ' (nur zu Halloween)' : '') + '</p>' : '') + '</div>' +
     (known ? '<div class="panel"><p><b>Stark gegen:</b> ' + esc(d.strong) + '</p><p class="mt"><b>Schwach gegen:</b> ' + esc(d.weak) + '</p></div>' : '') + skinBlock + own + '</div>');
 }
 
@@ -533,12 +524,11 @@ function boxStats(id) {
 }
 function boxScreen() {
   S.screen = 'box'; setView(null);
+  if (S.shopTab !== 'skin') S.shopTab = 'ball';
   const list = BOX_LIST.filter(b => boxActive(b.id, now()));
-  const tile = b => '<button class="boxtile' + (b.id.startsWith('skin') ? ' skin' : '') + '" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div>' + (b.id.startsWith('skin') ? '<span class="small" style="color:#fff2a0;text-shadow:1px 1px 0 var(--ink)">nur Aussehen</span>' : '') + '</div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>';
-  const balls = list.filter(b => !b.id.startsWith('skin')), skins = list.filter(b => b.id.startsWith('skin'));
-  show('<div class="col">' + backBar('Boxen') +
-    '<h3 style="color:#fff;text-shadow:2px 2px 0 var(--ink);margin:6px 2px 0">Ballboxen</h3><p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neue Bälle zum Kämpfen</p><div class="boxgrid">' + balls.map(tile).join('') + '</div>' +
-    (skins.length ? '<h3 style="color:#ffe27a;text-shadow:2px 2px 0 var(--ink);margin:16px 2px 0">Skin-Truhen</h3><p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neues Aussehen für Bälle. Gleiche Werte, gleiche Fähigkeiten.</p><div class="boxgrid">' + skins.map(tile).join('') + '</div>' : '') + '</div>');
+  const tile = b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div></div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>';
+  show('<div class="col">' + backBar('Shop') + shopTabs() + (S.shopTab === 'skin' ? skinDropPane() :
+    '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neue Bälle zum Kämpfen</p><div class="boxgrid">' + list.map(tile).join('') + '</div>') + '</div>');
 }
 function boxDetail(id) {
   const b = BOX_BY_ID[id];
@@ -600,6 +590,114 @@ function boxResult(r, s, before, b) {
     '<div class="panel" style="text-align:left"><div class="row sb wrap"><span>' + gi('heart', 22) + ' <b>' + d.hp + '</b> Leben</span><span>' + gi('sword', 22) + ' Schaden: <b>' + d.dmg + '</b></span></div><p class="mt">' + esc(d.desc) + '</p></div>' +
     (near.length ? '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Knapp daneben: ' + near.map(t => '<b style="color:' + RARITY[DEFS[t].rarity].color + ';background:var(--paper);padding:0 6px;border-radius:6px">' + esc(ballName(t)) + '</b>').join(' und ') + ' lag auch vorn!</p>' : '') +
     (new Set(realBalls().map(x => x.type)).size < 3 ? btn('Weiter', 'home', '', 'pri big') : btn('Noch eine Box (' + priceHTML(b) + ')', 'openbox', (ok ? '' : 'disabled') + ' data-id="' + b.id + '"', 'pri') + btn('Zu den Boxen', 'box')) + '</div>');
+  sfx(rar === 'mythisch' ? 'mythic' : rar === 'legendaer' ? 'legend' : big ? 'rare' : 'coin');
+  if (big) confetti(rar === 'mythisch' ? 110 : rar === 'legendaer' ? 70 : 40);
+}
+
+/* ================= Skindrop ================= */
+// Ein Skindrop: 4 Klicks, jeder Klick steigt mit Chance eine Seltenheit auf. Ergebnis (steps) legt der Server beim Öffnen fest.
+const DROPS = {};
+function dropImg(col) {   // handgezeichneter Kristalltropfen in Seltenheitsfarbe, einmal gerendert
+  if (DROPS[col]) return DROPS[col];
+  const cv = document.createElement('canvas'); cv.width = 240; cv.height = 300;
+  const x = cv.getContext('2d'); x.translate(120, 150); x.lineJoin = x.lineCap = 'round'; x.strokeStyle = INK; x.lineWidth = 6;
+  const sk = sketchCtx(x, 4.7, 130, 1.6); sk.lineWidth = 6;
+  const body = () => { sk.beginPath(); sk.moveTo(0, -128); sk.bezierCurveTo(30, -80, 92, -30, 92, 36); sk.bezierCurveTo(92, 92, 50, 126, 0, 126); sk.bezierCurveTo(-50, 126, -92, 92, -92, 36); sk.bezierCurveTo(-92, -30, -30, -80, 0, -128); sk.closePath(); };
+  body(); x.fillStyle = col; sk.fill(); sk.stroke();
+  x.save(); body(); x.clip();
+  x.fillStyle = 'rgba(255,255,255,.28)'; x.beginPath(); x.moveTo(0, -128); x.lineTo(-92, 36); x.lineTo(-30, 126); x.lineTo(0, 20); x.closePath(); x.fill();
+  x.fillStyle = 'rgba(0,0,0,.14)'; x.beginPath(); x.moveTo(0, -128); x.lineTo(92, 36); x.lineTo(40, 126); x.lineTo(0, 20); x.closePath(); x.fill();
+  x.restore();
+  x.lineWidth = 3.4; sk.lineWidth = 3.4; sk.beginPath(); sk.moveTo(0, -128); sk.lineTo(0, 20); sk.moveTo(-92, 36); sk.lineTo(0, 20); sk.lineTo(92, 36); sk.moveTo(0, 20); sk.lineTo(-30, 126); sk.moveTo(0, 20); sk.lineTo(40, 126); sk.stroke();
+  x.fillStyle = 'rgba(255,255,255,.85)'; x.beginPath(); x.ellipse(-52, 0, 9, 26, .45, 0, 7); x.fill();
+  return DROPS[col] = cv;
+}
+// Wahrscheinlichkeit je Seltenheit bei 4 Klicks, Aufstieg mit Chance p
+function dropOdds() {
+  const n = SKINDROP.clicks, p = SKINDROP.p, C = (a, b) => { let r = 1; for (let i = 0; i < b; i++) r = r * (a - i) / (i + 1); return r; };
+  return SORT.map((r, k) => [r, C(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k) * 100]);
+}
+function shopTabs() {
+  return '<div class="tabs"><button class="tab' + (S.shopTab !== 'skin' ? ' on' : '') + '" data-act="shoptab" data-v="ball">Ballboxen</button><button class="tab' + (S.shopTab === 'skin' ? ' on' : '') + '" data-act="shoptab" data-v="skin">Skindrops</button></div>';
+}
+function skinDropPane() {
+  const have = S.me.shards || 0, ok = have >= SKINDROP.price, c = typeCounts();
+  const odds = dropOdds(), skinsBy = r => SKIN_IDS.filter(id => DEFS[id].rarity === r);
+  return '<div class="hero bounce" style="margin-top:6px"><img alt="" src="' + dropImg('#8d8d8d').toDataURL() + '" style="width:150px;height:auto"></div>' +
+    '<div class="panel"><h3>Skindrop</h3><p class="mt">Tippe viermal auf den Drop. Jeder Tipp kann ihn in die nächste Seltenheit aufsteigen lassen. Am Ende bekommst du einen Skin genau dieser Seltenheit.</p>' +
+    '<div class="row sb wrap mt"><span>Kosten: ' + shardHTML(SKINDROP.price) + '</span><span>Du hast: ' + shardHTML(have) + '</span></div></div>' +
+    '<div class="panel"><h3>Chancen</h3>' + odds.map(o => '<div class="row sb"><span>' + rarHTML(o[0]) + ' <span class="small mute">(' + skinsBy(o[0]).length + ' Skins)</span></span><span>' + (o[1] >= 10 ? o[1].toFixed(0) : o[1] >= 1 ? o[1].toFixed(1) : o[1].toFixed(2)) + ' %</span></div>').join('') + '</div>' +
+    '<div class="panel"><h3>Diese Skins sind drin</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
+    SKIN_IDS.slice().sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name) : '???') + '</div></button>').join('') + '</div></div>' +
+    btn('Öffnen für ' + shardHTML(SKINDROP.price), 'skindrop', ok ? '' : 'disabled', 'pri big') +
+    (ok ? '' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dir fehlen Skin-Splitter.</p>');
+}
+async function openSkinDrop() {
+  const before = new Set(S.me.balls.map(x => x.type));
+  const r = await api('/api/skindrop', {});
+  if (r.err) { toast(errText(r.err)); return; }
+  S.screen = 'skindrop'; sfx('open'); SCREEN.onpointerdown = null;
+  const W = Math.min(window.innerWidth - 28, 320), H = 340, N = SKINDROP.clicks;
+  const colOf = lv => RARITY[SORT[lv]].color;
+  show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Skindrop</h2>' +
+    '<div class="center" style="position:relative"><canvas id="dc" style="touch-action:manipulation;cursor:pointer"></canvas></div>' +
+    '<div class="center jit" id="drar" style="font-size:26px;min-height:34px;text-shadow:2px 2px 0 var(--ink);color:#fff"></div>' +
+    '<div class="row gap6" id="dcirc" style="justify-content:center;gap:14px">' + Array.from({ length: N }, (_, i) => '<span class="dcirc" id="dci' + i + '" style="width:44px;height:44px;border-radius:50%;border:4px solid var(--ink);background:var(--paper);display:inline-block;box-shadow:2px 3px 0 var(--ink)"></span>').join('') + '</div>' +
+    '<p class="center small" id="dhint" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tippe auf den Drop!</p></div>');
+  const cv = $('#dc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
+  const st = { clicks: 0, lv: 0, shake: 0, flash: 0, grow: 0, done: 0, ps: [], ring: [], t0: -1 };
+  const stars = [];
+  const label = () => { const e = $('#drar'); if (e) { e.textContent = RARITY[SORT[st.lv]].name; e.style.color = st.lv ? '#fff' : '#e8e8e8'; e.style.textShadow = '2px 2px 0 var(--ink), 0 0 14px ' + colOf(st.lv); } };
+  label();
+  const spawn = (n, col, sp, kind) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = sp * (.4 + Math.random() * .8); st.ps.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, age: 0, life: .7 + Math.random() * .6, col, kind, sz: 6 + Math.random() * 6, rot: Math.random() * 6 }); } };
+  cv.onpointerdown = ev => {
+    ev.preventDefault(); if (st.clicks >= N || st.done) return;
+    const i = st.clicks++, up = r.steps[i];
+    const circ = $('#dci' + i);
+    if (up) { st.lv++; st.flash = 1; st.shake = 1.2; st.grow = 1; spawn(18 + st.lv * 6, colOf(st.lv), 190 + st.lv * 30, 'star'); st.ring.push({ age: 0, col: colOf(st.lv) }); sfx(st.lv >= 4 ? 'mythic' : st.lv >= 3 ? 'legend' : 'rare'); if (st.lv >= 3) confetti(30 + st.lv * 10); label(); }
+    else { st.shake = .55; spawn(7, '#e8e0cc', 90, 'dust'); sfx('hit2'); }
+    if (circ) { circ.style.background = colOf(st.lv); circ.style.transition = 'transform .25s cubic-bezier(.2,1.6,.4,1)'; circ.style.transform = 'scale(' + (up ? 1.35 : 1.12) + ')'; setTimeout(() => { circ.style.transform = ''; }, 260); }
+    const h = $('#dhint'); if (h) h.textContent = st.clicks < N ? (up ? 'Aufgestiegen!' : 'Noch nicht ...') + ' Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + '.' : 'Gleich ist es soweit ...';
+    if (st.clicks >= N) st.done = 1;
+  };
+  setView({
+    frame(tm, dt, tf) {
+      if (st.t0 < 0) st.t0 = tm;
+      const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.scale(DPR, DPR); g.translate(W / 2, H / 2 + 8);
+      const col = colOf(st.lv), lvf = st.lv / 4;
+      // Strahlen und Leuchten wachsen mit der Seltenheit
+      if (st.lv >= 1) { g.save(); g.rotate(tm * (.25 + lvf * .4)); const n = 8 + st.lv * 2; const rg = g.createRadialGradient(0, 0, 20, 0, 0, W / 2 - 4); rg.addColorStop(0, col + 'aa'); rg.addColorStop(1, col + '00'); g.fillStyle = rg; for (let i = 0; i < n; i++) { const a = i * 6.283 / n, w = .09 + .02 * st.lv; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - w) * W, Math.sin(a - w) * W); g.lineTo(Math.cos(a + w) * W, Math.sin(a + w) * W); g.closePath(); g.fill(); } g.restore(); }
+      const gl = g.createRadialGradient(0, 0, 10, 0, 0, 150 + st.lv * 18); gl.addColorStop(0, col + 'cc'); gl.addColorStop(1, col + '00'); g.globalAlpha = .35 + lvf * .4; g.fillStyle = gl; g.beginPath(); g.arc(0, 0, 170 + st.lv * 18, 0, 7); g.fill(); g.globalAlpha = 1;
+      // Ringwellen bei Aufstieg
+      for (const rg of st.ring) { rg.age += dt; const k = rg.age / .8; if (k > 1) continue; g.strokeStyle = rg.col; g.globalAlpha = 1 - k; g.lineWidth = 7 * (1 - k) + 1; g.beginPath(); g.arc(0, 0, 60 + k * 190, 0, 7); g.stroke(); g.globalAlpha = 1; }
+      st.ring = st.ring.filter(rg => rg.age < .8);
+      // kreisende Sterne je Stufe
+      for (let i = 0; i < st.lv * 2; i++) { const a = tm * (1 + i * .1) + i * 6.283 / (st.lv * 2), rr = 120 + (i % 2) * 20 + Math.sin(tm * 3 + i) * 6; star(g, Math.cos(a) * rr, Math.sin(a) * rr * .85, 6 + (i % 3), i % 2 ? '#fff2a0' : col, tm * 2 + i); }
+      // der Drop
+      st.shake = Math.max(0, st.shake - dt * 2.4); st.flash = Math.max(0, st.flash - dt * 2.2); st.grow = Math.max(0, st.grow - dt * 2.5);
+      const fin = st.done ? Math.min(1, (tm - (st.doneT || (st.doneT = tm))) / 1.1) : 0;
+      const wob = Math.sin(tm * 40) * st.shake * 6 + Math.sin(tm * 70) * fin * 7, sc = 1 + Math.sin(tm * 2.2) * .02 + st.grow * .18 + fin * .22;
+      g.save(); g.translate(wob, Math.sin(tm * 2) * 4 - st.grow * 8); g.rotate(Math.sin(tm * 30) * st.shake * .06); g.scale(sc, sc);
+      g.drawImage(dropImg(col), -90, -112, 180, 225);
+      if (st.flash > 0 || fin > .6) { g.globalCompositeOperation = 'source-atop'; g.globalAlpha = Math.max(st.flash * .6, (fin - .6) * 2); g.fillStyle = '#fff'; g.fillRect(-100, -120, 200, 250); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
+      g.restore();
+      // Teilchen
+      for (const p of st.ps) { p.age += dt; if (p.age > p.life) continue; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 200 * dt; g.globalAlpha = 1 - p.age / p.life; if (p.kind === 'star') star(g, p.x, p.y, p.sz * (1 - p.age / p.life * .5), p.col, p.rot + p.age * 6); else { g.fillStyle = p.col; g.strokeStyle = INK; g.lineWidth = 1.5; g.beginPath(); g.arc(p.x, p.y, p.sz * .5, 0, 7); g.fill(); g.stroke(); } g.globalAlpha = 1; }
+      st.ps = st.ps.filter(p => p.age < p.life);
+      if (st.done && tm - st.doneT > 1.25 && !st.shown) { st.shown = true; skinDropResult(r, before); }
+    }
+  });
+}
+function skinDropResult(r, before) {
+  S.screen = 'skindropres'; setView(null);
+  const d = DEFS[r.ball.type], isNew = !before.has(r.ball.type), rar = d.rarity, big = rar !== 'gewoehnlich' && rar !== 'selten';
+  const ok = (S.me.shards || 0) >= SKINDROP.price;
+  show('<div class="col res"><h1 class="jit pop" style="color:#fff;text-shadow:3px 4px 0 var(--ink)">' + esc(d.name) + '!</h1><div><span class="rarpill">' + rarHTML(rar) + '</span></div>' +
+    '<div class="hero sheet-ball" style="min-height:250px;align-items:center">' + (big ? '<div class="rays"></div>' : '') + '<div class="pop" style="position:relative">' + ball(r.ball.type, 240, .66) + '</div></div>' +
+    (isNew ? '<div class="center"><span class="tag" style="font-size:24px;padding:2px 14px">Neuer Skin!</span></div>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diesen Skin hattest du schon. Du kannst ihn auf dem Markt verkaufen oder tauschen.</p>') +
+    '<div class="panel" style="text-align:left"><p>' + esc(d.desc) + '</p><p class="small mt mute">Weise den Skin in der Sammlung dem passenden Ball zu.</p></div>' +
+    btn('Noch ein Skindrop (' + shardHTML(SKINDROP.price) + ')', 'skindrop', ok ? '' : 'disabled', 'pri big') +
+    btn('Zur Sammlung', 'collection', '', '') + btn('Zurück zum Shop', 'box', '', '') + '</div>');
   sfx(rar === 'mythisch' ? 'mythic' : rar === 'legendaer' ? 'legend' : big ? 'rare' : 'coin');
   if (big) confetti(rar === 'mythisch' ? 110 : rar === 'legendaer' ? 70 : 40);
 }
@@ -984,12 +1082,6 @@ const ACT = {
   roomstart() { wsSend({ t: 'room_start' }); },
   roomleave() { wsSend({ t: 'room_leave' }); },
   handel() { handelScreen(); },
-  skinshop() { skinShopScreen(); },
-  async skinbuy(d) {
-    const r = await api('/api/skinbuy', { id: d.id });
-    if (r.err) { toast(errText(r.err)); return; }
-    sfx('rare'); confetti(18); toast(DEFS[d.id].name + ' gekauft!'); skinShopScreen();
-  },
   limited() { limitedScreen(); },
   solo() { soloScreen(); },
   solopick(d) { soloPick(d.k); },
@@ -1046,6 +1138,8 @@ const ACT = {
     toast('Angebot zurückgezogen.'); closeOverlay(); if (d.back === 'market') market(); else collection();
   },
   box() { closeOverlay(); boxScreen(); },
+  shoptab(d) { S.shopTab = d.v; boxScreen(); },
+  skindrop() { return openSkinDrop(); },
   boxdetail(d) { closeOverlay(); boxDetail(d.id); },
   openbox(d) { return openBox(d.id); },
   market() { market(true); },

@@ -1,10 +1,9 @@
 // Datenhaltung: Konten, Bälle, Ballboxen, Markt, Handel (SQLite im Durable Object).
 // Alle Methoden sind synchron und damit atomar. Fehler werden als { err: 'code' } zurückgegeben.
 import { DurableObject } from 'cloudflare:workers';
-import { DEFS, BALL_IDS, BOSS_IDS, RARITY, ballsInBox, MAX_STARS, runFight } from '../public/js/engine.js';
-export const SKIN_PRICE = { gewoehnlich: 15, selten: 40, episch: 100, legendaer: 250, mythisch: 600 };
+import { DEFS, BALL_IDS, BOSS_IDS, SKIN_IDS, RARITY, ballsInBox, MAX_STARS, runFight } from '../public/js/engine.js';
 import { mulberry } from '../public/js/core.js';
-import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
+import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST, SKINDROP } from '../public/js/boxes.js';
 import { simBox, layoutOf } from '../public/js/boxsim.js';
 
 const START_COINS = 300;     // genau drei Standard-Boxen für das Tutorial
@@ -343,17 +342,18 @@ export class Store extends DurableObject {
     this.q('UPDATE users SET coins=999999, tokens=999999, shards=999999 WHERE id=?', u.id);
     return { ok: true, me: this.profile(this.userBy(tk)) };
   }
-  // Skin-Splitter: Währung nur für den Skin-Laden. Preis nach Seltenheit; wie man Splitter bekommt, ist noch offen
-  buySkin(tk, id) {
+  // Skindrop: kostet Skin-Splitter. Vier Klicks, jeder steigt mit Chance p eine Seltenheit auf (Start gewöhnlich); am Ende kommt ein zufälliger Skin dieser Seltenheit
+  openSkinDrop(tk) {
     const u = this.userBy(tk);
     if (!u) return { err: 'auth' };
-    const d = DEFS[id];
-    if (!d || !d.skin) return { err: 'no_skin' };
-    const price = SKIN_PRICE[d.rarity];
-    if ((u.shards || 0) < price) return { err: 'no_shards' };
-    this.q('UPDATE users SET shards=shards-? WHERE id=?', price, u.id);
+    if ((u.shards || 0) < SKINDROP.price) return { err: 'no_shards' };
+    const steps = []; let lv = 0;
+    for (let i = 0; i < SKINDROP.clicks; i++) { const up = lv < 4 && Math.random() < SKINDROP.p; if (up) lv++; steps.push(up); }
+    const rar = ['gewoehnlich', 'selten', 'episch', 'legendaer', 'mythisch'][lv], pool = SKIN_IDS.filter(id => DEFS[id].rarity === rar);
+    const id = pool[Math.floor(Math.random() * pool.length)];
+    this.q('UPDATE users SET shards=shards-? WHERE id=?', SKINDROP.price, u.id);
     const ball = this.giveBall(u.id, id);
-    return { ok: true, ball, me: this.profile(this.userBy(tk)) };
+    return { ok: true, steps, level: lv, rarity: rar, ball, me: this.profile(this.userBy(tk)) };
   }
   upgrade(tk, uid) {
     const u = this.userBy(tk);
