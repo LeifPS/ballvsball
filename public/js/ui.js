@@ -690,7 +690,7 @@ async function openSkinDrop0() {
     '<p id="dhint" class="small" style="margin:0;color:#e9e2ff;text-shadow:1px 1px 0 #0d0a1c">Tippe auf den Drop!</p></div>';
   document.body.appendChild(ov);
   const cv = $('#dc'); cv.width = W * DP; cv.height = H * DP;
-  const st = { clicks: 0, lv: 0, phase: 'idle', pt: 0, up: false, fin: false, cur: DROP_RGB[0].slice(), flash: 0, cam: 0, glow: 0, crackT: 1, squash: 0, ps: [], rings: [], slam: null, shown: false, fT: 0, t0: -1, nx: 0 };
+  const st = { clicks: 0, lv: 0, phase: 'idle', pt: 0, up: false, fin: false, cur: DROP_RGB[0].slice(), cracks: 0, flash: 0, cam: 0, glow: 0, crackT: 1, squash: 0, ps: [], rings: [], slam: null, shown: false, fT: 0, t0: -1, nx: 0 };
   const cx = W / 2, cy = H * .37, SC = Math.min(W * .44, H * .27) / 128;
   const nm = lv => RARITY[SORT[lv]].name;
   const label = () => { const e = $('#drar'); if (!e) return; e.innerHTML = st.lv >= 2 ? rarHTML(SORT[st.lv]) : esc(nm(st.lv)); e.style.textShadow = '2px 2px 0 #0d0a1c, 0 0 16px ' + rgbS(DROP_RGB[st.lv], 1); };
@@ -702,7 +702,7 @@ async function openSkinDrop0() {
   const tap = ev => {
     if (ev) ev.preventDefault();
     if (st.phase !== 'idle' || st.clicks >= N) return;
-    const i = st.clicks++; st.phase = 'charge'; st.pt = 0; st.up = !!r.steps[i]; st.fin = st.clicks >= N; st.crackT = 0; st.squash = 1;
+    const i = st.clicks++; st.phase = 'charge'; st.pt = 0; st.up = !!r.steps[i]; st.fin = st.clicks >= N; st.squash = 1;
     sfx('drop_tap'); vib(st.fin ? [20, 30, 40] : 18);
     if (st.fin) sfx('drop_charge');
     const h = $('#dhint'); if (h) h.textContent = st.fin ? '' : 'Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + ' ...';
@@ -736,7 +736,7 @@ async function openSkinDrop0() {
       st.flash = Math.max(0, st.flash - dt * 2.4); st.cam = Math.max(0, st.cam - dt * 2.2); st.glow = Math.max(0, st.glow - dt * 1.6); st.squash = Math.max(0, st.squash - dt * 4); st.crackT = Math.min(1, st.crackT + dt * 3);
       if (st.phase === 'charge') {
         st.pt += dt; const dur = st.fin ? 1.25 : .42;
-        if (st.pt >= dur) { if (st.fin) { if (st.up) levelUp(); shatter(); } else { st.phase = 'idle'; if (st.up) levelUp(); else miss(); } }
+        if (st.pt >= dur) { st.cracks++; st.crackT = 0; if (st.fin) { if (st.up) levelUp(); shatter(); } else { st.phase = 'idle'; if (st.up) levelUp(); else miss(); } }
       } else if (st.phase === 'final') { st.fT += dt; if (st.fT > 1.3 && !st.shown) { st.shown = true; finish(); } }
       // Hintergrund
       g.save();
@@ -759,7 +759,7 @@ async function openSkinDrop0() {
         const bob = Math.sin(tm * 2.1) * 6, sqY = 1 - st.squash * .12 * Math.sin(Math.min(1, st.squash) * 3.1416) - (st.fin ? ch * .06 : 0) + st.glow * .08, sqX = 1 + st.squash * .1 + (st.fin ? ch * .1 : 0);
         g.save(); g.translate(cx + Math.sin(tm * 70) * rumble, cy + bob + Math.cos(tm * 83) * rumble * .6); g.scale(SC * sqX, SC * sqY); g.rotate(Math.sin(tm * 55) * rumble * .004);
         if (st.fin && ch > .35) { g.shadowColor = rgbS(c, 1, .5); g.shadowBlur = 40 * ch; }
-        drawDropArt(g, tm, c, { cracks: st.clicks, crackP: st.crackT, glow: st.glow + (st.fin ? ch : 0), boil: 0 });
+        drawDropArt(g, tm, c, { cracks: st.cracks, crackP: st.crackT, glow: st.glow + (st.fin ? ch : 0), boil: 0 });
         g.restore();
         if (st.phase === 'idle' && st.clicks === 0) { g.save(); g.translate(cx, cy + SC * 175); g.globalAlpha = .6 + .4 * Math.sin(tm * 4); g.fillStyle = '#fff'; g.font = '26px "Caveat Brush", cursive'; g.textAlign = 'center'; g.strokeStyle = INK; g.lineWidth = 5; g.strokeText('Tippe!', 0, 0); g.fillText('Tippe!', 0, 0); g.restore(); }
       }
