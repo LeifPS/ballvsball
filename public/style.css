@@ -222,3 +222,36 @@ button.ttile:active{transform:translate(1px,2px)}
 
 /* Skin-Truhen: goldener Rahmen, klar von Ballboxen unterscheidbar */
 .boxtile.skin{background:linear-gradient(180deg,rgba(255,226,122,.35),rgba(255,154,196,.25));border:3px solid #e0b030;border-radius:16px;box-shadow:0 3px 0 var(--ink)}
+
+/* Kampf-Auswahl */
+.kmain{position:relative;display:flex;flex-direction:column;align-items:center;width:100%;box-sizing:border-box;padding:12px 10px 12px;background:var(--noise),linear-gradient(160deg,#ffe2a8,#ffb873);border:3px solid var(--ink);border-radius:var(--wob);box-shadow:3px 5px 0 var(--ink);color:var(--ink);overflow:hidden;transform:rotate(-.6deg);text-align:center}
+.kmain:active{transform:translate(1px,3px) rotate(-.6deg);box-shadow:1px 1px 0 var(--ink)}
+.kfight{display:flex;align-items:center;justify-content:center;gap:6px;position:relative;z-index:1}
+.kfight .kb{display:block;line-height:0}
+.kl{animation:kclashL 1.8s ease-in-out infinite}.kr{animation:kclashR 1.8s ease-in-out infinite}
+@keyframes kclashL{0%,100%{transform:translateX(-4px) rotate(-6deg)}50%{transform:translateX(12px) rotate(8deg)}}
+@keyframes kclashR{0%,100%{transform:translateX(4px) rotate(6deg)}50%{transform:translateX(-12px) rotate(-8deg)}}
+.kvs{font:400 60px/1 var(--f-display);color:#fff;text-shadow:3px 3px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink);transform:rotate(-8deg);animation:kvsp 1.8s ease-in-out infinite}
+@keyframes kvsp{0%,100%{transform:rotate(-8deg) scale(.92)}50%{transform:rotate(-4deg) scale(1.15)}}
+.kttl{display:flex;flex-direction:column;margin-top:2px;position:relative;z-index:1}
+.kttl b{font:400 38px/1.05 var(--f-display)}
+.kbolt{position:absolute;width:0;height:0;border-left:14px solid transparent;border-right:14px solid transparent;border-bottom:44px solid rgba(255,255,255,.4);opacity:.7}
+.kb1{left:6%;top:8px;transform:rotate(-30deg)}.kb2{right:7%;top:6px;transform:rotate(28deg)}.kb3{left:46%;top:-8px;transform:rotate(180deg);opacity:.3}
+.kbadge{position:absolute;right:-26px;top:12px;transform:rotate(38deg);background:var(--ink);color:#ffe14a;font:400 15px var(--f-display);padding:2px 30px;letter-spacing:1px}
+.kbadge.sm{position:static;transform:rotate(-3deg);display:inline-block;margin-top:2px;padding:1px 10px;border-radius:10px;background:#e0533a;color:#fff}
+.kgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ktile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:2px;padding:10px 6px 10px;min-width:0;text-align:center;color:var(--ink);border:2.5px solid var(--ink);border-radius:var(--wob);box-shadow:2px 4px 0 var(--ink);overflow:hidden}
+.ktile:active{transform:translate(1px,3px);box-shadow:1px 1px 0 var(--ink)}
+.ktile b{font:400 26px/1.1 var(--f-display)}
+.ktile .small{opacity:.75;line-height:1.15}
+.ktile .kart{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100px}
+.ktile .krow{display:flex;justify-content:center;margin-top:-8px}.ktile .krow:first-child{margin-top:0}
+.ktile .kb{display:block;line-height:0}
+.ktile .hv{display:flex;align-items:center;justify-content:center;gap:2px;height:60px}
+.k3{background:var(--noise),linear-gradient(160deg,#e6f2ff,#b9d9ff);transform:rotate(.7deg)}
+.k4{background:var(--noise),linear-gradient(160deg,#eaf7d6,#c8e8a8);transform:rotate(-.6deg)}
+.kfr{background:var(--noise),linear-gradient(160deg,#ffe8f3,#ffc4de);transform:rotate(-.5deg)}
+.kso{background:var(--noise),linear-gradient(160deg,#ffe6dc,#ffc3a8);transform:rotate(.6deg)}
+.koff{filter:grayscale(.8);opacity:.75;cursor:default}.koff:active{transform:rotate(-.6deg);box-shadow:2px 4px 0 var(--ink)}
+.ktape{position:absolute;left:-10%;right:-10%;top:30%;transform:rotate(-8deg);background:repeating-linear-gradient(45deg,#ffd23a 0 12px,#1d2742 12px 24px);color:#fff;font:400 22px var(--f-display);padding:6px 0;text-shadow:2px 2px 0 var(--ink),-1px -1px 0 var(--ink);border-top:2px solid var(--ink);border-bottom:2px solid var(--ink);letter-spacing:2px}
+.klabel{margin:6px 2px 0;color:#fff;font-size:22px;text-shadow:2px 2px 0 var(--ink)}

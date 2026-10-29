@@ -899,19 +899,19 @@ async function trades() {
 function multi() {
   S.screen = 'multi'; setView(null);
   const owned = [...new Set(realBalls().map(b => b.type))], pick = i => owned[(i * 7 + 3) % owned.length] || 'stachel';
-  const grp = (n, act, title, sub, tc) => {
-    const bs = []; for (let i = 0; i < n; i++) bs.push('<span class="mb">' + ball(pick(i + n), 66, .7, i % 2 ? 'data-dark="1"' : '') + '</span>');
-    const arr = n === 2 ? bs[0] + '<span class="mvs jit">VS</span>' + bs[1] : n === 3 ? '<span class="mrow">' + bs[0] + '</span><span class="mrow">' + bs[1] + bs[2] + '</span>' : '<span class="mrow">' + bs[0] + bs[1] + '</span><span class="mrow">' + bs[2] + bs[3] + '</span>';
-    const off = n > 3;   // Wartung (4 Spieler)
-    return '<button class="htile mode' + (n === 2 ? ' two' : '') + (off ? ' off' : '') + '" style="--tc:' + tc + '"' + (off ? ' disabled' : ' data-act="' + act + '"') + '><span class="mart">' + arr + '</span><span class="grow"><b>' + title + '</b><span class="small">' + (off ? 'Gerade wegen Wartung gesperrt' : sub) + '</span></span></button>';
-  };
+  const B = (i, sz, dark) => '<span class="kb">' + ball(pick(i), sz, .7, dark ? 'data-dark="1"' : '') + '</span>';
+  const hero = '<button class="kmain" data-act="queue1"><span class="kbolt kb1"></span><span class="kbolt kb2"></span><span class="kbolt kb3"></span>' +
+    '<span class="kfight"><span class="kl">' + B(1, 104) + '</span><span class="kvs jit">VS</span><span class="kr">' + B(5, 104, 1) + '</span></span>' +
+    '<span class="kttl"><b>1 gegen 1</b><span class="small">Der Klassiker: drei Leben</span></span><span class="kbadge">Beliebt</span></button>';
+  const tile = (cls, act, title, sub, art, extra) => '<button class="ktile ' + cls + '"' + (act ? ' data-act="' + act + '"' : ' disabled') + '><span class="kart">' + art + '</span><b>' + title + '</b><span class="small">' + sub + '</span>' + (extra || '') + '</button>';
+  const three = tile('k3', 'queue3', 'Zu dritt', 'Jeder gegen jeden, 3 Leben', '<span class="krow">' + B(2, 56) + '</span><span class="krow">' + B(4, 56, 1) + B(6, 56) + '</span>');
+  const four = tile('k4 koff', '', 'Zu viert', 'Jeder gegen jeden', '<span class="krow">' + B(2, 46) + B(4, 46, 1) + '</span><span class="krow">' + B(6, 46) + B(8, 46, 1) + '</span>', '<span class="ktape">Wartung</span>');
+  const fr = tile('kfr', 'friends', 'Mit Freunden', 'Raum mit Code, ohne Belohnung', '<span class="hv">' + gi('heart', 44, '#ff6f9a') + gi('heart', 32, '#ff9ac4') + '</span><span class="codebig jit" style="font-size:24px;letter-spacing:3px;margin-top:2px">ABCD</span>');
+  const so = tile('kso', 'solo', 'Einzelspieler', 'Tagesaufgabe und Boss', '<span class="hv">' + gi('star', 44, '#ff9a5a') + ball(topType(), 52, .7) + '</span>', S.me.freeBoxes ? '<span class="kbadge sm">' + S.me.freeBoxes + ' Gratis-Box</span>' : '');
   show('<div class="col">' + backBar('Kampf') +
-    '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Wähle, wie viele Spieler kämpfen. Fehlende Spieler füllen Bots auf.</p>' +
-    grp(2, 'queue1', '1 gegen 1', 'Der Klassiker: drei Leben', '#ffd9a0') +
-    grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: drei Leben, nur der Beste verliert keins', '#d6ecff') +
-    grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#dff3c8') +
-    '<button class="htile mode" style="--tc:#ffe0f0" data-act="friends"><span class="mart"><span class="hv">' + gi('heart', 40, '#ff6f9a') + gi('heart', 30, '#ff9ac4') + '</span><span class="codebig jit" style="font-size:26px;letter-spacing:3px">ABCD</span></span><span class="grow"><b>Mit Freunden</b><span class="small">Raum mit Code, ohne Belohnung</span></span></button>' +
-    '<button class="htile mode" style="--tc:#ffd9d0" data-act="solo"><span class="mart"><span class="hv">' + gi('star', 40, '#ff9a5a') + ball(topType(), 50, .7) + '</span></span><span class="grow"><b>Einzelspieler</b><span class="small">Tagesaufgabe und Boss' + (S.me.freeBoxes ? ' - ' + S.me.freeBoxes + ' Gratis-Box' : '') + '</span></span></button></div>');
+    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 0 2px">Fehlende Spieler füllen Bots auf.</p>' + hero +
+    '<div class="kgrid">' + three + four + '</div>' +
+    '<p class="klabel jit">Andere Wege zu kämpfen</p><div class="kgrid">' + fr + so + '</div></div>');
 }
 
 /* ================= Freunde ================= */
