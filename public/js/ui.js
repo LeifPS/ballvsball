@@ -298,7 +298,7 @@ function limitedScreen() {
   S.screen = 'limited'; setView(null); closeOverlay(); setScene('menu');
   const evs = BOX_LIST.filter(b => b.until && boxActive(b.id, now())).sort((a, z) => a.until - z.until);
   show('<div class="col">' + backBar('Zeitlich begrenzt') + '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diese Boxen verschwinden bald. Die Bälle behältst du für immer.</p>' +
-    '<div class="boxgrid">' + evs.map(b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div><span class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + timeLeft(b.until - now()) + '</span></div></button>').join('') + '</div></div>');
+    '<div class="sgrid">' + evs.map(boxCard).join('') + '</div></div>');
 }
 /* ================= Einzelspieler ================= */
 async function soloScreen() {
@@ -312,7 +312,7 @@ async function soloScreen() {
     '<div class="panel"><h3>Tägliche Herausforderung</h3><div class="row gap6" style="align-items:center;margin:6px 0">' + ball(d.opp, 80, .7) + '<div class="grow"><b>' + esc(ballName(d.opp)) + '</b> ' + starsHTML(d.oppStars, 14) + '<div class="small mute">Regel: ' + esc(d.rule.text) + '</div></div></div>' +
     '<p class="small">Belohnung: ' + coinHTML(100) + ' und 1 Gratis-Standard-Box (einmal pro Tag)</p>' + dailyBtn + btn(d.claimed ? 'Nochmal kämpfen' : 'Kämpfen', 'solopick', 'data-k="daily"', 'pri') + '</div>' +
     '<div class="panel"><h3>Bossrennen</h3><div class="row gap6" style="align-items:center;margin:6px 0">' + ball(b.type, 90, .7) + '<div class="grow"><b>' + esc(ballName(b.type)) + '</b> (Boss)<div class="small mute">Du hast 3 verschiedene Bälle. Das Leben des Bosses bleibt zwischen den Kämpfen.</div>' +
-    '<div style="height:12px;border:2px solid var(--ink);border-radius:8px;background:#fff;overflow:hidden;margin-top:6px"><i style="display:block;height:100%;width:' + pct + '%;background:#d9534f"></i></div><div class="small">Boss-Leben: ' + pct + ' % - Bälle benutzt: ' + b.used.length + ' von 3</div></div></div>' +
+    '<div class="progress thin" style="height:14px;margin-top:6px"><i style="width:' + pct + '%;background:#d9534f"></i></div><div class="small">Boss-Leben: ' + pct + ' % - Bälle benutzt: ' + b.used.length + ' von 3</div></div></div>' +
     '<p class="small">Belohnung: ' + coinHTML(150) + ' und 1 Gratis-Standard-Box (einmal pro Tag)</p>' + (b.claimed ? '<p class="center small mute">Heute besiegt! Du kannst weiter üben.</p>' : '') +
     (b.used.length >= 3 || b.frac <= 0 ? btn('Neuer Versuch', 'bossreset', '', 'pri') : btn(b.used.length ? 'Nächster Ball' : 'Kämpfen', 'solopick', 'data-k="boss"', 'pri')) + '</div>' +
     '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Die Aufgaben wechseln jeden Tag um Mitternacht (UTC).</p></div>');
@@ -377,7 +377,7 @@ async function logScreen(tab) {
     return show('<div class="col">' + backBar('Kampflog') + tabs +
       '<div class="panel"><p><b>' + it.length + '</b> Kämpfe gespeichert - <b>' + wins + '</b> Siege bei <b>' + real.length + '</b> gewerteten Kämpfen' + (real.length ? ' (' + Math.round(wins / real.length * 100) + ' %)' : '') + '</p>' +
       '<p class="small mute">Gewonnene Runden: ' + rw + ' von ' + rounds.length + (rounds.length ? ' (' + Math.round(rw / rounds.length * 100) + ' %)' : '') + ' - längste Siegesserie: ' + best + '</p></div>' +
-      '<div class="panel"><p><b>Deine Bälle</b></p>' + top.map(([t, o]) => '<div class="row gap6" style="align-items:center;margin:4px 0">' + ball(t, 40, .7) + '<div class="grow"><div class="small"><b>' + esc(ballName(t)) + '</b> - ' + o.n + ' Runden, ' + Math.round(o.w / o.n * 100) + ' % gewonnen</div><div style="height:8px;border:2px solid var(--ink);border-radius:6px;background:#fff;overflow:hidden"><i style="display:block;height:100%;width:' + Math.round(o.w / o.n * 100) + '%;background:#4fb25a"></i></div></div></div>').join('') + '</div>' +
+      '<div class="panel"><p><b>Deine Bälle</b></p>' + top.map(([t, o]) => '<div class="row gap6" style="align-items:center;margin:4px 0">' + ball(t, 40, .7) + '<div class="grow"><div class="small"><b>' + esc(ballName(t)) + '</b> - ' + o.n + ' Runden, ' + Math.round(o.w / o.n * 100) + ' % gewonnen</div><div class="progress thin"><i style="width:' + Math.round(o.w / o.n * 100) + '%;background:#4fb25a"></i></div></div></div>').join('') + '</div>' +
       (oppTop.length ? '<div class="panel"><p><b>Häufigste Gegner</b></p>' + oppTop.map(([n, c]) => '<p class="small">' + esc(n) + ' - ' + c + 'x</p>').join('') + '</div>' : '') + '</div>');
   }
   show('<div class="col">' + backBar('Kampflog') + tabs + it.map(x => '<button class="card cell" style="min-height:0;padding:10px 12px;text-align:left" data-act="logopen" data-id="' + x.id + '"><div class="row sb" style="align-items:center"><b>' + MODE_NAME(x) + '</b>' + resPill(x) + '</div>' +
@@ -461,8 +461,8 @@ function collection(keep) {
     '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + indexIds().length + ' Bällen</span><span>' + realBalls().length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
     (upAllPlan().steps ? btn(gi('star', 24, '#ffd45a') + ' Alles maximal verbessern', 'upall', '', 'green') : '') +
     '<div class="row gap6"><div class="inp grow row" style="padding-left:8px">' + gi('search', 24) + '<input id="cq" placeholder="Ball suchen" value="' + esc(f.q) + '" autocomplete="off"></div></div>' +
-    '<div class="tabs">' + tabs.map(t => '<button class="tab' + (f.rar === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="rar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
-    '<div class="tabs">' + boxes.map(t => '<button class="tab' + (f.box === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="box" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+    '<div class="tabs sc">' + tabs.map(t => '<button class="tab' + (f.rar === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="rar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+    '<div class="tabs sc">' + boxes.map(t => '<button class="tab' + (f.box === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="box" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
     '<div class="tabs"><button class="tab' + (f.sort === 'rar' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="rar">Nach Seltenheit</button><button class="tab' + (f.sort === 'name' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="name">A bis Z</button><button class="tab' + (f.sort === 'own' ? ' on' : '') + '" data-act="cfilter" data-k="sort" data-v="own">Meiste</button><button class="tab' + (f.own ? ' on' : '') + '" data-act="cown">Nur meine</button></div>' +
     '<div class="grid3" id="cgrid">' + colGrid() + '</div></div>');
   const q = $('#cq'); if (q) q.oninput = () => { S.col.q = q.value; const g = $('#cgrid'); if (g) { g.innerHTML = colGrid(); decorate(g); } };
@@ -524,21 +524,21 @@ function boxStats(id) {
   const ids = ballsInBox(id), c = typeCounts();
   return { n: ids.length, own: ids.filter(t => c[t]).length, ids };
 }
+const boxCard = b => { const st = boxStats(b.id), pct = Math.round(st.own / st.n * 100), left = b.until ? timeLeft(b.until - now()) : '';
+    return '<button class="scard" style="--bc:' + b.col + '" data-act="boxdetail" data-id="' + b.id + '"><span class="sart">' + boxArt(b.id, 118) + '</span><b class="snm">' + esc(b.name) + '</b>' +
+      '<span class="sprog"><i style="width:' + pct + '%"></i></span><span class="small mute">' + st.own + ' von ' + st.n + ' gesammelt</span>' +
+      '<span class="sprice">' + priceHTML(b) + '</span>' + (b.until ? '<span class="tag">' + left + '</span>' : '') + '</button>'; };
 function boxScreen() {
   S.screen = 'box'; setView(null);
   if (S.shopTab !== 'skin') S.shopTab = 'ball';
   const list = BOX_LIST.filter(b => boxActive(b.id, now()));
-  const card = b => { const st = boxStats(b.id), pct = Math.round(st.own / st.n * 100), left = b.until ? timeLeft(b.until - now()) : '';
-    return '<button class="scard" style="--bc:' + b.col + '" data-act="boxdetail" data-id="' + b.id + '"><span class="sart">' + boxArt(b.id, 118) + '</span><b class="snm">' + esc(b.name) + '</b>' +
-      '<span class="sprog"><i style="width:' + pct + '%"></i></span><span class="small mute">' + st.own + ' von ' + st.n + ' gesammelt</span>' +
-      '<span class="sprice">' + priceHTML(b) + '</span>' + (b.until ? '<span class="tag">' + left + '</span>' : '') + '</button>'; };
   const std = list.find(b => b.id === 'standard'), ev = list.filter(b => b.until).sort((a, z) => a.until - z.until), rest = list.filter(b => b.id !== 'standard' && !b.until);
   const free = S.me.freeBoxes || 0;
   const hero = std ? '<button class="shero" data-act="boxdetail" data-id="standard"><span class="sart">' + boxArt('standard', 130) + '</span><span class="grow"><b>Standard-Box</b><span class="small">Der Einstieg: ein neuer Ball pro Box</span><span class="sprice big">' + (free ? '<span class="sfree">' + pl(free, 'Gratis-Box', 'Gratis-Boxen') + '</span>' : priceHTML(std)) + '</span></span></button>' : '';
   show('<div class="col">' + backBar('Shop') + shopTabs() + (S.shopTab === 'skin' ? skinDropPane() :
     hero +
-    (ev.length ? '<h3 class="shd">Zeitlich begrenzt</h3><div class="sgrid">' + ev.map(card).join('') + '</div>' : '') +
-    '<h3 class="shd">Themenboxen</h3><div class="sgrid">' + rest.map(card).join('') + '</div>') + '</div>');
+    (ev.length ? '<h3 class="shd">Zeitlich begrenzt</h3><div class="sgrid">' + ev.map(boxCard).join('') + '</div>' : '') +
+    '<h3 class="shd">Themenboxen</h3><div class="sgrid">' + rest.map(boxCard).join('') + '</div>') + '</div>');
 }
 function boxDetail(id) {
   const b = BOX_BY_ID[id];
@@ -853,7 +853,7 @@ async function market(resetPage) {
     const r = await api('/api/market/browse', { rarity: mk.rarity, q: mk.q, sort: mk.sort, page: mk.page });
     if (r.err) { toast(errText(r.err)); return; }
     mk.items = r.items; mk.total = r.total;
-    body = '<div class="tabs">' + [['', 'Alle']].concat(SORT.map(x => [x, RARITY[x].name])).map(t => '<button class="tab' + (mk.rarity === t[0] ? ' on' : '') + '" data-act="mkrar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
+    body = '<div class="tabs sc">' + [['', 'Alle']].concat(SORT.map(x => [x, RARITY[x].name])).map(t => '<button class="tab' + (mk.rarity === t[0] ? ' on' : '') + '" data-act="mkrar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
       '<div class="row gap6"><div class="inp grow row" style="padding-left:8px">' + gi('search', 24) + '<input id="mkq" placeholder="Ball suchen" value="' + esc(mk.q) + '"></div><button class="btn sm pri" data-act="mksearch">Suchen</button></div>' +
       '<div class="tabs">' + [['low', 'Billigste'], ['high', 'Teuerste'], ['new', 'Neueste']].map(t => '<button class="tab' + (mk.sort === t[0] ? ' on' : '') + '" data-act="mksort" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
       (mk.items.length ? mk.items.map(it => {
