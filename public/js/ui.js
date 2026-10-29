@@ -273,10 +273,10 @@ function home() {
   show('<div class="col" style="padding-top:2px"><div class="row sb" style="padding-right:50px"><div class="pill">' + esc(me.name) + '</div><button class="btn sm" style="min-height:40px;padding:4px 10px" data-act="settings" aria-label="Einstellungen">' + gi('gear', 26) + '</button></div><div class="row" style="justify-content:flex-end;margin-top:-6px">' + wallet() + '</div>' +
     '<h1 class="jit">Ball gegen Ball</h1>' +
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
-    '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
+    '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + indexIds().length + ' Bällen</div>' +
     (() => { const evs = BOX_LIST.filter(b => b.until && boxActive(b.id, now())); if (!evs.length) return ''; return '<button class="panel" style="display:flex;align-items:center;gap:8px;width:100%;min-height:0;padding:4px 12px;background:#ffe3b0;text-align:left" data-act="limited">' + gi('token', 26) + '<span class="grow"><b>Zeitlich begrenzt</b> <span class="small">' + evs.length + ' Boxen</span></span>' + gi('arrow', 16).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>'; })() +
     btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'multi', '', 'fight') +
-    '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + BALL_IDS.length + ' Bällen</span></button>' +
+    '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + indexIds().length + ' Bällen</span></button>' +
     '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
     '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="handel"><span class="hv">' + gi('coin', 36) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 30) + '</span></span><b>Handel</b><span class="small">Markt und Tauschen</span></button>' +
       '<button class="htile" style="--tc:#e3dcf7" data-act="log"><span class="hv">' + gi('sword', 36) + '</span><b>Kampflog</b><span class="small">Wiederholen und teilen</span></button></div>' +
@@ -407,9 +407,11 @@ function replayRound(rec, idx, back) {
 }
 
 /* ================= Sammlung ================= */
+// Bälle aus abgeschalteten Boxen (z. B. Brainrot) stehen nicht im Index, außer man besitzt sie schon
+const indexIds = () => { const c = typeCounts(); return BALL_IDS.filter(id => { const b = BOX_BY_ID[DEFS[id].box]; return !(b && b.off) || c[id]; }); };
 function sortedIds() {
   const c = typeCounts(), f = S.col, q = f.q.trim().toLowerCase();
-  const pool = f.box === 'skin1' || f.box === 'skin2' ? SKIN_IDS : BALL_IDS;   // Skins nur im Skin-Truhen-Filter
+  const pool = f.box === 'skin1' || f.box === 'skin2' ? SKIN_IDS : indexIds();   // Skins nur im Skin-Truhen-Filter
   let ids = pool.filter(id => {
     const d = DEFS[id];
     if (f.rar !== 'all' && d.rarity !== f.rar) return false;
@@ -453,7 +455,7 @@ function collection(keep) {
   const tabs = [['all', 'Alle']].concat(SORT.map(r => [r, RARITY[r].name]));
   const boxes = [['all', 'Alle Boxen']].concat(BOX_LIST.filter(b => !b.off).map(b => [b.id, b.name.replace('-Box', '')]));
   show('<div class="col">' + backBar('Sammlung') +
-    '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + BALL_IDS.length + ' Bällen</span><span>' + realBalls().length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
+    '<div class="panel" style="padding:8px 12px"><div class="row sb small"><span>' + have + ' von ' + indexIds().length + ' Bällen</span><span>' + realBalls().length + ' insgesamt</span></div><div class="progress mt"><i style="width:' + Math.round(have / BALL_IDS.length * 100) + '%"></i></div></div>' +
     (upAllPlan().steps ? btn(gi('star', 24, '#ffd45a') + ' Alles maximal verbessern', 'upall', '', 'green') : '') +
     '<div class="row gap6"><div class="inp grow row" style="padding-left:8px">' + gi('search', 24) + '<input id="cq" placeholder="Ball suchen" value="' + esc(f.q) + '" autocomplete="off"></div></div>' +
     '<div class="tabs">' + tabs.map(t => '<button class="tab' + (f.rar === t[0] ? ' on' : '') + '" data-act="cfilter" data-k="rar" data-v="' + t[0] + '">' + t[1] + '</button>').join('') + '</div>' +
