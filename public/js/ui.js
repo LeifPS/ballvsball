@@ -641,13 +641,65 @@ function skinDropPane() {
     '<h3 class="shd">Alle Skins <span class="small">(' + owned + ' von ' + SKIN_IDS.length + ')</span></h3><div class="panel">' +
     SORT.slice().reverse().map(r => '<div class="sdgrp"><div class="row sb"><span>' + rarHTML(r) + '</span><span class="small mute">' + pl(skinsBy(r).length, 'Skin', 'Skins') + '</span></div><div class="grid3" style="grid-template-columns:repeat(4,1fr);gap:6px">' + skinsBy(r).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 62, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:12px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name) : '???') + '</div></button>').join('') + '</div></div>').join('') + '</div>';
 }
+// Farben des Drops je Stufe (Mythisch und Legendär wandern zwischen Tönen)
+const DROP_RGB = [[169, 176, 189], [59, 139, 255], [160, 80, 240], [255, 194, 26], [255, 74, 42]];
+const dropRGB = (lv, tm) => {
+  if (lv === 3) { const k = (Math.sin(tm * 3) + 1) / 2; return [232 + k * 23, 172 + k * 36, 10 + k * 60]; }   // dunkelgelb <-> hellgelb
+  if (lv === 4) { const k = (tm * .6) % 3, P = [[255, 42, 42], [255, 154, 26], [255, 210, 58]], a = P[Math.floor(k)], b = P[(Math.floor(k) + 1) % 3], f = k % 1; return a.map((v, i) => v + (b[i] - v) * f); }
+  if (lv === 2) { const k = (Math.sin(tm * 1.6) + 1) / 2; return [140 + k * 36, 60 + k * 36, 226 + k * 20]; }   // ganz leichter Violett-Verlauf
+  return DROP_RGB[lv];
+};
+const rgbS = (c, a, l) => { const m = l || 0, q = x => Math.max(0, Math.min(255, Math.round(m >= 0 ? x + (255 - x) * m : x * (1 + m)))); return 'rgba(' + q(c[0]) + ',' + q(c[1]) + ',' + q(c[2]) + ',' + (a == null ? 1 : a) + ')'; };   // l>0 heller, l<0 dunkler
+// Risse im Drop (in Drop-Koordinaten), pro Tipp ein weiterer
+const DROP_CRACKS = [
+  [[-4, -100], [10, -60], [-8, -20], [6, 20], [-6, 60]],
+  [[4, -10], [40, -34], [60, -70], [50, -96]],
+  [[-2, 10], [-44, 4], [-66, 40], [-60, 80]],
+  [[10, 30], [34, 62], [24, 100], [48, 118]]
+];
+const DROP_BODY = g => { g.beginPath(); g.moveTo(0, -128); g.bezierCurveTo(30, -80, 92, -30, 92, 36); g.bezierCurveTo(92, 92, 50, 126, 0, 126); g.bezierCurveTo(-50, 126, -92, 92, -92, 36); g.bezierCurveTo(-92, -30, -30, -80, 0, -128); g.closePath(); };
+function drawDropArt(g, tm, c, o) {
+  // g: nach translate/scale in Drop-Koordinaten (Höhe ~ 254). c: Farbe [r,g,b]; o: { cracks, crackP, glow, boil }
+  const sk = sketchCtx(g, 4.7 + (Math.floor(tm * 8) % 3) * 1.713, 130, 1.5); g.lineJoin = g.lineCap = 'round';
+  g.fillStyle = rgbS(c, 1); const gr = g.createLinearGradient(-70, -110, 80, 120); gr.addColorStop(0, rgbS(c, 1, .55)); gr.addColorStop(.5, rgbS(c, 1)); gr.addColorStop(1, rgbS(c, 1, -.45)); g.fillStyle = gr;
+  DROP_BODY(sk); sk.fill();
+  g.save(); DROP_BODY(sk); sk.clip();
+  g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(0, -128); g.lineTo(-92, 36); g.lineTo(-30, 126); g.lineTo(0, 20); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(0,0,40,.16)'; g.beginPath(); g.moveTo(0, -128); g.lineTo(92, 36); g.lineTo(40, 126); g.lineTo(0, 20); g.closePath(); g.fill();
+  // Lichtstreifen wandert über den Kristall
+  const sx = ((tm * .55) % 1.6) * 330 - 190; g.save(); g.rotate(.5); g.fillStyle = 'rgba(255,255,255,.34)'; g.fillRect(sx, -200, 26, 420); g.fillRect(sx + 40, -200, 10, 420); g.restore();
+  // Licht aus den Rissen
+  if (o.cracks) {
+    for (let i = 0; i < o.cracks; i++) {
+      const pts = DROP_CRACKS[i], pr = i === o.cracks - 1 ? o.crackP : 1, n = pts.length - 1, upto = pr * n;
+      const trace = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k <= n; k++) { if (k - 1 >= upto) break; const f = Math.min(1, upto - (k - 1)); g.lineTo(pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * f, pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * f); } };
+      g.shadowColor = rgbS(c, 1, .6); g.shadowBlur = 22; g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 9 + o.glow * 8; trace(); g.stroke(); g.shadowBlur = 0;
+      g.strokeStyle = rgbS(c, 1, .85); g.lineWidth = 5; trace(); g.stroke();
+      g.strokeStyle = INK; g.lineWidth = 1.6; trace(); g.stroke();
+    }
+  }
+  g.restore();
+  g.strokeStyle = INK; g.lineWidth = 6.5; sk.lineWidth = 6.5; DROP_BODY(sk); sk.stroke();
+  g.lineWidth = 3.2; sk.lineWidth = 3.2; sk.beginPath(); sk.moveTo(0, -128); sk.lineTo(0, 20); sk.moveTo(-92, 36); sk.lineTo(0, 20); sk.lineTo(92, 36); sk.moveTo(0, 20); sk.lineTo(-30, 126); sk.moveTo(0, 20); sk.lineTo(40, 126); sk.stroke();
+  g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(-54, -2, 8, 24, .45, 0, 7); g.fill(); g.beginPath(); g.arc(-44, -34, 4, 0, 7); g.fill();
+  const tw = Math.max(0, Math.sin(tm * 4)); star(g, 50, -10, 6 + tw * 7, '#fff', tm); star(g, -20, 68, 4 + (1 - tw) * 5, '#fff', -tm);
+}
+function removeDropOverlay() { const o = document.getElementById('dover'); if (o) o.remove(); }
+let DROP_LAST = null;
 async function openSkinDrop() {
-  try { return await openSkinDrop0(); } catch (e) { console.error('OSD', e && e.stack); toast('Fehler beim Öffnen'); }
+  DROP_LAST = null;
+  try { return await openSkinDrop0(); } catch (e) {
+    console.error('OSD', e && e.stack);
+    removeDropOverlay(); setView(null);
+    // Der Server hat den Drop schon abgerechnet: Ergebnis trotzdem zeigen
+    if (DROP_LAST) { toast('Anzeige-Fehler: ' + (e && e.message)); skinDropResult(DROP_LAST.r, DROP_LAST.before); } else toast('Fehler beim Öffnen: ' + (e && e.message));
+  }
 }
 async function openSkinDrop0() {
   const before = new Set(S.me.balls.map(x => x.type));
   const r = await api('/api/skindrop', {});
   if (r.err) { toast(errText(r.err)); return; }
+  DROP_LAST = { r, before };
   S.screen = 'skindrop'; setView(null); sfx('open'); setScene('drop'); SCREEN.onpointerdown = null; removeDropOverlay();
   const N = SKINDROP.clicks, W = window.innerWidth, H = window.innerHeight, DP = Math.min(2, DPR);
   const ov = document.createElement('div'); ov.id = 'dover'; ov.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:35;background:#120d24;touch-action:manipulation;user-select:none;-webkit-user-select:none;overflow:hidden';
@@ -701,7 +753,10 @@ async function openSkinDrop0() {
   cv.onpointerdown = tap;
   const BGST = Array.from({ length: 36 }, (_, i) => [((i * 97) % 100) / 100, ((i * 53 + 17) % 100) / 100, 2 + (i % 4), i * .7]);
   setView({
-    frame(tm, dt) {
+    frame(tm, dt) { try { drop(tm, dt); } catch (e) { console.error('OSD frame', e && e.stack); if (!st.shown) { st.shown = true; finish(); } } }
+  });
+  function drop(tm, dt) {
+    {
       if (st.t0 < 0) st.t0 = tm;
       const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.scale(DP, DP);
       // Übergang der Farbe, Kamera-Wackeln, Phasen
@@ -767,7 +822,7 @@ async function openSkinDrop0() {
       }
       if (st.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(1, st.flash * (st.phase === 'final' ? .95 : .55)) + ')'; g.fillRect(0, 0, W, H); }
     }
-  });
+  }
   const finish = () => {
     const wf = document.createElement('div'); wf.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:60;background:#fff;opacity:1;pointer-events:none;transition:opacity .8s ease-out';
     document.body.appendChild(wf); skinDropResult(r, before); removeDropOverlay();
