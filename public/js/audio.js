@@ -5,6 +5,8 @@ let scene = 'menu';
 try { const v = window.localStorage.getItem('bvb_snd'); if (v !== null) mode = Math.max(0, Math.min(2, +v)); } catch (e) { }
 
 export const getMode = () => mode;
+export const hasSfx = n => !!buffers[n];   // Datei geladen? (sonst spielt der Ersatzton)
+export function setModeTemp(m) { mode = m; apply(); }   // ohne zu speichern (Vorschauseiten)
 export function setMode(m) {
   mode = m; try { window.localStorage.setItem('bvb_snd', String(m)); } catch (e) { }
   apply();
