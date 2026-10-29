@@ -53,10 +53,13 @@ export function ringJ(g, x, y, r, w, col, f, seed) {
   }
   g.stroke();
 }
+// Handgezeichnet auch bei Partikeln: wackelige Doppellinie und versetzte Füllung (sketchCtx), das Wackeln springt im Takt der Zeichen-Frames
+let TF = 0;
+const hd = (g, k, size, amin) => sketchCtx(g, Math.sin(k * 12.9898) * 7 + (TF % 3) * 1.713, size || 14, amin == null ? .35 : amin);   // kleine Teile wackeln weniger, damit sie nicht zu Klecksen werden
 export function star(g, x, y, r, col, rot) {
-  g.save(); g.translate(x, y); g.rotate(rot || 0); g.beginPath();
-  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .45 : r; g[i ? 'lineTo' : 'moveTo'](Math.cos(a) * q, Math.sin(a) * q); }
-  g.closePath(); g.fillStyle = col; g.fill(); g.lineWidth = Math.max(1, r * .18); g.strokeStyle = INK; g.stroke(); g.restore();
+  g.save(); g.translate(x, y); g.rotate(rot || 0); const h = hd(g, x * .37 + y * .71 + r, 14); h.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? r * .45 : r; h[i ? 'lineTo' : 'moveTo'](Math.cos(a) * q, Math.sin(a) * q); }
+  h.closePath(); g.fillStyle = col; h.fill(); g.lineWidth = Math.max(1, r * .18); h.lineWidth = g.lineWidth; g.strokeStyle = INK; h.stroke(); g.restore();
 }
 
 
@@ -99,14 +102,14 @@ const RB = ['#ff5a5a', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#a77ae8'];
 const skinCol = (col, i) => col === 'rainbow' ? RB[((i % RB.length) + RB.length) % RB.length] : col;
 function skinPart(g, kind, x, y, col, sz, rot) {
   if (kind === 'star') { star(g, x, y, sz, col, rot); return; }
-  g.save(); g.translate(x, y); g.rotate(rot || 0); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); g.lineJoin = 'round'; g.beginPath();
-  if (kind === 'heart') { g.moveTo(0, sz * .9); g.bezierCurveTo(-sz * 1.5, -sz * .1, -sz * .9, -sz * 1.2, 0, -sz * .4); g.bezierCurveTo(sz * .9, -sz * 1.2, sz * 1.5, -sz * .1, 0, sz * .9); }
-  else if (kind === 'shard') { g.moveTo(0, -sz * 1.3); g.lineTo(sz * .6, 0); g.lineTo(0, sz * 1.3); g.lineTo(-sz * .6, 0); }
-  else if (kind === 'flower') { for (let i = 0; i < 5; i++) { const a = i * 1.2566; g.moveTo(0, 0); g.ellipse(Math.cos(a) * sz * .7, Math.sin(a) * sz * .7, sz * .55, sz * .38, a, 0, 7); } }
-  else if (kind === 'ember') { g.moveTo(0, -sz * 1.2); g.quadraticCurveTo(sz * .9, -sz * .1, 0, sz * .8); g.quadraticCurveTo(-sz * .9, -sz * .1, 0, -sz * 1.2); }
-  else g.arc(0, 0, kind === 'coin' ? sz * .8 : sz * .6, 0, 7);
-  g.closePath(); g.fill(); g.stroke();
-  if (kind === 'coin') { g.beginPath(); g.arc(0, 0, sz * .42, 0, 7); g.stroke(); }
+  g.save(); g.translate(x, y); g.rotate(rot || 0); const h = hd(g, x * .31 + y * .53 + sz, 14); g.fillStyle = col; g.strokeStyle = INK; g.lineWidth = Math.max(1, sz * .22); h.lineWidth = g.lineWidth; g.lineJoin = 'round'; h.beginPath();
+  if (kind === 'heart') { h.moveTo(0, sz * .9); h.bezierCurveTo(-sz * 1.5, -sz * .1, -sz * .9, -sz * 1.2, 0, -sz * .4); h.bezierCurveTo(sz * .9, -sz * 1.2, sz * 1.5, -sz * .1, 0, sz * .9); }
+  else if (kind === 'shard') { h.moveTo(0, -sz * 1.3); h.lineTo(sz * .6, 0); h.lineTo(0, sz * 1.3); h.lineTo(-sz * .6, 0); }
+  else if (kind === 'flower') { for (let i = 0; i < 5; i++) { const a = i * 1.2566; h.moveTo(0, 0); h.ellipse(Math.cos(a) * sz * .7, Math.sin(a) * sz * .7, sz * .55, sz * .38, a, 0, 7); } }
+  else if (kind === 'ember') { h.moveTo(0, -sz * 1.2); h.quadraticCurveTo(sz * .9, -sz * .1, 0, sz * .8); h.quadraticCurveTo(-sz * .9, -sz * .1, 0, -sz * 1.2); }
+  else h.arc(0, 0, kind === 'coin' ? sz * .8 : sz * .6, 0, 7);
+  h.closePath(); h.fill(); h.stroke();
+  if (kind === 'coin') { h.beginPath(); h.arc(0, 0, sz * .42, 0, 7); h.stroke(); }
   g.restore();
 }
 const ownerSkin = (sim, id) => { const b = sim && sim.byId ? sim.byId[id] : null; return b && b.skin ? SKIN_BY_ID[b.skin] : null; };
@@ -169,6 +172,7 @@ export function skinStartFx(sim) {
 }
 let sim0 = null;
 export function drawBall(g, b, sim, tf, tm, tint) {
+  TF = tf;
   const d = b.def, st = b.st || {}, v = vstate(b), f = tf + b.id, type = b.type;
   const k = b.r / R0 * (KS[type] || 1), x = b.x, y = b.y;
   if (b.vx * v.pvx < 0 || b.vy * v.pvy < 0) { v.sq = .16; v.ax = (b.vx * v.pvx < 0) ? 0 : 1; }
@@ -196,14 +200,13 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   else if (type === 'supernova' && st.ch > 0) { const rr = b.r * (1.5 + st.ch * 2), gr = g.createRadialGradient(0, 0, 0, 0, 0, rr); gr.addColorStop(0, 'rgba(255,240,150,' + (.15 + st.ch * .5) + ')'); gr.addColorStop(1, 'rgba(255,240,150,0)'); g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rr, 0, 7); g.fill(); }
   else if (type === 'schwarzloch') { ringJ(g, 0, 0, 38 + Math.sin(tm * 3) * 4, 1.2, 'rgba(139,79,201,.4)', tf, b.id); }
   else if (type === 'tornado') { const p = partSprite('swirl'); spr(g, p, 0, 0, f, (b.r + 14) / p.rad, tm * 4, .55); }
-  { const sk = b.skin && SKIN_BY_ID[b.skin], an = sk && sk.anim && ANIM[sk.anim]; if (an && an.back) { g.save(); an.back(g, b, tm, k); g.restore(); } }   // Skin-Animationen hinter dem Ball
+  { const sk = b.skin && SKIN_BY_ID[b.skin], an = sk && sk.anim && ANIM[sk.anim]; if (an && an.back) { g.save(); an.back(hd(g, b.id * 5.3, 40), b, tm, k); g.restore(); } }   // Skin-Animationen hinter dem Ball
   /* Körper */
   g.save(); g.rotate(type === 'blauast' && !b.preview ? tm * 4 : tilt); g.scale(sx * bob * k, sy * bob * k);
   if (type === 'herrscher') {   // Regenbogen-Körper, dreht sich langsam
     const gr = g.createConicGradient ? g.createConicGradient(tm * 1.6, 0, 0) : g.createLinearGradient(-R0, -R0, R0, R0);
     ['#ff3b3b', '#ffb02e', '#ffe83b', '#4fd45a', '#3bb7ff', '#8a5cff', '#ff3bd0', '#ff3b3b'].forEach((c, i, a) => gr.addColorStop(i / (a.length - 1), c));
-    g.fillStyle = gr; g.beginPath(); g.arc(0, 0, R0, 0, 7); g.fill();
-    g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.ellipse(-R0 * .42, -R0 * .5, R0 * .16, R0 * .09, -.7, 0, 7); g.fill();
+    { const h = hd(g, 5.5, 40); g.fillStyle = gr; h.beginPath(); h.arc(0, 0, R0, 0, 7); h.fill(); g.fillStyle = 'rgba(255,255,255,.5)'; h.beginPath(); h.ellipse(-R0 * .42, -R0 * .5, R0 * .16, R0 * .09, -.7, 0, 7); h.fill(); }
   }
   const sp = bodySprite(b.skin ? b.skin : type === 'erik' && st.emo != null ? 'erik_' + 'wfta'[st.emo] : type === 'gefuehl' && st.mode != null ? 'gefuehl_' + 'fwa'[st.mode] : type, !b.preview);
   g.drawImage(sp.fr[((f % 3) + 3) % 3], -sp.side / 2, -sp.side / 2, sp.side, sp.side);
@@ -218,7 +221,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
   }
   g.restore();
   g.globalAlpha = ghost ? .45 : 1;
-  { const sk = b.skin && SKIN_BY_ID[b.skin]; if (sk) { if (sk.part) skinAmbient(g, b, sk, tm); const an = sk.anim && ANIM[sk.anim]; if (an && an.front) { g.save(); an.front(g, b, tm, k); g.restore(); } } }
+  { const sk = b.skin && SKIN_BY_ID[b.skin]; if (sk) { if (sk.part) skinAmbient(g, b, sk, tm); const an = sk.anim && ANIM[sk.anim]; if (an && an.front) { g.save(); an.front(hd(g, b.id * 3.7, 40), b, tm, k); g.restore(); } } }
   /* vorne */
   if (type === 'schwert') {
     const n = st.n || 1, ang = st.ang || 0, p = partSprite('dagger');
@@ -239,7 +242,7 @@ export function drawBall(g, b, sim, tf, tm, tint) {
     const a = tm * 9; for (let i = 0; i < 3; i++) { const aa = a + i * 2.094; spr(g, partSprite('blade'), Math.cos(aa) * (b.r * .3), Math.sin(aa) * (b.r * .3), f + i, (b.r + 10) / 24, aa, .75); }
   } else if (type === 'kreisel' && st.spin > 0) {
     ringJ(g, 0, 0, b.r + 12, 2.4, 'rgba(255,255,255,.8)', tf, b.id); ringJ(g, 0, 0, b.r + 12, 1.2, INK, tf + 1, b.id + 5);
-    for (let i = 0; i < 4; i++) { const a = tm * 12 + i * 1.57; g.strokeStyle = INK; g.lineWidth = 1.4; g.beginPath(); g.arc(0, 0, b.r + 12, a, a + .5); g.stroke(); }
+    { const h = hd(g, b.id * 1.9, 30); for (let i = 0; i < 4; i++) { const a = tm * 12 + i * 1.57; g.strokeStyle = INK; g.lineWidth = 1.4; h.lineWidth = 1.4; h.beginPath(); h.arc(0, 0, b.r + 12, a, a + .5); h.stroke(); } }
   } else if (type === 'pfanne') {
     const a = st.ang || 0; spr(g, partSprite('pan'), Math.cos(a) * (b.r + 10), Math.sin(a) * (b.r + 10), f, .85, a);
   } else if (type === 'drache' && st.breath > 0) {
@@ -306,6 +309,7 @@ const WAVE_COL = { shock: ['#9ad8ff', '#ffffff'], nova: ['#ffe14a', '#fff6c0'], 
 const ZONE = { rain: 'rainZone', lava: 'lavaZone', dust: 'dustZone', egg: 'eggZone', platte: 'platteZone', brew: 'brewZone' };
 export const GROUND = { puddle: 1, fire: 1, spike: 1, bomb: 1, meteor: 1, mine: 1, wave: 1 };
 export function drawObj(g, o, sim, tf, tm) {
+  TF = tf;
   const f = tf + (o.owner || 0) * 3;
   const osk = o.owner ? ownerSkin(sim, o.owner) : null;
   if (osk && osk.atk && o.proj && o.vx !== undefined) { skinProj(g, o, osk, tm); return; }   // Geschosse im Skin-Look
@@ -332,7 +336,7 @@ export function drawObj(g, o, sim, tf, tm) {
     case 'puddle': {
       const key = o.vis ? ZONE[o.vis] || 'puddleZone' : 'puddleZone';
       spr(g, objSprite(key), o.x, o.y, f, o.r / 30, 0, Math.min(.9, o.life / 1.5));
-      if (o.vis === 'rain') for (let i = 0; i < 4; i++) { const ph = (tm * 2 + i * .3 + o.x) % 1; g.strokeStyle = 'rgba(80,150,220,.8)'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(o.x - o.r * .5 + i * o.r * .35, o.y - 26 + ph * 26); g.lineTo(o.x - o.r * .5 + i * o.r * .35 - 1.5, o.y - 18 + ph * 26); g.stroke(); }
+      if (o.vis === 'rain') { const h = hd(g, o.x * .1, 20); for (let i = 0; i < 4; i++) { const ph = (tm * 2 + i * .3 + o.x) % 1; g.strokeStyle = 'rgba(80,150,220,.8)'; g.lineWidth = 1.4; h.lineWidth = 1.4; h.beginPath(); h.moveTo(o.x - o.r * .5 + i * o.r * .35, o.y - 26 + ph * 26); h.lineTo(o.x - o.r * .5 + i * o.r * .35 - 1.5, o.y - 18 + ph * 26); h.stroke(); } }
       break;
     }
     case 'boom': { const sp = objSprite(o.vis || 'boom'); spr(g, sp, o.x, o.y, f, Math.max(1, o.r / sp.rad), o.rot); break; }
@@ -440,18 +444,19 @@ export function burst(x, y, n, cols) {   // Konfetti für Sieg
   for (let i = 0; i < n; i++) pt({ k: 'conf', x: x + (rnd() - .5) * 40, y, age: 0, life: 1.6 + rnd() * .8, vx: (rnd() - .5) * 260, vy: -160 - rnd() * 200, col: cols[i % cols.length], sz: 3 + rnd() * 3, rot: rnd() * 6 });
 }
 export function drawFx(g, dt, tf) {
+  TF = tf;
   for (let i = FXL.length - 1; i >= 0; i--) {
     const e = FXL[i]; e.age += dt;
     if (e.age >= e.life) { FXL.splice(i, 1); continue; }
     const p = e.age / e.life;
     switch (e.k) {
       case 'spark': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 180 * dt; star(g, e.x, e.y, e.sz * (1 - p * .6), e.col, e.rot + e.age * 6); break;
-      case 'puff': e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= .94; e.vy *= .94; g.save(); g.globalAlpha = (1 - p) * .85; g.fillStyle = e.col; g.strokeStyle = INK; g.lineWidth = 1.2; g.beginPath(); g.arc(e.x, e.y, e.sz * (.6 + p * .9), 0, 7); g.fill(); g.stroke(); g.restore(); break;
+      case 'puff': e.x += e.vx * dt; e.y += e.vy * dt; e.vx *= .94; e.vy *= .94; { g.save(); g.globalAlpha = (1 - p) * .85; const h = hd(g, e.x * .3 + e.y * .5, 14); g.fillStyle = e.col; g.strokeStyle = INK; g.lineWidth = 1.2; h.lineWidth = 1.2; h.beginPath(); h.arc(e.x, e.y, e.sz * (.6 + p * .9), 0, 7); h.fill(); h.stroke(); g.restore(); break; }
       case 'sp': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 90 * dt; e.vx *= .985; g.save(); g.globalAlpha = Math.min(1, (1 - p) * 1.6); skinPart(g, e.shape, e.x, e.y, e.col, e.sz * (1 - p * .4), e.rot + e.age * 5); g.restore(); break;
       case 'ring': g.save(); g.globalAlpha = 1 - p; ringJ(g, e.x, e.y, e.r * (.25 + .75 * Math.sqrt(p)), 4 * (1 - p) + .8, e.col, tf, 3); g.restore(); break;
       case 'star': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 140 * dt; star(g, e.x, e.y, e.sz, '#ffd45a', e.age * 5); break;
-      case 'conf': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 380 * dt; e.vx *= .985; g.save(); g.translate(e.x, e.y); g.rotate(e.rot + e.age * 8); g.globalAlpha = Math.min(1, (1 - p) * 2); g.fillStyle = e.col; g.strokeStyle = INK; g.lineWidth = 1; g.beginPath(); g.rect(-e.sz, -e.sz * .6, e.sz * 2, e.sz * 1.2); g.fill(); g.stroke(); g.restore(); break;
-      case 'plus': e.y += e.vy * dt; g.save(); g.globalAlpha = 1 - p; g.strokeStyle = '#2f9a3a'; g.lineWidth = 2.6; g.beginPath(); g.moveTo(e.x - 4, e.y); g.lineTo(e.x + 4, e.y); g.moveTo(e.x, e.y - 4); g.lineTo(e.x, e.y + 4); g.stroke(); g.restore(); break;
+      case 'conf': e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 380 * dt; e.vx *= .985; g.save(); g.translate(e.x, e.y); g.rotate(e.rot + e.age * 8); g.globalAlpha = Math.min(1, (1 - p) * 2); { const h = hd(g, e.rot * 9 + e.sz, 14); g.fillStyle = e.col; g.strokeStyle = INK; g.lineWidth = 1; h.lineWidth = 1; h.beginPath(); h.rect(-e.sz, -e.sz * .6, e.sz * 2, e.sz * 1.2); h.fill(); h.stroke(); g.restore(); break; }
+      case 'plus': e.y += e.vy * dt; { g.save(); g.globalAlpha = 1 - p; const h = hd(g, e.x * .2 + e.y, 14); g.strokeStyle = '#2f9a3a'; g.lineWidth = 2.6; h.lineWidth = 2.6; h.beginPath(); h.moveTo(e.x - 4, e.y); h.lineTo(e.x + 4, e.y); h.moveTo(e.x, e.y - 4); h.lineTo(e.x, e.y + 4); h.stroke(); g.restore(); break; }
       case 'num': {
         const yy = e.y - p * 22 - Math.sin(Math.min(1, p * 4) * 3.14) * 4, sc = p < .15 ? 1 + (.15 - p) * 4 : 1;
         g.save(); g.globalAlpha = p > .7 ? (1 - p) / .3 : 1; g.translate(e.x, yy); g.scale(sc, sc);

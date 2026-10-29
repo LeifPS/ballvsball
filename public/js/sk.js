@@ -3,8 +3,8 @@ export const INK = '#1d2742';
 export const PAPER = '#f6efd9';
 export const DPR = Math.min(2.5, Math.max(1, (typeof window !== 'undefined' && window.devicePixelRatio) || 1));
 
-export function sketchCtx(c, seed, s) {
-  let subs = [], cur = null, lx = 0, ly = 0; const seg = s * .07, amp = Math.max(.7, s * .02), TAU = Math.PI * 2;
+export function sketchCtx(c, seed, s, amin) {
+  let subs = [], cur = null, lx = 0, ly = 0; const seg = s * .07, amp = Math.max(amin == null ? .7 : amin, s * .02), TAU = Math.PI * 2;
   const add = (x, y) => { if (!cur) { cur = { p: [], closed: false }; subs.push(cur); } cur.p.push([x, y]); lx = x; ly = y; };
   const line = (x, y) => { if (!cur) return add(x, y); const n = Math.max(1, Math.ceil(Math.hypot(x - lx, y - ly) / seg)), x0 = lx, y0 = ly; for (let i = 1; i <= n; i++) add(x0 + (x - x0) * i / n, y0 + (y - y0) * i / n); };
   const nz = (i, k) => Math.sin(i * .85 + seed * 12.9 + k * 3.1) * .62 + Math.sin(i * 2.1 + seed * 7.3 + k) * .38;
