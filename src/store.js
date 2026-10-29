@@ -348,7 +348,7 @@ export class Store extends DurableObject {
     if (!u) return { err: 'auth' };
     if ((u.shards || 0) < SKINDROP.price) return { err: 'no_shards' };
     const steps = []; let lv = 0;
-    for (let i = 0; i < SKINDROP.clicks; i++) { const up = lv < 4 && Math.random() < SKINDROP.p; if (up) lv++; steps.push(up); }
+    for (let i = 0; i < SKINDROP.clicks; i++) { const up = lv < 4 && Math.random() < SKINDROP.q[lv]; if (up) lv++; steps.push(up); }
     const rar = ['gewoehnlich', 'selten', 'episch', 'legendaer', 'mythisch'][lv], pool = SKIN_IDS.filter(id => DEFS[id].rarity === rar);
     const id = pool[Math.floor(Math.random() * pool.length)];
     this.q('UPDATE users SET shards=shards-? WHERE id=?', SKINDROP.price, u.id);

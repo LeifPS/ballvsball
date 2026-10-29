@@ -1,7 +1,7 @@
 // Oberfläche: Anmeldung, Startseite, Sammlung, Ballboxen, Markt, Handel, Freunde und Kampfablauf.
 import { DEFS, BALL_IDS, SKIN_IDS, RARITY, DT, BOX, MAX_STARS, STAR_BONUS, createSim, stepSim, ballsInBox } from './engine.js';
 import { createBox, stepBox, BW, layoutOf } from './boxsim.js';
-import { BOX_LIST, BOX_BY_ID, BOX_RARITY, boxActive, UP_COST, SKINDROP } from './boxes.js';
+import { BOX_LIST, BOX_BY_ID, BOX_RARITY, boxActive, UP_COST, SKINDROP, skindropOdds } from './boxes.js';
 import { DPR, INK, gi, mkSprite, spr, sketchCtx } from './sk.js';
 import { boxArt } from './boxart.js';
 import { drawBallIn, clearFx, fxState, burst, star, skinStartFx } from './art.js';
@@ -614,10 +614,7 @@ function dropImg(col) {   // handgezeichneter Kristalltropfen in Seltenheitsfarb
   return DROPS[col] = cv;
 }
 // Wahrscheinlichkeit je Seltenheit bei 4 Klicks, Aufstieg mit Chance p
-function dropOdds() {
-  const n = SKINDROP.clicks, p = SKINDROP.p, C = (a, b) => { let r = 1; for (let i = 0; i < b; i++) r = r * (a - i) / (i + 1); return r; };
-  return SORT.map((r, k) => [r, C(n, k) * Math.pow(p, k) * Math.pow(1 - p, n - k) * 100]);
-}
+function dropOdds() { return SORT.map((r, k) => [r, skindropOdds()[k]]); }
 function shopTabs() {
   return '<div class="tabs"><button class="tab' + (S.shopTab !== 'skin' ? ' on' : '') + '" data-act="shoptab" data-v="ball">Ballboxen</button><button class="tab' + (S.shopTab === 'skin' ? ' on' : '') + '" data-act="shoptab" data-v="skin">Skindrops</button></div>';
 }
