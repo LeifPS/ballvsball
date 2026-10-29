@@ -528,9 +528,17 @@ function boxScreen() {
   S.screen = 'box'; setView(null);
   if (S.shopTab !== 'skin') S.shopTab = 'ball';
   const list = BOX_LIST.filter(b => boxActive(b.id, now()));
-  const tile = b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div></div>' + (b.until ? '<span class="tag">Begrenzt</span>' : '') + '</button>';
+  const card = b => { const st = boxStats(b.id), pct = Math.round(st.own / st.n * 100), left = b.until ? timeLeft(b.until - now()) : '';
+    return '<button class="scard" style="--bc:' + b.col + '" data-act="boxdetail" data-id="' + b.id + '"><span class="sart">' + boxArt(b.id, 118) + '</span><b class="snm">' + esc(b.name) + '</b>' +
+      '<span class="sprog"><i style="width:' + pct + '%"></i></span><span class="small mute">' + st.own + ' von ' + st.n + ' gesammelt</span>' +
+      '<span class="sprice">' + priceHTML(b) + '</span>' + (b.until ? '<span class="tag">' + left + '</span>' : '') + '</button>'; };
+  const std = list.find(b => b.id === 'standard'), ev = list.filter(b => b.until).sort((a, z) => a.until - z.until), rest = list.filter(b => b.id !== 'standard' && !b.until);
+  const free = S.me.freeBoxes || 0;
+  const hero = std ? '<button class="shero" data-act="boxdetail" data-id="standard"><span class="sart">' + boxArt('standard', 130) + '</span><span class="grow"><b>Standard-Box</b><span class="small">Der Einstieg: ein neuer Ball pro Box</span><span class="sprice big">' + (free ? '<span class="sfree">' + pl(free, 'Gratis-Box', 'Gratis-Boxen') + '</span>' : priceHTML(std)) + '</span></span></button>' : '';
   show('<div class="col">' + backBar('Shop') + shopTabs() + (S.shopTab === 'skin' ? skinDropPane() :
-    '<p class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink);margin:0 2px">Neue Bälle zum Kämpfen</p><div class="boxgrid">' + list.map(tile).join('') + '</div>') + '</div>');
+    hero +
+    (ev.length ? '<h3 class="shd">Zeitlich begrenzt</h3><div class="sgrid">' + ev.map(card).join('') + '</div>' : '') +
+    '<h3 class="shd">Themenboxen</h3><div class="sgrid">' + rest.map(card).join('') + '</div>') + '</div>');
 }
 function boxDetail(id) {
   const b = BOX_BY_ID[id];
@@ -621,60 +629,18 @@ function shopTabs() {
 }
 function skinDropPane() {
   const have = S.me.shards || 0, ok = have >= SKINDROP.price, c = typeCounts();
-  const odds = dropOdds(), skinsBy = r => SKIN_IDS.filter(id => DEFS[id].rarity === r);
-  return '<div class="hero bounce" style="margin-top:6px"><img alt="" src="' + dropImg('#8d8d8d').toDataURL() + '" style="width:150px;height:auto"></div>' +
-    '<div class="panel"><h3>Skindrop</h3><p class="mt">Tippe viermal auf den Drop. Jeder Tipp kann ihn in die nächste Seltenheit aufsteigen lassen. Am Ende bekommst du einen Skin genau dieser Seltenheit.</p>' +
-    '<div class="row sb wrap mt"><span>Kosten: ' + shardHTML(SKINDROP.price) + '</span><span>Du hast: ' + shardHTML(have) + '</span></div></div>' +
-    '<div class="panel"><h3>Chancen</h3>' + odds.map(o => '<div class="row sb"><span>' + rarHTML(o[0]) + ' <span class="small mute">(' + pl(skinsBy(o[0]).length, 'Skin', 'Skins') + ')</span></span><span>' + (o[1] >= 10 ? o[1].toFixed(0) : o[1] >= 1 ? o[1].toFixed(1) : o[1].toFixed(2)) + ' %</span></div>').join('') + '</div>' +
-    '<div class="panel"><h3>Diese Skins sind drin</h3><div class="grid3" style="margin-top:6px;grid-template-columns:repeat(4,1fr);gap:6px">' +
-    SKIN_IDS.slice().sort((a, z) => RARITY[DEFS[z].rarity].order - RARITY[DEFS[a].rarity].order).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 66, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:13px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name) : '???') + '</div></button>').join('') + '</div></div>' +
+  const odds = dropOdds(), skinsBy = r => SKIN_IDS.filter(id => DEFS[id].rarity === r), owned = SKIN_IDS.filter(t => c[t]).length;
+  const max = Math.max(...odds.map(o => o[1]));
+  return '<div class="sdhero"><span class="sdglow"></span><img alt="" class="sdimg" src="' + dropImg('#b7a2ff').toDataURL() + '"><b class="sdt">Skindrop</b>' +
+    '<span class="small" style="color:#e9e2ff">Neues Aussehen für deine Bälle. Gleiche Werte, gleiche Fähigkeiten.</span>' +
+    '<span class="sdhave">Du hast ' + shardHTML(have) + '</span>' +
     btn('Öffnen für ' + shardHTML(SKINDROP.price), 'skindrop', ok ? '' : 'disabled', 'pri big') +
-    (ok ? '' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dir fehlen Skin-Splitter.</p>');
+    (ok ? '' : '<span class="small" style="color:#ffd0c8">Dir fehlen Skin-Splitter. Du bekommst 10 pro gewonnenem Kampf.</span>') + '</div>' +
+    '<h3 class="shd">So funktioniert es</h3><div class="sdsteps"><span><i>1</i>Tippe viermal auf den Drop</span><span><i>2</i>Jeder Tipp kann ihn aufsteigen lassen</span><span><i>3</i>Du bekommst einen Skin dieser Seltenheit</span></div>' +
+    '<h3 class="shd">Chancen</h3><div class="panel sdodds">' + odds.map(o => { const pct = o[1], col = RARITY[o[0]].color; return '<div class="sdrow"><span class="sdrn">' + rarHTML(o[0]) + '</span><span class="sdbar"><i style="width:' + Math.max(3, pct / max * 100) + '%;background:' + col + '"></i></span><span class="sdpc">' + (pct >= 10 ? pct.toFixed(0) : pct >= 1 ? pct.toFixed(1) : pct.toFixed(2)) + ' %</span></div>'; }).join('') + '</div>' +
+    '<h3 class="shd">Alle Skins <span class="small">(' + owned + ' von ' + SKIN_IDS.length + ')</span></h3><div class="panel">' +
+    SORT.slice().reverse().map(r => '<div class="sdgrp"><div class="row sb"><span>' + rarHTML(r) + '</span><span class="small mute">' + pl(skinsBy(r).length, 'Skin', 'Skins') + '</span></div><div class="grid3" style="grid-template-columns:repeat(4,1fr);gap:6px">' + skinsBy(r).map(t => '<button data-act="detail" data-t="' + t + '" style="position:relative;text-align:center">' + ball(t, 62, .64, c[t] ? '' : 'data-dark="1"') + '<div class="small" style="font-size:12px;line-height:1;margin-top:-6px;color:' + RARITY[DEFS[t].rarity].color + '">' + (c[t] ? esc(DEFS[t].name) : '???') + '</div></button>').join('') + '</div></div>').join('') + '</div>';
 }
-// Farben des Drops je Stufe (Mythisch und Legendär wandern zwischen Tönen)
-const DROP_RGB = [[169, 176, 189], [59, 139, 255], [160, 80, 240], [255, 194, 26], [255, 74, 42]];
-const dropRGB = (lv, tm) => {
-  if (lv === 3) { const k = (Math.sin(tm * 3) + 1) / 2; return [232 + k * 23, 172 + k * 36, 10 + k * 60]; }   // dunkelgelb <-> hellgelb
-  if (lv === 4) { const k = (tm * .6) % 3, P = [[255, 42, 42], [255, 154, 26], [255, 210, 58]], a = P[Math.floor(k)], b = P[(Math.floor(k) + 1) % 3], f = k % 1; return a.map((v, i) => v + (b[i] - v) * f); }
-  if (lv === 2) { const k = (Math.sin(tm * 1.6) + 1) / 2; return [140 + k * 36, 60 + k * 36, 226 + k * 20]; }   // ganz leichter Violett-Verlauf
-  return DROP_RGB[lv];
-};
-const rgbS = (c, a, l) => { const m = l || 0, q = x => Math.max(0, Math.min(255, Math.round(m >= 0 ? x + (255 - x) * m : x * (1 + m)))); return 'rgba(' + q(c[0]) + ',' + q(c[1]) + ',' + q(c[2]) + ',' + (a == null ? 1 : a) + ')'; };   // l>0 heller, l<0 dunkler
-// Risse im Drop (in Drop-Koordinaten), pro Tipp ein weiterer
-const DROP_CRACKS = [
-  [[-4, -100], [10, -60], [-8, -20], [6, 20], [-6, 60]],
-  [[4, -10], [40, -34], [60, -70], [50, -96]],
-  [[-2, 10], [-44, 4], [-66, 40], [-60, 80]],
-  [[10, 30], [34, 62], [24, 100], [48, 118]]
-];
-const DROP_BODY = g => { g.beginPath(); g.moveTo(0, -128); g.bezierCurveTo(30, -80, 92, -30, 92, 36); g.bezierCurveTo(92, 92, 50, 126, 0, 126); g.bezierCurveTo(-50, 126, -92, 92, -92, 36); g.bezierCurveTo(-92, -30, -30, -80, 0, -128); g.closePath(); };
-function drawDropArt(g, tm, c, o) {
-  // g: nach translate/scale in Drop-Koordinaten (Höhe ~ 254). c: Farbe [r,g,b]; o: { cracks, crackP, glow, boil }
-  const sk = sketchCtx(g, 4.7 + (Math.floor(tm * 8) % 3) * 1.713, 130, 1.5); g.lineJoin = g.lineCap = 'round';
-  g.fillStyle = rgbS(c, 1); const gr = g.createLinearGradient(-70, -110, 80, 120); gr.addColorStop(0, rgbS(c, 1, .55)); gr.addColorStop(.5, rgbS(c, 1)); gr.addColorStop(1, rgbS(c, 1, -.45)); g.fillStyle = gr;
-  DROP_BODY(sk); sk.fill();
-  g.save(); DROP_BODY(sk); sk.clip();
-  g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(0, -128); g.lineTo(-92, 36); g.lineTo(-30, 126); g.lineTo(0, 20); g.closePath(); g.fill();
-  g.fillStyle = 'rgba(0,0,40,.16)'; g.beginPath(); g.moveTo(0, -128); g.lineTo(92, 36); g.lineTo(40, 126); g.lineTo(0, 20); g.closePath(); g.fill();
-  // Lichtstreifen wandert über den Kristall
-  const sx = ((tm * .55) % 1.6) * 330 - 190; g.save(); g.rotate(.5); g.fillStyle = 'rgba(255,255,255,.34)'; g.fillRect(sx, -200, 26, 420); g.fillRect(sx + 40, -200, 10, 420); g.restore();
-  // Licht aus den Rissen
-  if (o.cracks) {
-    for (let i = 0; i < o.cracks; i++) {
-      const pts = DROP_CRACKS[i], pr = i === o.cracks - 1 ? o.crackP : 1, n = pts.length - 1, upto = pr * n;
-      const trace = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k <= n; k++) { if (k - 1 >= upto) break; const f = Math.min(1, upto - (k - 1)); g.lineTo(pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * f, pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * f); } };
-      g.shadowColor = rgbS(c, 1, .6); g.shadowBlur = 22; g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 9 + o.glow * 8; trace(); g.stroke(); g.shadowBlur = 0;
-      g.strokeStyle = rgbS(c, 1, .85); g.lineWidth = 5; trace(); g.stroke();
-      g.strokeStyle = INK; g.lineWidth = 1.6; trace(); g.stroke();
-    }
-  }
-  g.restore();
-  g.strokeStyle = INK; g.lineWidth = 6.5; sk.lineWidth = 6.5; DROP_BODY(sk); sk.stroke();
-  g.lineWidth = 3.2; sk.lineWidth = 3.2; sk.beginPath(); sk.moveTo(0, -128); sk.lineTo(0, 20); sk.moveTo(-92, 36); sk.lineTo(0, 20); sk.lineTo(92, 36); sk.moveTo(0, 20); sk.lineTo(-30, 126); sk.moveTo(0, 20); sk.lineTo(40, 126); sk.stroke();
-  g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(-54, -2, 8, 24, .45, 0, 7); g.fill(); g.beginPath(); g.arc(-44, -34, 4, 0, 7); g.fill();
-  const tw = Math.max(0, Math.sin(tm * 4)); star(g, 50, -10, 6 + tw * 7, '#fff', tm); star(g, -20, 68, 4 + (1 - tw) * 5, '#fff', -tm);
-}
-function removeDropOverlay() { const o = document.getElementById('dover'); if (o) o.remove(); }
 async function openSkinDrop() {
   try { return await openSkinDrop0(); } catch (e) { console.error('OSD', e && e.stack); toast('Fehler beim Öffnen'); }
 }
