@@ -77,6 +77,7 @@ function loop(ms) {
 
 /* ================= Hilfen ================= */
 function show(html) {
+  { const o = document.getElementById('dover'); if (o && S.screen !== 'skindrop') o.remove(); }
   clearTimers(); SCREEN.innerHTML = html; window.scrollTo(0, 0); decorate(SCREEN);
   SCREEN.classList.remove('sin'); void SCREEN.offsetWidth; SCREEN.classList.add('sin');   // sanftes Einblenden
 }
@@ -632,61 +633,168 @@ function skinDropPane() {
     btn('Öffnen für ' + shardHTML(SKINDROP.price), 'skindrop', ok ? '' : 'disabled', 'pri big') +
     (ok ? '' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Dir fehlen Skin-Splitter.</p>');
 }
+// Farben des Drops je Stufe (Mythisch und Legendär wandern zwischen Tönen)
+const DROP_RGB = [[169, 176, 189], [59, 139, 255], [160, 80, 240], [255, 194, 26], [255, 74, 42]];
+const dropRGB = (lv, tm) => {
+  if (lv === 3) { const k = (Math.sin(tm * 3) + 1) / 2; return [217 + k * 38, 160 + k * 70, 0 + k * 128]; }   // dunkelgelb <-> hellgelb
+  if (lv === 4) { const k = (tm * .6) % 3, P = [[255, 42, 42], [255, 154, 26], [255, 210, 58]], a = P[Math.floor(k)], b = P[(Math.floor(k) + 1) % 3], f = k % 1; return a.map((v, i) => v + (b[i] - v) * f); }
+  return DROP_RGB[lv];
+};
+const rgbS = (c, a, l) => { const m = l || 0, q = x => Math.max(0, Math.min(255, Math.round(m >= 0 ? x + (255 - x) * m : x * (1 + m)))); return 'rgba(' + q(c[0]) + ',' + q(c[1]) + ',' + q(c[2]) + ',' + (a == null ? 1 : a) + ')'; };   // l>0 heller, l<0 dunkler
+// Risse im Drop (in Drop-Koordinaten), pro Tipp ein weiterer
+const DROP_CRACKS = [
+  [[-4, -100], [10, -60], [-8, -20], [6, 20], [-6, 60]],
+  [[4, -10], [40, -34], [60, -70], [50, -96]],
+  [[-2, 10], [-44, 4], [-66, 40], [-60, 80]],
+  [[10, 30], [34, 62], [24, 100], [48, 118]]
+];
+const DROP_BODY = g => { g.beginPath(); g.moveTo(0, -128); g.bezierCurveTo(30, -80, 92, -30, 92, 36); g.bezierCurveTo(92, 92, 50, 126, 0, 126); g.bezierCurveTo(-50, 126, -92, 92, -92, 36); g.bezierCurveTo(-92, -30, -30, -80, 0, -128); g.closePath(); };
+function drawDropArt(g, tm, c, o) {
+  // g: nach translate/scale in Drop-Koordinaten (Höhe ~ 254). c: Farbe [r,g,b]; o: { cracks, crackP, glow, boil }
+  const sk = sketchCtx(g, 4.7 + (Math.floor(tm * 8) % 3) * 1.713, 130, 1.5); g.lineJoin = g.lineCap = 'round';
+  g.fillStyle = rgbS(c, 1); const gr = g.createLinearGradient(-70, -110, 80, 120); gr.addColorStop(0, rgbS(c, 1, .55)); gr.addColorStop(.5, rgbS(c, 1)); gr.addColorStop(1, rgbS(c, 1, -.45)); g.fillStyle = gr;
+  DROP_BODY(sk); sk.fill();
+  g.save(); DROP_BODY(sk); sk.clip();
+  g.fillStyle = 'rgba(255,255,255,.2)'; g.beginPath(); g.moveTo(0, -128); g.lineTo(-92, 36); g.lineTo(-30, 126); g.lineTo(0, 20); g.closePath(); g.fill();
+  g.fillStyle = 'rgba(0,0,40,.16)'; g.beginPath(); g.moveTo(0, -128); g.lineTo(92, 36); g.lineTo(40, 126); g.lineTo(0, 20); g.closePath(); g.fill();
+  // Lichtstreifen wandert über den Kristall
+  const sx = ((tm * .55) % 1.6) * 330 - 190; g.save(); g.rotate(.5); g.fillStyle = 'rgba(255,255,255,.34)'; g.fillRect(sx, -200, 26, 420); g.fillRect(sx + 40, -200, 10, 420); g.restore();
+  // Licht aus den Rissen
+  if (o.cracks) {
+    for (let i = 0; i < o.cracks; i++) {
+      const pts = DROP_CRACKS[i], pr = i === o.cracks - 1 ? o.crackP : 1, n = pts.length - 1, upto = pr * n;
+      const trace = () => { g.beginPath(); g.moveTo(pts[0][0], pts[0][1]); for (let k = 1; k <= n; k++) { if (k - 1 >= upto) break; const f = Math.min(1, upto - (k - 1)); g.lineTo(pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * f, pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * f); } };
+      g.shadowColor = rgbS(c, 1, .6); g.shadowBlur = 22; g.strokeStyle = 'rgba(255,255,255,.95)'; g.lineWidth = 9 + o.glow * 8; trace(); g.stroke(); g.shadowBlur = 0;
+      g.strokeStyle = rgbS(c, 1, .85); g.lineWidth = 5; trace(); g.stroke();
+      g.strokeStyle = INK; g.lineWidth = 1.6; trace(); g.stroke();
+    }
+  }
+  g.restore();
+  g.strokeStyle = INK; g.lineWidth = 6.5; sk.lineWidth = 6.5; DROP_BODY(sk); sk.stroke();
+  g.lineWidth = 3.2; sk.lineWidth = 3.2; sk.beginPath(); sk.moveTo(0, -128); sk.lineTo(0, 20); sk.moveTo(-92, 36); sk.lineTo(0, 20); sk.lineTo(92, 36); sk.moveTo(0, 20); sk.lineTo(-30, 126); sk.moveTo(0, 20); sk.lineTo(40, 126); sk.stroke();
+  g.fillStyle = 'rgba(255,255,255,.9)'; g.beginPath(); g.ellipse(-54, -2, 8, 24, .45, 0, 7); g.fill(); g.beginPath(); g.arc(-44, -34, 4, 0, 7); g.fill();
+  const tw = Math.max(0, Math.sin(tm * 4)); star(g, 50, -10, 6 + tw * 7, '#fff', tm); star(g, -20, 68, 4 + (1 - tw) * 5, '#fff', -tm);
+}
+function removeDropOverlay() { const o = document.getElementById('dover'); if (o) o.remove(); }
 async function openSkinDrop() {
+  try { return await openSkinDrop0(); } catch (e) { console.error('OSD', e && e.stack); toast('Fehler beim Öffnen'); }
+}
+async function openSkinDrop0() {
   const before = new Set(S.me.balls.map(x => x.type));
   const r = await api('/api/skindrop', {});
   if (r.err) { toast(errText(r.err)); return; }
-  S.screen = 'skindrop'; sfx('open'); SCREEN.onpointerdown = null;
-  const W = Math.min(window.innerWidth - 28, 320), H = 340, N = SKINDROP.clicks;
-  const colOf = lv => RARITY[SORT[lv]].color;
-  show('<div class="col"><h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Skindrop</h2>' +
-    '<div class="center" style="position:relative"><canvas id="dc" style="touch-action:manipulation;cursor:pointer"></canvas></div>' +
-    '<div class="center jit" id="drar" style="font-size:26px;min-height:34px;text-shadow:2px 2px 0 var(--ink);color:#fff"></div>' +
-    '<div class="row gap6" id="dcirc" style="justify-content:center;gap:14px">' + Array.from({ length: N }, (_, i) => '<span class="dcirc" id="dci' + i + '" style="width:44px;height:44px;border-radius:50%;border:4px solid var(--ink);background:var(--paper);display:inline-block;box-shadow:2px 3px 0 var(--ink)"></span>').join('') + '</div>' +
-    '<p class="center small" id="dhint" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tippe auf den Drop!</p></div>');
-  const cv = $('#dc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  const st = { clicks: 0, lv: 0, shake: 0, flash: 0, grow: 0, done: 0, ps: [], ring: [], t0: -1 };
-  const stars = [];
-  const label = () => { const e = $('#drar'); if (e) { e.innerHTML = st.lv >= 3 ? rarHTML(SORT[st.lv]) : esc(RARITY[SORT[st.lv]].name); e.style.color = st.lv ? '#fff' : '#e8e8e8'; e.style.textShadow = '2px 2px 0 var(--ink), 0 0 14px ' + colOf(st.lv); } };
+  S.screen = 'skindrop'; setView(null); sfx('open'); SCREEN.onpointerdown = null; removeDropOverlay();
+  const N = SKINDROP.clicks, W = window.innerWidth, H = window.innerHeight, DP = Math.min(2, DPR);
+  const ov = document.createElement('div'); ov.id = 'dover'; ov.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:35;background:#120d24;touch-action:manipulation;user-select:none;-webkit-user-select:none;overflow:hidden';
+  ov.innerHTML = '<canvas id="dc" style="position:absolute;left:0;top:0;width:100%;height:100%;cursor:pointer"></canvas>' +
+    '<div style="position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 7%);text-align:center;pointer-events:none"><div id="drar" class="jit" style="font-size:30px;min-height:40px;color:#fff"></div>' +
+    '<div id="dcirc" style="display:flex;justify-content:center;gap:16px;margin:8px 0">' + Array.from({ length: N }, (_, i) => '<span id="dci' + i + '" style="width:46px;height:46px;border-radius:50%;border:4px solid #0d0a1c;background:#2a2147;display:inline-block;box-shadow:inset 0 4px 8px rgba(0,0,0,.45),0 2px 0 rgba(255,255,255,.15);transition:transform .3s cubic-bezier(.2,1.8,.4,1),background .2s,box-shadow .3s"></span>').join('') + '</div>' +
+    '<p id="dhint" class="small" style="margin:0;color:#e9e2ff;text-shadow:1px 1px 0 #0d0a1c">Tippe auf den Drop!</p></div>';
+  document.body.appendChild(ov);
+  const cv = $('#dc'); cv.width = W * DP; cv.height = H * DP;
+  const st = { clicks: 0, lv: 0, phase: 'idle', pt: 0, up: false, fin: false, cur: DROP_RGB[0].slice(), flash: 0, cam: 0, glow: 0, crackT: 1, squash: 0, ps: [], rings: [], slam: null, shown: false, fT: 0, t0: -1, nx: 0 };
+  const cx = W / 2, cy = H * .37, SC = Math.min(W * .44, H * .27) / 128;
+  const nm = lv => RARITY[SORT[lv]].name;
+  const label = () => { const e = $('#drar'); if (!e) return; e.innerHTML = st.lv >= 3 ? rarHTML(SORT[st.lv]) : esc(nm(st.lv)); e.style.textShadow = '2px 2px 0 #0d0a1c, 0 0 16px ' + rgbS(DROP_RGB[st.lv], 1); };
   label();
-  const spawn = (n, col, sp, kind) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = sp * (.4 + Math.random() * .8); st.ps.push({ x: 0, y: 0, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 30, age: 0, life: .7 + Math.random() * .6, col, kind, sz: 6 + Math.random() * 6, rot: Math.random() * 6 }); } };
-  cv.onpointerdown = ev => {
-    ev.preventDefault(); if (st.clicks >= N || st.done) return;
-    const i = st.clicks++, up = r.steps[i];
-    const circ = $('#dci' + i);
-    if (up) { st.lv++; st.flash = 1; st.shake = 1.2; st.grow = 1; spawn(18 + st.lv * 6, colOf(st.lv), 190 + st.lv * 30, 'star'); st.ring.push({ age: 0, col: colOf(st.lv) }); sfx(st.lv >= 4 ? 'mythic' : st.lv >= 3 ? 'legend' : 'rare'); if (st.lv >= 3) confetti(30 + st.lv * 10); label(); }
-    else { st.shake = .55; spawn(7, '#e8e0cc', 90, 'dust'); sfx('hit2'); }
-    if (circ) { circ.style.background = colOf(st.lv); circ.style.transition = 'transform .25s cubic-bezier(.2,1.6,.4,1)'; circ.style.transform = 'scale(' + (up ? 1.35 : 1.12) + ')'; setTimeout(() => { circ.style.transform = ''; }, 260); }
-    const h = $('#dhint'); if (h) h.textContent = st.clicks < N ? (up ? 'Aufgestiegen!' : 'Noch nicht ...') + ' Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + '.' : 'Gleich ist es soweit ...';
-    if (st.clicks >= N) st.done = 1;
+  const circ = (i, lv) => { const c = $('#dci' + i); if (!c) return; const col = DROP_RGB[lv]; c.style.background = 'radial-gradient(circle at 35% 30%,' + rgbS(col, 1, .7) + ',' + rgbS(col, 1) + ' 60%,' + rgbS(col, 1, -.35) + ')'; c.style.boxShadow = '0 0 18px ' + rgbS(col, .9) + ',inset 0 -3px 6px rgba(0,0,0,.25)'; c.style.transform = 'scale(1.4)'; setTimeout(() => { c.style.transform = ''; }, 300); };
+  const P = (o) => { if (st.ps.length < 140) st.ps.push(Object.assign({ age: 0, life: 1, vx: 0, vy: 0, gr: 0, sz: 6, rot: 0, vr: 0, kind: 'dot' }, o)); };
+  const burst = (n, c, sp, kind, up) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = sp * (.35 + Math.random() * .8); P({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (up || 0), gr: 260, life: .8 + Math.random() * .9, sz: 5 + Math.random() * 8, rot: Math.random() * 6, vr: (Math.random() - .5) * 12, col: kind === 'star' && Math.random() < .35 ? '#fff6b8' : rgbS(c, 1, .15 + Math.random() * .3), kind }); } };
+  const vib = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { } };
+  const tap = ev => {
+    if (ev) ev.preventDefault();
+    if (st.phase !== 'idle' || st.clicks >= N) return;
+    const i = st.clicks++; st.phase = 'charge'; st.pt = 0; st.up = !!r.steps[i]; st.fin = st.clicks >= N; st.crackT = 0; st.squash = 1;
+    sfx('hit2'); sfx('grate', .7); vib(st.fin ? [20, 30, 40] : 18);
+    if (st.fin) sfx('whoosh');
+    const h = $('#dhint'); if (h) h.textContent = st.fin ? '' : 'Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + ' ...';
   };
+  const levelUp = () => {
+    st.lv++; const c = dropRGB(st.lv, 0); st.flash = 1; st.cam = .55 + st.lv * .15; st.glow = 1;
+    st.rings.push({ age: 0, c, w: 12 }, { age: -.12, c, w: 7 }); burst(26 + st.lv * 10, c, 230 + st.lv * 40, 'star', 80); burst(14, c, 150, 'dot', 40);
+    st.slam = { age: 0, txt: nm(st.lv).toUpperCase() + '!', lv: st.lv };
+    sfx(st.lv >= 4 ? 'mythic' : st.lv >= 3 ? 'legend' : 'rare'); if (st.lv >= 2) sfx('boom', .8); vib(st.lv >= 3 ? [30, 40, 60] : 30);
+    if (st.lv >= 3) confetti(40 + st.lv * 15);
+    label(); circ(st.clicks - 1, st.lv);
+    const h = $('#dhint'); if (h && !st.fin) h.textContent = 'Aufgestiegen! Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + ' ...';
+  };
+  const miss = () => { st.cam = .22; burst(8, DROP_RGB[0], 90, 'dot', 20); circ(st.clicks - 1, st.lv); sfx('click'); const h = $('#dhint'); if (h && !st.fin) h.textContent = 'Nichts ... Noch ' + (N - st.clicks) + ' Tipp' + (N - st.clicks > 1 ? 's' : '') + '.'; };
+  const shatter = () => {
+    st.phase = 'final'; st.fT = 0; st.flash = 1; st.cam = 1.2; const c = dropRGB(st.lv, 0);
+    for (let i = 0; i < 26; i++) { const a = Math.random() * 6.283, v = 150 + Math.random() * 330; P({ x: cx + Math.cos(a) * 20 * SC, y: cy + Math.sin(a) * 30 * SC, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, gr: 520, life: 1.3 + Math.random() * .5, sz: (10 + Math.random() * 16) * SC / 1.4, rot: Math.random() * 6, vr: (Math.random() - .5) * 14, col: rgbS(c, 1, (Math.random() - .5) * .6), kind: 'shard' }); }
+    burst(60 + st.lv * 15, c, 380, 'star', 100); st.rings.push({ age: 0, c, w: 16 }, { age: -.1, c, w: 9 }, { age: -.22, c, w: 5 });
+    sfx('boom'); sfx('nova'); vib([40, 30, 80]); confetti(st.lv >= 3 ? 90 : 40);
+    for (let i = 0; i < N; i++) { const el = $('#dci' + i); if (el) el.style.transform = 'scale(1.2)'; }
+  };
+  cv.onpointerdown = tap;
+  const BGST = Array.from({ length: 36 }, (_, i) => [((i * 97) % 100) / 100, ((i * 53 + 17) % 100) / 100, 2 + (i % 4), i * .7]);
   setView({
-    frame(tm, dt, tf) {
+    frame(tm, dt) {
       if (st.t0 < 0) st.t0 = tm;
-      const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.scale(DPR, DPR); g.translate(W / 2, H / 2 + 8);
-      const col = colOf(st.lv), lvf = st.lv / 4;
-      // Strahlen und Leuchten wachsen mit der Seltenheit
-      if (st.lv >= 1) { g.save(); g.rotate(tm * (.25 + lvf * .4)); const n = 8 + st.lv * 2; const rg = g.createRadialGradient(0, 0, 20, 0, 0, W / 2 - 4); rg.addColorStop(0, col + 'aa'); rg.addColorStop(1, col + '00'); g.fillStyle = rg; for (let i = 0; i < n; i++) { const a = i * 6.283 / n, w = .09 + .02 * st.lv; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - w) * W, Math.sin(a - w) * W); g.lineTo(Math.cos(a + w) * W, Math.sin(a + w) * W); g.closePath(); g.fill(); } g.restore(); }
-      const gl = g.createRadialGradient(0, 0, 10, 0, 0, 150 + st.lv * 18); gl.addColorStop(0, col + 'cc'); gl.addColorStop(1, col + '00'); g.globalAlpha = .35 + lvf * .4; g.fillStyle = gl; g.beginPath(); g.arc(0, 0, 170 + st.lv * 18, 0, 7); g.fill(); g.globalAlpha = 1;
-      // Ringwellen bei Aufstieg
-      for (const rg of st.ring) { rg.age += dt; const k = rg.age / .8; if (k > 1) continue; g.strokeStyle = rg.col; g.globalAlpha = 1 - k; g.lineWidth = 7 * (1 - k) + 1; g.beginPath(); g.arc(0, 0, 60 + k * 190, 0, 7); g.stroke(); g.globalAlpha = 1; }
-      st.ring = st.ring.filter(rg => rg.age < .8);
-      // kreisende Sterne je Stufe
-      for (let i = 0; i < st.lv * 2; i++) { const a = tm * (1 + i * .1) + i * 6.283 / (st.lv * 2), rr = 120 + (i % 2) * 20 + Math.sin(tm * 3 + i) * 6; star(g, Math.cos(a) * rr, Math.sin(a) * rr * .85, 6 + (i % 3), i % 2 ? '#fff2a0' : col, tm * 2 + i); }
-      // der Drop
-      st.shake = Math.max(0, st.shake - dt * 2.4); st.flash = Math.max(0, st.flash - dt * 2.2); st.grow = Math.max(0, st.grow - dt * 2.5);
-      const fin = st.done ? Math.min(1, (tm - (st.doneT || (st.doneT = tm))) / 1.1) : 0;
-      const wob = Math.sin(tm * 40) * st.shake * 6 + Math.sin(tm * 70) * fin * 7, sc = 1 + Math.sin(tm * 2.2) * .02 + st.grow * .18 + fin * .22;
-      g.save(); g.translate(wob, Math.sin(tm * 2) * 4 - st.grow * 8); g.rotate(Math.sin(tm * 30) * st.shake * .06); g.scale(sc, sc);
-      g.drawImage(dropImg(col), -90, -112, 180, 225);
-      if (st.flash > 0 || fin > .6) { g.globalCompositeOperation = 'source-atop'; g.globalAlpha = Math.max(st.flash * .6, (fin - .6) * 2); g.fillStyle = '#fff'; g.fillRect(-100, -120, 200, 250); g.globalCompositeOperation = 'source-over'; g.globalAlpha = 1; }
+      const g = cv.getContext('2d'); g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cv.width, cv.height); g.scale(DP, DP);
+      // Übergang der Farbe, Kamera-Wackeln, Phasen
+      const tgt = dropRGB(st.lv, tm); for (let k = 0; k < 3; k++) st.cur[k] += (tgt[k] - st.cur[k]) * Math.min(1, dt * 9);
+      const c = st.cur, lvf = st.lv / 4;
+      st.flash = Math.max(0, st.flash - dt * 2.4); st.cam = Math.max(0, st.cam - dt * 2.2); st.glow = Math.max(0, st.glow - dt * 1.6); st.squash = Math.max(0, st.squash - dt * 4); st.crackT = Math.min(1, st.crackT + dt * 3);
+      if (st.phase === 'charge') {
+        st.pt += dt; const dur = st.fin ? 1.25 : .42;
+        if (st.pt >= dur) { if (st.fin) { if (st.up) levelUp(); shatter(); } else { st.phase = 'idle'; if (st.up) levelUp(); else miss(); } }
+      } else if (st.phase === 'final') { st.fT += dt; if (st.fT > 1.3 && !st.shown) { st.shown = true; finish(); } }
+      // Hintergrund
+      g.save();
+      const camX = (Math.random() - .5) * st.cam * 22, camY = (Math.random() - .5) * st.cam * 22; g.translate(camX, camY);
+      const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, rgbS(c, 1, -.86)); bg.addColorStop(1, '#0c0818'); g.fillStyle = bg; g.fillRect(-30, -30, W + 60, H + 60);
+      for (const s of BGST) { const a = .25 + .45 * Math.max(0, Math.sin(tm * 1.3 + s[3])); g.globalAlpha = a; g.fillStyle = '#fff'; g.beginPath(); g.arc(s[0] * W, s[1] * H, s[2] * .5, 0, 7); g.fill(); }
+      g.globalAlpha = 1;
+      g.save(); g.translate(cx, cy); g.rotate(tm * (.18 + lvf * .35)); const nr = 7 + st.lv * 2, R = Math.max(W, H);
+      const rg = g.createRadialGradient(0, 0, 30, 0, 0, R * .75); rg.addColorStop(0, rgbS(c, .1 + lvf * .38 + st.glow * .2)); rg.addColorStop(1, rgbS(c, 0)); g.fillStyle = rg;
+      for (let i = 0; i < nr; i++) { const a = i * 6.283 / nr, w = .08 + .03 * st.lv; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - w) * R, Math.sin(a - w) * R); g.lineTo(Math.cos(a + w) * R, Math.sin(a + w) * R); g.closePath(); g.fill(); }
       g.restore();
+      const gl = g.createRadialGradient(cx, cy, 10, cx, cy, SC * (190 + st.lv * 24)); gl.addColorStop(0, rgbS(c, .55 + st.glow * .3 + .08 * Math.sin(tm * 3), .1)); gl.addColorStop(1, rgbS(c, 0)); g.fillStyle = gl; g.fillRect(0, 0, W, H);
+      // ständig aufsteigende Funken (mehr je Stufe)
+      if (st.phase !== 'final' && Math.random() < dt * (5 + st.lv * 9)) P({ x: cx + (Math.random() - .5) * SC * 260, y: cy + SC * 120, vx: (Math.random() - .5) * 30, vy: -60 - Math.random() * 90, life: 1.2 + Math.random(), sz: 3 + Math.random() * 5, col: rgbS(c, 1, .4), kind: Math.random() < .35 ? 'star' : 'dot' });
+      // Boden-Schatten
+      if (st.phase !== 'final') { g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, cy + SC * 150, SC * (92 - Math.sin(tm * 2) * 5), SC * 14, 0, 0, 7); g.fill(); }
+      // Der Drop
+      if (st.phase !== 'final') {
+        const ch = st.phase === 'charge' ? (st.fin ? Math.min(1, st.pt / 1.25) : st.pt / .42) : 0, rumble = st.phase === 'charge' ? (st.fin ? 2 + ch * 12 : 3 + ch * 3) : 0;
+        const bob = Math.sin(tm * 2.1) * 6, sqY = 1 - st.squash * .12 * Math.sin(Math.min(1, st.squash) * 3.1416) - (st.fin ? ch * .06 : 0) + st.glow * .08, sqX = 1 + st.squash * .1 + (st.fin ? ch * .1 : 0);
+        g.save(); g.translate(cx + Math.sin(tm * 70) * rumble, cy + bob + Math.cos(tm * 83) * rumble * .6); g.scale(SC * sqX, SC * sqY); g.rotate(Math.sin(tm * 55) * rumble * .004);
+        if (st.fin && ch > .35) { g.shadowColor = rgbS(c, 1, .5); g.shadowBlur = 40 * ch; }
+        drawDropArt(g, tm, c, { cracks: st.clicks, crackP: st.crackT, glow: st.glow + (st.fin ? ch : 0), boil: 0 });
+        g.restore();
+        if (st.phase === 'idle' && st.clicks === 0) { g.save(); g.translate(cx, cy + SC * 175); g.globalAlpha = .6 + .4 * Math.sin(tm * 4); g.fillStyle = '#fff'; g.font = '26px "Caveat Brush", cursive'; g.textAlign = 'center'; g.strokeStyle = INK; g.lineWidth = 5; g.strokeText('Tippe!', 0, 0); g.fillText('Tippe!', 0, 0); g.restore(); }
+      }
+      // Ringwellen
+      for (const rg2 of st.rings) { rg2.age += dt; const k = rg2.age / .9; if (k < 0 || k > 1) continue; g.strokeStyle = rgbS(rg2.c, 1 - k, .35); g.lineWidth = rg2.w * (1 - k) + 1; g.beginPath(); g.arc(cx, cy, SC * 40 + k * Math.max(W, H) * .6, 0, 7); g.stroke(); }
+      st.rings = st.rings.filter(x => x.age < .9);
       // Teilchen
-      for (const p of st.ps) { p.age += dt; if (p.age > p.life) continue; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += 200 * dt; g.globalAlpha = 1 - p.age / p.life; if (p.kind === 'star') star(g, p.x, p.y, p.sz * (1 - p.age / p.life * .5), p.col, p.rot + p.age * 6); else { g.fillStyle = p.col; g.strokeStyle = INK; g.lineWidth = 1.5; g.beginPath(); g.arc(p.x, p.y, p.sz * .5, 0, 7); g.fill(); g.stroke(); } g.globalAlpha = 1; }
+      for (const p of st.ps) {
+        p.age += dt; if (p.age >= p.life) continue; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.gr * dt; p.rot += p.vr * dt; const k = p.age / p.life; g.globalAlpha = Math.min(1, (1 - k) * 1.6);
+        if (p.kind === 'star') star(g, p.x, p.y, p.sz * (1 - k * .4), p.col, p.rot);
+        else if (p.kind === 'shard') { g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.col; g.strokeStyle = INK; g.lineWidth = 2.6; g.lineJoin = 'round'; g.beginPath(); g.moveTo(0, -p.sz); g.lineTo(p.sz * .8, p.sz * .5); g.lineTo(-p.sz * .6, p.sz * .7); g.closePath(); g.fill(); g.stroke(); g.restore(); }
+        else { g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.sz * (1 - k * .5) * .6, 0, 7); g.fill(); }
+        g.globalAlpha = 1;
+      }
       st.ps = st.ps.filter(p => p.age < p.life);
-      if (st.done && tm - st.doneT > 1.25 && !st.shown) { st.shown = true; skinDropResult(r, before); }
+      // Namensschild bei Aufstieg
+      if (st.slam) {
+        const sl = st.slam; sl.age += dt; if (sl.age > 1.7) st.slam = null; else {
+          const pop = sl.age < .28 ? 2.4 - 1.4 * (sl.age / .28) : 1, fade = sl.age > 1.2 ? 1 - (sl.age - 1.2) / .5 : 1, big = Math.min(W * .17, 62) * (1 + sl.lv * .06);
+          g.save(); g.translate(cx, cy - SC * 168); g.rotate(-.05 + Math.sin(tm * 3) * .01); g.scale(pop, pop); g.globalAlpha = Math.max(0, fade); g.font = big + 'px "Caveat Brush", cursive'; g.textAlign = 'center'; g.textBaseline = 'middle';
+          g.lineJoin = 'round'; g.strokeStyle = INK; g.lineWidth = 12; g.strokeText(sl.txt, 0, 0);
+          const tg = g.createLinearGradient(-big * 2, 0, big * 2, 0); const cc = dropRGB(sl.lv, tm); tg.addColorStop(0, rgbS(cc, 1, -.1)); tg.addColorStop(.5 + Math.sin(tm * 4) * .3, rgbS(cc, 1, .75)); tg.addColorStop(1, rgbS(cc, 1, -.1)); g.fillStyle = tg; g.fillText(sl.txt, 0, 0); g.restore();
+        }
+      }
+      g.restore();
+      if (st.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(1, st.flash * (st.phase === 'final' ? .95 : .55)) + ')'; g.fillRect(0, 0, W, H); }
     }
   });
+  const finish = () => {
+    const wf = document.createElement('div'); wf.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:60;background:#fff;opacity:1;pointer-events:none;transition:opacity .8s ease-out';
+    document.body.appendChild(wf); skinDropResult(r, before); removeDropOverlay();
+    requestAnimationFrame(() => requestAnimationFrame(() => { wf.style.opacity = '0'; setTimeout(() => wf.remove(), 900); }));
+  };
 }
 function skinDropResult(r, before) {
   S.screen = 'skindropres'; setView(null);
