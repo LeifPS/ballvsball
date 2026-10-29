@@ -270,27 +270,38 @@ function home() {
     '<h1 class="jit">Ball gegen Ball</h1>' +
     '<div class="hero bounce">' + ball(topType(), 170, .62) + '</div>' +
     '<div class="center small" style="color:#fff;text-shadow:1px 2px 0 var(--ink)">' + me.wins + ' Siege - ' + me.losses + ' Niederlagen - ' + types + ' von ' + BALL_IDS.length + ' Bällen</div>' +
-    (() => { const evs = BOX_LIST.filter(b => b.until && boxActive(b.id, now())); return evs.length ? '<div class="panel" style="display:block;padding:6px 10px;background:#ffe3b0"><div class="row gap6" style="align-items:center;padding-bottom:2px">' + gi('token', 30) + '<b class="grow">Nur kurze Zeit</b></div>' + evs.map(b => '<button style="display:flex;justify-content:space-between;width:100%;align-items:center;min-height:0;padding:4px 2px;text-align:left;border-top:2px dashed rgba(29,39,66,.25)" data-act="boxdetail" data-id="' + b.id + '"><span><b>' + esc(b.name) + '</b><br><span class="small">' + timeLeft(b.until - now()) + ' - ' + ballsInBox(b.id).length + ' neue Bälle</span></span>' + gi('arrow', 18).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>').join('') + '</div>' : ''; })() +
+    (() => { const evs = BOX_LIST.filter(b => b.until && boxActive(b.id, now())); if (!evs.length) return ''; return '<button class="panel" style="display:flex;align-items:center;gap:8px;width:100%;min-height:0;padding:4px 12px;background:#ffe3b0;text-align:left" data-act="limited">' + gi('token', 26) + '<span class="grow"><b>Zeitlich begrenzt</b> <span class="small">' + evs.length + ' Boxen</span></span>' + gi('arrow', 16).replace('<img', '<img style="transform:scaleX(-1)"') + '</button>'; })() +
     btn('<span class="fsw l">' + gi('sword', 58) + '</span><span class="ftx">Kampf!</span><span class="fsw r">' + gi('sword', 58) + '</span>', 'multi', '', 'fight') +
     '<div class="row gap6"><button class="htile" style="--tc:#cfe4ff" data-act="collection"><span class="hv fan">' + top3.map((t, i) => '<span style="--i:' + (i - 1) + '">' + ball(t, 62, .7) + '</span>').join('') + '</span><b>Sammlung</b><span class="small">' + types + ' von ' + BALL_IDS.length + ' Bällen</span></button>' +
     '<button class="htile" style="--tc:#ffe3a8" data-act="box"><span class="hv">' + boxArt('standard', 66) + '</span><b>Ballboxen</b><span class="small">' + me.boxes + ' geöffnet</span></button></div>' +
-    '<div class="row gap6"><button class="htile" style="--tc:#ffd9d0" data-act="solo"><span class="hv">' + gi('star', 36, '#ff9a5a') + '</span><b>Einzelspieler</b><span class="small">Tagesaufgabe und Boss' + (me.freeBoxes ? ' - ' + me.freeBoxes + ' Gratis-Box' : '') + '</span></button>'+
+    '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="handel"><span class="hv">' + gi('coin', 36) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 30) + '</span></span><b>Handel</b><span class="small">Markt und Tauschen</span></button>' +
       '<button class="htile" style="--tc:#e3dcf7" data-act="log"><span class="hv">' + gi('sword', 36) + '</span><b>Kampflog</b><span class="small">Wiederholen und teilen</span></button></div>' +
-    '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="market"><span class="hv">' + gi('coin', 40) + gi('coin', 30) + '</span><b>Markt</b><span class="small">Kaufen und verkaufen</span></button>' +
-    '<button class="htile" style="--tc:#f3d6f0" data-act="trades"><span class="hv">' + gi('arrow', 34) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 34) + '</span></span><b>Tauschen</b><span class="small">Mit anderen Spielern</span></button></div>' +
     (me.dailyReady ? '<button class="htile daily" data-act="daily"><span class="hv">' + gi('star', 44, '#ffd45a') + '</span><span class="grow"><b>Tagesbelohnung abholen</b><span class="small">' + (ev ? 'Münzen und +5 Kürbisse' : 'Münzen für heute') + '</span></span></button>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
     (/[?&]test=1/.test(location.search) ? btn('TEST: unendlich Münzen und Marken', 'testcoins', '', 'red') : '') + '</div>');
 }
 
+/* ================= Handel und zeitlich begrenzte Boxen ================= */
+function handelScreen() {
+  S.screen = 'handel'; setView(null); closeOverlay(); setScene('menu');
+  show('<div class="col">' + backBar('Handel') +
+    '<button class="htile mode" style="--tc:#cdeec4" data-act="market"><span class="mart"><span class="hv">' + gi('coin', 44) + gi('coin', 32) + '</span></span><span class="grow"><b>Markt</b><span class="small">Bälle kaufen und verkaufen</span></span></button>' +
+    '<button class="htile mode" style="--tc:#f3d6f0" data-act="trades"><span class="mart"><span class="hv">' + gi('arrow', 40) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 40) + '</span></span></span><span class="grow"><b>Tauschen</b><span class="small">Bälle mit anderen Spielern tauschen</span></span></button></div>');
+}
+function limitedScreen() {
+  S.screen = 'limited'; setView(null); closeOverlay(); setScene('menu');
+  const evs = BOX_LIST.filter(b => b.until && boxActive(b.id, now())).sort((a, z) => a.until - z.until);
+  show('<div class="col">' + backBar('Zeitlich begrenzt') + '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Diese Boxen verschwinden bald. Die Bälle behältst du für immer.</p>' +
+    '<div class="boxgrid">' + evs.map(b => '<button class="boxtile" data-act="boxdetail" data-id="' + b.id + '"><div class="boxin">' + boxArt(b.id, 150) + '<div class="nm">' + esc(b.name) + '</div><span class="small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + timeLeft(b.until - now()) + '</span></div></button>').join('') + '</div></div>');
+}
 /* ================= Einzelspieler ================= */
 async function soloScreen() {
   S.screen = 'solo'; setView(null); closeOverlay(); setScene('menu');
-  show('<div class="col">' + backBar('Einzelspieler') + '<p class="center" style="color:#fff">Lade ...</p></div>');
+  show('<div class="col">' + backBar('Einzelspieler', 'multi') + '<p class="center" style="color:#fff">Lade ...</p></div>');
   const r = await api('/api/solo'); if (r.err) { toast(errText(r.err)); return home(); }
   S.solo = r;
   const d = r.daily, b = r.boss, pct = Math.round(b.frac * 100);
   const dailyBtn = d.claimed ? '<p class="center small mute">Heute geschafft! Du kannst trotzdem weiter üben.</p>' : '';
-  show('<div class="col">' + backBar('Einzelspieler') +
+  show('<div class="col">' + backBar('Einzelspieler', 'multi') +
     '<div class="panel"><h3>Tägliche Herausforderung</h3><div class="row gap6" style="align-items:center;margin:6px 0">' + ball(d.opp, 80, .7) + '<div class="grow"><b>' + esc(ballName(d.opp)) + '</b> ' + starsHTML(d.oppStars, 14) + '<div class="small mute">Regel: ' + esc(d.rule.text) + '</div></div></div>' +
     '<p class="small">Belohnung: ' + coinHTML(100) + ' und 1 Gratis-Standard-Box (einmal pro Tag)</p>' + dailyBtn + btn(d.claimed ? 'Nochmal kämpfen' : 'Kämpfen', 'solopick', 'data-k="daily"', 'pri') + '</div>' +
     '<div class="panel"><h3>Bossrennen</h3><div class="row gap6" style="align-items:center;margin:6px 0">' + ball(b.type, 90, .7) + '<div class="grow"><b>' + esc(ballName(b.type)) + '</b> (Boss)<div class="small mute">Du hast 3 verschiedene Bälle. Das Leben des Bosses bleibt zwischen den Kämpfen.</div>' +
@@ -582,7 +593,7 @@ async function market(resetPage) {
       return '<div class="listrow card rbar" style="--rc:' + RARITY[d.rarity].color + '">' + ball(b.type, 58, .7) + '<div class="grow"><b>' + esc(d.name) + '</b> ' + starsHTML(b.stars, 14) + '<br>' + coinHTML(b.price) + '</div><button class="btn sm" data-act="mkcancel" data-uid="' + b.uid + '" data-back="market">Zurückziehen</button></div>';
     }).join('') : '<p class="center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Du hast nichts zum Verkauf angeboten. Öffne in der Sammlung einen Ball, den du doppelt hast, und lege einen Preis fest.</p>';
   }
-  show('<div class="col">' + backBar('Markt') + '<div class="tabs"><button class="tab' + (mk.tab === 'buy' ? ' on' : '') + '" data-act="mktab" data-v="buy">Kaufen</button><button class="tab' + (mk.tab === 'mine' ? ' on' : '') + '" data-act="mktab" data-v="mine">Meine Angebote</button></div>' + body + '<p class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Beim Verkauf werden 5 % Gebühr abgezogen.</p></div>');
+  show('<div class="col">' + backBar('Markt', 'handel') + '<div class="tabs"><button class="tab' + (mk.tab === 'buy' ? ' on' : '') + '" data-act="mktab" data-v="buy">Kaufen</button><button class="tab' + (mk.tab === 'mine' ? ' on' : '') + '" data-act="mktab" data-v="mine">Meine Angebote</button></div>' + body + '<p class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Beim Verkauf werden 5 % Gebühr abgezogen.</p></div>');
 }
 
 /* ================= Tauschen ================= */
@@ -627,7 +638,7 @@ async function trades() {
   }
   const cnt = { in: r.incoming.length, out: r.outgoing.length };
   const tabs = [['in', 'Eingehend'], ['out', 'Ausgehend'], ['new', 'Neues Angebot'], ['hist', 'Verlauf']];
-  show('<div class="col">' + backBar('Tauschen') + '<div class="tabs ttabs">' + tabs.map(t => '<button class="tab' + (tab === t[0] ? ' on' : '') + '" data-act="ttab" data-v="' + t[0] + '">' + t[1] + (cnt[t[0]] ? '<i class="tbadge">' + cnt[t[0]] + '</i>' : '') + '</button>').join('') + '</div>' + body + '</div>');
+  show('<div class="col">' + backBar('Tauschen', 'handel') + '<div class="tabs ttabs">' + tabs.map(t => '<button class="tab' + (tab === t[0] ? ' on' : '') + '" data-act="ttab" data-v="' + t[0] + '">' + t[1] + (cnt[t[0]] ? '<i class="tbadge">' + cnt[t[0]] + '</i>' : '') + '</button>').join('') + '</div>' + body + '</div>');
 }
 
 /* ================= Mehrspieler ================= */
@@ -645,7 +656,8 @@ function multi() {
     grp(2, 'queue1', '1 gegen 1', 'Der Klassiker: drei Leben', '#ffd9a0') +
     grp(3, 'queue3', 'Zu dritt', 'Jeder gegen jeden: drei Leben, nur der Beste verliert keins', '#d6ecff') +
     grp(4, 'queue4', 'Zu viert', 'Jeder gegen jeden: nur der Beste verliert kein Leben', '#dff3c8') +
-    '<button class="htile mode" style="--tc:#ffe0f0" data-act="friends"><span class="mart"><span class="hv">' + gi('heart', 40, '#ff6f9a') + gi('heart', 30, '#ff9ac4') + '</span><span class="codebig jit" style="font-size:26px;letter-spacing:3px">ABCD</span></span><span class="grow"><b>Mit Freunden</b><span class="small">Raum mit Code, ohne Belohnung</span></span></button></div>');
+    '<button class="htile mode" style="--tc:#ffe0f0" data-act="friends"><span class="mart"><span class="hv">' + gi('heart', 40, '#ff6f9a') + gi('heart', 30, '#ff9ac4') + '</span><span class="codebig jit" style="font-size:26px;letter-spacing:3px">ABCD</span></span><span class="grow"><b>Mit Freunden</b><span class="small">Raum mit Code, ohne Belohnung</span></span></button>' +
+    '<button class="htile mode" style="--tc:#ffd9d0" data-act="solo"><span class="mart"><span class="hv">' + gi('star', 40, '#ff9a5a') + ball(topType(), 50, .7) + '</span></span><span class="grow"><b>Einzelspieler</b><span class="small">Tagesaufgabe und Boss' + (S.me.freeBoxes ? ' - ' + S.me.freeBoxes + ' Gratis-Box' : '') + '</span></span></button></div>');
 }
 
 /* ================= Freunde ================= */
@@ -933,6 +945,8 @@ const ACT = {
   roomslot(d) { wsSend({ t: 'room_slot', slot: +d.s }); },
   roomstart() { wsSend({ t: 'room_start' }); },
   roomleave() { wsSend({ t: 'room_leave' }); },
+  handel() { handelScreen(); },
+  limited() { limitedScreen(); },
   solo() { soloScreen(); },
   solopick(d) { soloPick(d.k); },
   solofight(d) { return soloFight(d.k, d.uid); },
