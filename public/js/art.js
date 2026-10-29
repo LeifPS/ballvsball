@@ -1,6 +1,6 @@
 // Zeichnen der Bälle, Geschosse und Effekte (Tonlinge-Stil, vorgerenderte Sprites mit 3 Boil-Frames).
 import { DEFS } from './engine.js';
-import { INK, DPR, mkSprite, spr, sketchCtx } from './sk.js';
+import { INK, DPR, mkSprite, spr as spr0, sketchCtx } from './sk.js';
 import { BALLS, VARIANTS, OB, PARTS, S0, R0, setNoHeld } from './ballart.js';
 import { nearestEnemy } from './core.js';
 import { SKIN_BY_ID } from './skins.js';
@@ -111,6 +111,24 @@ function skinPart(g, kind, x, y, col, sz, rot) {
   h.closePath(); h.fill(); h.stroke();
   if (kind === 'coin') { h.beginPath(); h.arc(0, 0, sz * .42, 0, 7); h.stroke(); }
   g.restore();
+}
+
+// Farbschema des Skins gilt auch für alle Angriffsobjekte (Stacheln, Bumerang, Feuer ...): Sprite wird umgefärbt (Helligkeit bleibt)
+let CUR_TINT = null;
+const TINTED = new Map();
+function tintSp(sp, col) {
+  const k = col; let m = TINTED.get(sp); if (!m) TINTED.set(sp, m = {});
+  if (m[k]) return m[k];
+  const fr = sp.fr.map(cv => { const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const x = c.getContext('2d');
+    x.drawImage(cv, 0, 0); x.globalCompositeOperation = 'color'; x.fillStyle = col; x.fillRect(0, 0, c.width, c.height);
+    x.globalCompositeOperation = 'destination-in'; x.drawImage(cv, 0, 0); return c; });
+  return m[k] = { fr, side: sp.side, sc: sp.sc, rad: sp.rad };
+}
+function spr(g, sp, ...a) { return spr0(g, CUR_TINT ? tintSp(sp, CUR_TINT) : sp, ...a); }
+function skinTint(sk, tm) {
+  const a = sk.atk;
+  if (a) return skinCol(a.col, Math.floor(tm * 4));
+  const p = sk.pal || {}; return p.spike || p.flame || p.band || p.body || null;
 }
 const ownerSkin = (sim, id) => { const b = sim && sim.byId ? sim.byId[id] : null; return b && b.skin ? SKIN_BY_ID[b.skin] : null; };
 // Partikel am Ball: kreisen (orbit), steigen auf (rise) oder bleiben hinter dem Ball zurück (trail)
@@ -309,9 +327,19 @@ const WAVE_COL = { shock: ['#9ad8ff', '#ffffff'], nova: ['#ffe14a', '#fff6c0'], 
 const ZONE = { rain: 'rainZone', lava: 'lavaZone', dust: 'dustZone', egg: 'eggZone', platte: 'platteZone', brew: 'brewZone' };
 export const GROUND = { puddle: 1, fire: 1, spike: 1, bomb: 1, meteor: 1, mine: 1, wave: 1 };
 export function drawObj(g, o, sim, tf, tm) {
+  const osk = o.owner ? ownerSkin(sim, o.owner) : null;
+  CUR_TINT = osk && !(o.k === 'mauer') ? skinTint(osk, tm) : null;
+  try { drawObj0(g, o, sim, tf, tm, osk); } finally { CUR_TINT = null; }
+  // Episch+: bewegliche Angriffsobjekte (Stacheln, Bumerang ...) ziehen Skin-Partikel hinter sich her
+  if (osk && osk.atk && !o.proj && o.vx !== undefined && (o.vx || o.vy)) {
+    const a = osk.atk, sp = Math.hypot(o.vx, o.vy) || 1, ux = o.vx / sp, uy = o.vy / sp;
+    for (let i = 1; i <= 2; i++) { g.globalAlpha = .7 - i * .2; skinPart(g, a.kind, o.x - ux * i * 9 + Math.sin(tm * 9 + i * 2) * 2, o.y - uy * i * 9 + Math.cos(tm * 8 + i * 3) * 2, skinCol(a.col2 || a.col, i), 3.2, tm * 4 + i); }
+    g.globalAlpha = 1;
+  }
+}
+function drawObj0(g, o, sim, tf, tm, osk) {
   TF = tf;
   const f = tf + (o.owner || 0) * 3;
-  const osk = o.owner ? ownerSkin(sim, o.owner) : null;
   if (osk && osk.atk && o.proj && o.vx !== undefined) { skinProj(g, o, osk, tm); return; }   // Geschosse im Skin-Look
   switch (o.k) {
     case 'mauer': {   // Ziegelmauer, handgezeichnet
