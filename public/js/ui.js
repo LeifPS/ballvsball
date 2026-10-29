@@ -359,9 +359,9 @@ function ago(ts) {
 const RES_COL = { 1: '#4fb25a', 0: '#e0b020', '-1': '#d9534f' };
 function resPill(it) {
   const t = it.ffa ? (it.win ? 'Platz 1' : 'Platz ' + it.place) : it.win ? 'Sieg' : 'Niederlage';
-  return '<span class="rarpill" style="background:' + (it.win ? '#4fb25a' : '#d9534f') + ';color:#fff">' + t + '</span>';
+  return '<span class="rpill" style="background:' + (it.win ? '#5cc468' : '#e2605c') + '">' + t + '</span>';
 }
-function dots(it) { return '<span class="row gap6" style="gap:3px">' + it.res.map(r => '<i style="display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid var(--ink);background:' + RES_COL[r] + '"></i>').join('') + '</span>'; }
+function dots(it) { return '<span class="row gap6" style="gap:0">' + it.res.map(r => gi('dot', 20, RES_COL[r])).join('') + '</span>'; }
 async function logScreen(tab) {
   S.screen = 'log'; setView(null); closeOverlay(); setScene('menu'); tab = tab || S.logTab || 'list'; S.logTab = tab;
   if (!S.logItems) { show('<div class="col">' + backBar('Kampflog') + '<p class="center" style="color:#fff">Lade ...</p></div>'); const r = await api('/api/log'); if (r.err) { toast(errText(r.err)); return home(); } S.logItems = r.items; }

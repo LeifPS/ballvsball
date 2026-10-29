@@ -293,3 +293,6 @@ button.ttile:active{transform:translate(1px,2px)}
 .sdbar{flex:1;height:14px;border:2px solid var(--ink);border-radius:8px;background:#fff;overflow:hidden}
 .sdbar i{display:block;height:100%}
 .sdgrp{margin-bottom:8px}
+
+/* Ergebnis-Schild im Kampflog: handgemalt wie die Knöpfe */
+.rpill{display:inline-block;padding:2px 16px 3px;color:#fff;font:400 22px/1.15 var(--f-display);text-shadow:2px 2px 0 var(--ink),-1px -1px 0 var(--ink),1px -1px 0 var(--ink),-1px 1px 0 var(--ink);background-image:var(--noise);border:2.5px solid var(--ink);border-radius:var(--wob);box-shadow:2px 3px 0 var(--ink);transform:rotate(-2deg)}
