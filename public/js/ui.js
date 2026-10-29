@@ -86,6 +86,8 @@ function overlay(html) { OVER.innerHTML = '<div>' + html + '</div>'; OVER.hidden
 function closeOverlay() { OVER.hidden = true; OVER.innerHTML = ''; }
 let toastT = 0;
 function toast(msg) { TOAST.textContent = msg; TOAST.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => { TOAST.hidden = true; }, 2800); }
+// Nur auf der Vorschau-Seite (preview-...): Testknopf für unendlich Münzen. Auf der echten Seite gibt es ihn nicht mehr.
+const IS_PREVIEW = /(^|[.-])preview([.-]|$)/.test(location.hostname);
 async function api(path, body) {
   try {
     const ac = new AbortController(), to = setTimeout(() => ac.abort(), 20000);   // hängende Anfrage gibt nach 20 s auf, damit der Knopf nicht ewig gesperrt bleibt
@@ -277,7 +279,7 @@ function home() {
     '<div class="row gap6"><button class="htile" style="--tc:#cdeec4" data-act="handel"><span class="hv">' + gi('coin', 36) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 30) + '</span></span><b>Handel</b><span class="small">Markt und Tauschen</span></button>' +
       '<button class="htile" style="--tc:#e3dcf7" data-act="log"><span class="hv">' + gi('sword', 36) + '</span><b>Kampflog</b><span class="small">Wiederholen und teilen</span></button></div>' +
     (me.dailyReady ? '<button class="htile daily" data-act="daily"><span class="hv">' + gi('star', 44, '#ffd45a') + '</span><span class="grow"><b>Tagesbelohnung abholen</b><span class="small">' + (ev ? 'Münzen und +5 Kürbisse' : 'Münzen für heute') + '</span></span></button>' : '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tagesbelohnung schon geholt. Morgen gibt es mehr.</p>') +
-    (/[?&]test=1/.test(location.search) ? btn('TEST: unendlich Münzen und Marken', 'testcoins', '', 'red') : '') + '</div>');
+    (IS_PREVIEW ? btn('TEST: unendlich Münzen und Kürbisse', 'testcoins', '', 'red') : '') + '</div>');
 }
 
 /* ================= Handel und zeitlich begrenzte Boxen ================= */

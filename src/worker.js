@@ -36,7 +36,7 @@ export default {
       case '/api/transfer/redeem': r = await store.transferRedeem(tk, b.code); break;
       case '/api/delete': r = await store.deleteAccount(tk, b.name); break;
       case '/api/rename': r = await store.rename(tk, b.name); break;
-      case '/api/testcoins': r = b.key === 'leif-test' ? await store.testCoins(tk) : { err: 'bad' }; break;
+      case '/api/testcoins': r = b.key === 'leif-test' && (/(^|[.-])preview([.-]|$)/.test(url.hostname) || url.hostname === 'localhost' || url.hostname === '127.0.0.1') ? await store.testCoins(tk) : { err: 'bad' }; break;
       case '/api/upgradeall': r = await store.upgradeAll(tk); break;
       case '/api/upgrade': r = await store.upgrade(tk, b.uid); break;
       case '/api/daily': r = await store.daily(tk); break;
