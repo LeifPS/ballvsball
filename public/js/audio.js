@@ -63,7 +63,7 @@ function loadMusic() {
   if (musicLoading || !ctx) return;
   musicLoading = true;
   for (const k in TRACKS) {
-    fetch(TRACKS[k]).then(r => r.arrayBuffer()).then(ab => new Promise((res, rej) => ctx.decodeAudioData(ab, res, rej))).then(buf => { musicBufs[k] = buf; playScene(); }).catch(() => { });
+    fetch(TRACKS[k]).then(r => { if (!r.ok) throw new Error('fehlt'); return r.arrayBuffer(); }).then(ab => ctx.decodeAudioData(ab)).then(buf => { musicBufs[k] = buf; playScene(); }).catch(() => { });
   }
 }
 function fadeOut(c) {

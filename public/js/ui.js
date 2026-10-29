@@ -686,7 +686,7 @@ async function openSkinDrop0() {
   const ov = document.createElement('div'); ov.id = 'dover'; ov.style.cssText = 'position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:35;background:#120d24;touch-action:manipulation;user-select:none;-webkit-user-select:none;overflow:hidden';
   ov.innerHTML = '<canvas id="dc" style="position:absolute;left:0;top:0;width:100%;height:100%;cursor:pointer"></canvas>' +
     '<div style="position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 7%);text-align:center;pointer-events:none"><div id="drar" class="jit" style="font-size:30px;min-height:40px;color:#fff"></div>' +
-    '<div id="dcirc" style="display:flex;justify-content:center;gap:16px;margin:8px 0">' + Array.from({ length: N }, (_, i) => '<span id="dci' + i + '" style="width:46px;height:46px;border-radius:50%;border:4px solid #0d0a1c;background:#2a2147;display:inline-block;box-shadow:inset 0 4px 8px rgba(0,0,0,.45),0 2px 0 rgba(255,255,255,.15);transition:transform .3s cubic-bezier(.2,1.8,.4,1),background .2s,box-shadow .3s"></span>').join('') + '</div>' +
+    '<div id="dcirc" style="height:50px;margin:8px 0"></div>' +
     '<p id="dhint" class="small" style="margin:0;color:#e9e2ff;text-shadow:1px 1px 0 #0d0a1c">Tippe auf den Drop!</p></div>';
   document.body.appendChild(ov);
   const cv = $('#dc'); cv.width = W * DP; cv.height = H * DP;
@@ -695,7 +695,7 @@ async function openSkinDrop0() {
   const nm = lv => RARITY[SORT[lv]].name;
   const label = () => { const e = $('#drar'); if (!e) return; e.innerHTML = st.lv >= 2 ? rarHTML(SORT[st.lv]) : esc(nm(st.lv)); e.style.textShadow = '2px 2px 0 #0d0a1c, 0 0 16px ' + rgbS(DROP_RGB[st.lv], 1); };
   label();
-  const circ = (i, lv) => { const c = $('#dci' + i); if (!c) return; const col = DROP_RGB[lv]; c.style.background = 'radial-gradient(circle at 35% 30%,' + rgbS(col, 1, .7) + ',' + rgbS(col, 1) + ' 60%,' + rgbS(col, 1, -.35) + ')'; c.style.boxShadow = '0 0 18px ' + rgbS(col, .9) + ',inset 0 -3px 6px rgba(0,0,0,.25)'; c.style.transform = 'scale(1.4)'; setTimeout(() => { c.style.transform = ''; }, 300); };
+  const sock = []; const circ = (i, lv) => { sock[i] = { lv, t: 0 }; };
   const P = (o) => { if (st.ps.length < 140) st.ps.push(Object.assign({ age: 0, life: 1, vx: 0, vy: 0, gr: 0, sz: 6, rot: 0, vr: 0, kind: 'dot' }, o)); };
   const burst = (n, c, sp, kind, up) => { for (let i = 0; i < n; i++) { const a = Math.random() * 6.283, v = sp * (.35 + Math.random() * .8); P({ x: cx, y: cy, vx: Math.cos(a) * v, vy: Math.sin(a) * v - (up || 0), gr: 260, life: .8 + Math.random() * .9, sz: 5 + Math.random() * 8, rot: Math.random() * 6, vr: (Math.random() - .5) * 12, col: kind === 'star' && Math.random() < .35 ? '#fff6b8' : rgbS(c, 1, .15 + Math.random() * .3), kind }); } };
   const vib = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) { } };
@@ -722,8 +722,15 @@ async function openSkinDrop0() {
     for (let i = 0; i < 26; i++) { const a = Math.random() * 6.283, v = 150 + Math.random() * 330; P({ x: cx + Math.cos(a) * 20 * SC, y: cy + Math.sin(a) * 30 * SC, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 120, gr: 520, life: 1.3 + Math.random() * .5, sz: (10 + Math.random() * 16) * SC / 1.4, rot: Math.random() * 6, vr: (Math.random() - .5) * 14, col: rgbS(c, 1, (Math.random() - .5) * .6), kind: 'shard' }); }
     burst(60 + st.lv * 15, c, 380, 'star', 100); st.rings.push({ age: 0, c, w: 16 }, { age: -.1, c, w: 9 }, { age: -.22, c, w: 5 });
     sfx('drop_shatter'); vib([40, 30, 80]); confetti(st.lv >= 3 ? 90 : 40);
-    for (let i = 0; i < N; i++) { const el = $('#dci' + i); if (el) el.style.transform = 'scale(1.2)'; }
   };
+  // Handgezeichnete Hilfen: wackelige Blobs, Ringe, Dreiecke (alles mit Tintenumriss, wie der Rest des Spiels)
+  const wob = (i, k, tm) => Math.sin(i * 2.3 + k * 12.9 + Math.floor(tm * 8) * 1.7) * .6 + Math.sin(i * 5.1 + k * 7.3) * .4;
+  const blob = (g, x, y, r, fill, k, tm, lw) => { g.beginPath(); for (let i = 0; i < 9; i++) { const a = i / 9 * 6.283, rr = r * (1 + wob(i, k, tm) * .16); i ? g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); if (fill) { g.fillStyle = fill; g.fill(); } g.strokeStyle = INK; g.lineWidth = lw || 2; g.lineJoin = 'round'; g.stroke(); };
+  const wring = (g, x, y, r, w, col, alpha, tm, k) => { const path = () => { g.beginPath(); for (let i = 0; i <= 48; i++) { const a = i / 48 * 6.283, rr = r + wob(i, k, tm) * Math.max(2, r * .012); i ? g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } }; g.globalAlpha = alpha; g.lineJoin = 'round'; path(); g.strokeStyle = INK; g.lineWidth = w + 5; g.stroke(); path(); g.strokeStyle = col; g.lineWidth = w; g.stroke(); g.globalAlpha = 1; };
+  const tri = (g, x, y, sz, rot, fill, k, tm) => { const sk = sketchCtx(g, k * .37 + Math.floor(tm * 8) % 3 * 1.713, sz * 6, sz * .2); g.save(); g.translate(x, y); g.rotate(rot); g.lineJoin = 'round'; g.fillStyle = fill; g.strokeStyle = INK; g.lineWidth = Math.max(2, sz * .22); sk.lineWidth = g.lineWidth; sk.beginPath(); sk.moveTo(0, -sz); sk.lineTo(sz * .8, sz * .5); sk.lineTo(-sz * .6, sz * .7); sk.closePath(); sk.fill(); sk.stroke(); g.restore(); };
+  const spark4 = (g, x, y, r, a, tm, k) => { g.globalAlpha = a; g.fillStyle = '#fff'; g.beginPath(); for (let i = 0; i < 8; i++) { const an = i * .7854 - 1.5708, rr = i % 2 ? r * .35 : r * (1 + wob(i, k, tm) * .2); i ? g.lineTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr) : g.moveTo(x + Math.cos(an) * rr, y + Math.sin(an) * rr); } g.closePath(); g.fill(); g.globalAlpha = 1; };
+  const sockEl = $('#dcirc'); let sockY = H * .86; const sockX = i => W / 2 + (i - (N - 1) / 2) * 62;
+  const place = () => { if (sockEl) { const b = sockEl.getBoundingClientRect(); sockY = b.top + b.height / 2; } }; place();
   cv.onpointerdown = tap;
   const BGST = Array.from({ length: 36 }, (_, i) => [((i * 97) % 100) / 100, ((i * 53 + 17) % 100) / 100, 2 + (i % 4), i * .7]);
   setView({
@@ -742,8 +749,7 @@ async function openSkinDrop0() {
       g.save();
       const camX = (Math.random() - .5) * st.cam * 22, camY = (Math.random() - .5) * st.cam * 22; g.translate(camX, camY);
       const bg = g.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, rgbS(c, 1, -.86)); bg.addColorStop(1, '#0c0818'); g.fillStyle = bg; g.fillRect(-30, -30, W + 60, H + 60);
-      for (const s of BGST) { const a = .25 + .45 * Math.max(0, Math.sin(tm * 1.3 + s[3])); g.globalAlpha = a; g.fillStyle = '#fff'; g.beginPath(); g.arc(s[0] * W, s[1] * H, s[2] * .5, 0, 7); g.fill(); }
-      g.globalAlpha = 1;
+      BGST.forEach((s, bi) => spark4(g, s[0] * W, s[1] * H, 1.5 + s[2] * .9, .25 + .5 * Math.max(0, Math.sin(tm * 1.3 + s[3])), tm, bi));
       g.save(); g.translate(cx, cy); g.rotate(tm * (.18 + lvf * .35)); const nr = 7 + st.lv * 2, R = Math.max(W, H);
       const rg = g.createRadialGradient(0, 0, 30, 0, 0, R * .75); rg.addColorStop(0, rgbS(c, .1 + lvf * .38 + st.glow * .2)); rg.addColorStop(1, rgbS(c, 0)); g.fillStyle = rg;
       for (let i = 0; i < nr; i++) { const a = i * 6.283 / nr, w = .08 + .03 * st.lv; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(a - w) * R, Math.sin(a - w) * R); g.lineTo(Math.cos(a + w) * R, Math.sin(a + w) * R); g.closePath(); g.fill(); }
@@ -752,7 +758,7 @@ async function openSkinDrop0() {
       // ständig aufsteigende Funken (mehr je Stufe)
       if (st.phase !== 'final' && Math.random() < dt * (5 + st.lv * 9)) P({ x: cx + (Math.random() - .5) * SC * 260, y: cy + SC * 120, vx: (Math.random() - .5) * 30, vy: -60 - Math.random() * 90, life: 1.2 + Math.random(), sz: 3 + Math.random() * 5, col: rgbS(c, 1, .4), kind: Math.random() < .35 ? 'star' : 'dot' });
       // Boden-Schatten
-      if (st.phase !== 'final') { g.fillStyle = 'rgba(0,0,0,.35)'; g.beginPath(); g.ellipse(cx, cy + SC * 150, SC * (92 - Math.sin(tm * 2) * 5), SC * 14, 0, 0, 7); g.fill(); }
+      if (st.phase !== 'final') { g.save(); g.translate(cx, cy + SC * 150); g.scale(1, .17); g.globalAlpha = .4; blob(g, 0, 0, SC * (92 - Math.sin(tm * 2) * 5), '#000', 3, tm, 0.01); g.restore(); }
       // Der Drop
       if (st.phase !== 'final') {
         const ch = st.phase === 'charge' ? (st.fin ? Math.min(1, st.pt / 1.25) : st.pt / .42) : 0, rumble = st.phase === 'charge' ? (st.fin ? 2 + ch * 12 : 3 + ch * 3) : 0;
@@ -764,14 +770,14 @@ async function openSkinDrop0() {
         if (st.phase === 'idle' && st.clicks === 0) { g.save(); g.translate(cx, cy + SC * 175); g.globalAlpha = .6 + .4 * Math.sin(tm * 4); g.fillStyle = '#fff'; g.font = '26px "Caveat Brush", cursive'; g.textAlign = 'center'; g.strokeStyle = INK; g.lineWidth = 5; g.strokeText('Tippe!', 0, 0); g.fillText('Tippe!', 0, 0); g.restore(); }
       }
       // Ringwellen
-      for (const rg2 of st.rings) { rg2.age += dt; const k = rg2.age / .9; if (k < 0 || k > 1) continue; g.strokeStyle = rgbS(rg2.c, 1 - k, .35); g.lineWidth = rg2.w * (1 - k) + 1; g.beginPath(); g.arc(cx, cy, SC * 40 + k * Math.max(W, H) * .6, 0, 7); g.stroke(); }
+      for (const rg2 of st.rings) { rg2.age += dt; const k = rg2.age / .9; if (k < 0 || k > 1) continue; wring(g, cx, cy, SC * 40 + k * Math.max(W, H) * .6, rg2.w * (1 - k) + 1.5, rgbS(rg2.c, 1, .35), 1 - k, tm, rg2.w); }
       st.rings = st.rings.filter(x => x.age < .9);
       // Teilchen
       for (const p of st.ps) {
         p.age += dt; if (p.age >= p.life) continue; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += p.gr * dt; p.rot += p.vr * dt; const k = p.age / p.life; g.globalAlpha = Math.min(1, (1 - k) * 1.6);
         if (p.kind === 'star') star(g, p.x, p.y, p.sz * (1 - k * .4), p.col, p.rot);
-        else if (p.kind === 'shard') { g.save(); g.translate(p.x, p.y); g.rotate(p.rot); g.fillStyle = p.col; g.strokeStyle = INK; g.lineWidth = 2.6; g.lineJoin = 'round'; g.beginPath(); g.moveTo(0, -p.sz); g.lineTo(p.sz * .8, p.sz * .5); g.lineTo(-p.sz * .6, p.sz * .7); g.closePath(); g.fill(); g.stroke(); g.restore(); }
-        else { g.fillStyle = p.col; g.beginPath(); g.arc(p.x, p.y, p.sz * (1 - k * .5) * .6, 0, 7); g.fill(); }
+        else if (p.kind === 'shard') tri(g, p.x, p.y, p.sz, p.rot, p.col, p.sz, tm);
+        else blob(g, p.x, p.y, Math.max(1.6, p.sz * (1 - k * .5) * .6), p.col, p.sz * 3, tm, p.sz > 5 ? 1.6 : 1);
         g.globalAlpha = 1;
       }
       st.ps = st.ps.filter(p => p.age < p.life);
@@ -785,6 +791,13 @@ async function openSkinDrop0() {
         }
       }
       g.restore();
+      for (let i = 0; i < N; i++) {
+        const so = sock[i], pop = so ? Math.max(0, 1 - (so.t += dt) / .35) : 0, px = sockX(i), rr = 22 * (1 + pop * .45 + (st.phase === 'final' && st.fT < .4 ? .2 : 0));
+        if (so) { const col = DROP_RGB[so.lv], gl2 = g.createRadialGradient(px, sockY, 4, px, sockY, 46); gl2.addColorStop(0, rgbS(col, .6 * (.5 + pop))); gl2.addColorStop(1, rgbS(col, 0)); g.fillStyle = gl2; g.fillRect(px - 50, sockY - 50, 100, 100); }
+        blob(g, px, sockY, rr, so ? rgbS(DROP_RGB[so.lv], 1) : '#2a2147', 20 + i, tm, 4);
+        if (so) { g.fillStyle = 'rgba(255,255,255,.55)'; g.beginPath(); g.ellipse(px - rr * .3, sockY - rr * .35, rr * .28, rr * .16, -.5, 0, 7); g.fill(); }
+        else { g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 2; g.beginPath(); g.arc(px, sockY + 1, rr * .55, .3, 2.6); g.stroke(); }
+      }
       if (st.flash > 0) { g.fillStyle = 'rgba(255,255,255,' + Math.min(1, st.flash * (st.phase === 'final' ? .95 : .55)) + ')'; g.fillRect(0, 0, W, H); }
     }
   });
