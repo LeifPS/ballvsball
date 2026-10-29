@@ -17,5 +17,7 @@
   "migrations": [
     { "tag": "v1", "new_sqlite_classes": ["Store", "Game"] }
   ],
+  "preview_urls": true,
+  "previews": {},
   "observability": { "enabled": true }
 }
