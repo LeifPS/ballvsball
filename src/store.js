@@ -2,6 +2,7 @@
 // Alle Methoden sind synchron und damit atomar. Fehler werden als { err: 'code' } zurückgegeben.
 import { DurableObject } from 'cloudflare:workers';
 import { DEFS, BALL_IDS, BOSS_IDS, RARITY, ballsInBox, MAX_STARS, runFight } from '../public/js/engine.js';
+export const SKIN_PRICE = { gewoehnlich: 15, selten: 40, episch: 100, legendaer: 250, mythisch: 600 };
 import { mulberry } from '../public/js/core.js';
 import { BOX_BY_ID, BOX_RARITY, boxActive, eventActive, EVENT_END, UP_COST } from '../public/js/boxes.js';
 import { simBox, layoutOf } from '../public/js/boxsim.js';
@@ -81,6 +82,7 @@ export class Store extends DurableObject {
     this.sql.exec('CREATE TABLE IF NOT EXISTS equip(owner INTEGER NOT NULL, type TEXT NOT NULL, skin_uid INTEGER NOT NULL, PRIMARY KEY(owner,type))');
     this.sql.exec('CREATE TABLE IF NOT EXISTS solo(user_id INTEGER NOT NULL, kind TEXT NOT NULL, day INTEGER NOT NULL, data TEXT NOT NULL, PRIMARY KEY(user_id,kind))');
     if (!cols.includes('tokens')) this.sql.exec('ALTER TABLE users ADD COLUMN tokens INTEGER NOT NULL DEFAULT 0');
+    if (!cols.includes('shards')) this.sql.exec('ALTER TABLE users ADD COLUMN shards INTEGER NOT NULL DEFAULT 0');
   }
 
   /* ---------- Hilfen ---------- */
@@ -113,7 +115,7 @@ export class Store extends DurableObject {
     const live = eventActive(now);
     if (!live && u.tokens) this.q('UPDATE users SET tokens=0 WHERE id=?', u.id);
     return {
-      id: u.id, name: u.name, coins: u.coins, tokens: live ? u.tokens : 0, wins: u.wins, losses: u.losses, boxes: u.boxes, streak: u.streak,
+      id: u.id, name: u.name, coins: u.coins, tokens: live ? u.tokens : 0, shards: u.shards || 0, wins: u.wins, losses: u.losses, boxes: u.boxes, streak: u.streak,
       dailyReady: u.last_daily < today, freeBoxes: u.free_boxes || 0, equip: this.equipMap(u.id), balls, now, eventEnd: EVENT_END
     };
   }
@@ -338,8 +340,20 @@ export class Store extends DurableObject {
   testCoins(tk) {
     const u = this.userBy(tk);
     if (!u) return { err: 'auth' };
-    this.q('UPDATE users SET coins=999999, tokens=999999 WHERE id=?', u.id);
+    this.q('UPDATE users SET coins=999999, tokens=999999, shards=999999 WHERE id=?', u.id);
     return { ok: true, me: this.profile(this.userBy(tk)) };
+  }
+  // Skin-Splitter: Währung nur für den Skin-Laden. Preis nach Seltenheit; wie man Splitter bekommt, ist noch offen
+  buySkin(tk, id) {
+    const u = this.userBy(tk);
+    if (!u) return { err: 'auth' };
+    const d = DEFS[id];
+    if (!d || !d.skin) return { err: 'no_skin' };
+    const price = SKIN_PRICE[d.rarity];
+    if ((u.shards || 0) < price) return { err: 'no_shards' };
+    this.q('UPDATE users SET shards=shards-? WHERE id=?', price, u.id);
+    const ball = this.giveBall(u.id, id);
+    return { ok: true, ball, me: this.profile(this.userBy(tk)) };
   }
   upgrade(tk, uid) {
     const u = this.userBy(tk);

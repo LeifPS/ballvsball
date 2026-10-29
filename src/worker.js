@@ -38,6 +38,7 @@ export default {
       case '/api/rename': r = await store.rename(tk, b.name); break;
       case '/api/testcoins': r = b.key === 'leif-test' && (/(^|[.-])preview([.-]|$)/.test(url.hostname) || url.hostname === 'localhost' || url.hostname === '127.0.0.1') ? await store.testCoins(tk) : { err: 'bad' }; break;
       case '/api/upgradeall': r = await store.upgradeAll(tk); break;
+      case '/api/skinbuy': r = await store.buySkin(tk, String(b.id)); break;
       case '/api/upgrade': r = await store.upgrade(tk, b.uid); break;
       case '/api/daily': r = await store.daily(tk); break;
       case '/api/box': r = await store.openBox(tk, b.box || 'standard'); break;

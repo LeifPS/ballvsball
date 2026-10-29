@@ -28,7 +28,7 @@ const ERR = {
   net: 'Keine Verbindung zum Server.', auth: 'Anmeldung fehlgeschlagen.', need_name: 'Bitte wähle einen Namen.',
   name_invalid: 'Name: 3 bis 16 Zeichen, nur Buchstaben, Zahlen, Leerzeichen, - und _.', name_taken: 'Dieser Name ist schon vergeben.',
   code_bad: 'Der Code stimmt nicht oder ist abgelaufen.', has_progress: 'Dieses Gerät hat schon einen Spielstand mit Kämpfen. Lösche zuerst dort das Konto.',
-  no_base: 'Du brauchst erst den passenden Ball.', no_skin: 'Das ist kein Skin.', no_skin_fight: 'Skins kämpfen nicht selbst.', maintenance: 'Mehrspieler ist wegen Wartungsarbeiten gerade gesperrt.', boss_done: 'Starte einen neuen Versuch.', boss_used: 'Diesen Ball hast du schon benutzt.', rule: 'Dieser Ball erfüllt die Regel nicht.', daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
+  no_base: 'Du brauchst erst den passenden Ball.', no_skin: 'Das ist kein Skin.', no_shards: 'Dir fehlen Skin-Splitter.', no_skin_fight: 'Skins kämpfen nicht selbst.', maintenance: 'Mehrspieler ist wegen Wartungsarbeiten gerade gesperrt.', boss_done: 'Starte einen neuen Versuch.', boss_used: 'Diesen Ball hast du schon benutzt.', rule: 'Dieser Ball erfüllt die Regel nicht.', daily_taken: 'Heute schon abgeholt.', no_coins: 'Nicht genug Münzen.', tutorial_box: 'Öffne zuerst deine Standard-Box.', no_tokens: 'Nicht genug Halloween-Marken.', box_over: 'Diese Box gibt es nicht mehr.',
   price_invalid: 'Der Preis muss zwischen 10 und 100000 Münzen liegen.',
   not_yours: 'Das gehört dir nicht (mehr).', locked: 'Dieser Ball ist gerade gesperrt.', min_balls: 'Du musst mindestens 3 verschiedene freie Bälle behalten.',
   gone: 'Das gibt es nicht mehr.', own: 'Das ist dein eigener Ball.', no_player: 'Spieler nicht gefunden.', self: 'Das bist du selbst.',
@@ -44,6 +44,8 @@ const eventLive = () => !!S.me && now() < S.me.eventEnd;
 const BALLS = new Set();
 const coinHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('coin', 22) + '</span>';
 const tokHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('token', 22) + '</span>';
+const shardHTML = n => '<span style="white-space:nowrap"><b>' + n + '</b> ' + gi('shard', 22) + '</span>';
+const SKIN_PRICE = { gewoehnlich: 15, selten: 40, episch: 100, legendaer: 250, mythisch: 600 };   // wie in store.js
 const priceHTML = b => b.cur === 'tokens' ? tokHTML(b.price) : coinHTML(b.price);
 const rarHTML = r => '<span class="rar' + (r === 'mythisch' ? ' myth' : '') + '" style="color:' + RARITY[r].color + '">' + RARITY[r].name + '</span>';
 const ball = (type, size, fit, extra) => '<canvas class="ball" data-ball="' + type + '" data-size="' + size + '" data-fit="' + (fit || .62) + '" ' + (extra || '') + '></canvas>';
@@ -114,7 +116,7 @@ function topType() {
 }
 function wallet() {
   if (!S.me) return '';   // Gast (geteilte Wiederholung)
-  return '<div class="row gap6">' + (eventLive() ? '<div class="pill" title="Kürbisse">' + tokHTML(S.me.tokens) + '</div>' : '') + '<div class="pill">' + coinHTML(S.me.coins) + '</div></div>';
+  return '<div class="row gap6">' + (eventLive() ? '<div class="pill" title="Kürbisse">' + tokHTML(S.me.tokens) + '</div>' : '') + '<div class="pill" title="Skin-Splitter">' + shardHTML(S.me.shards || 0) + '</div><div class="pill">' + coinHTML(S.me.coins) + '</div></div>';
 }
 function backBar(title, to) {
   return '<div class="row" style="padding-right:50px"><button class="btn sm" style="min-height:44px;padding:2px 14px" data-act="' + (to || 'home') + '">' + gi('arrow', 26) + '</button><h2 class="grow jit">' + esc(title) + '</h2></div><div class="row" style="justify-content:flex-end;margin-top:-4px">' + wallet() + '</div>';
@@ -289,7 +291,15 @@ function handelScreen() {
   S.screen = 'handel'; setView(null); closeOverlay(); setScene('menu');
   show('<div class="col">' + backBar('Handel') +
     '<button class="htile mode" style="--tc:#cdeec4" data-act="market"><span class="mart"><span class="hv">' + gi('coin', 44) + gi('coin', 32) + '</span></span><span class="grow"><b>Markt</b><span class="small">Bälle kaufen und verkaufen</span></span></button>' +
+    '<button class="htile mode" style="--tc:#cfe0ff" data-act="skinshop"><span class="mart"><span class="hv">' + gi('shard', 44) + gi('shard', 32) + '</span></span><span class="grow"><b>Skin-Laden</b><span class="small">Skins mit Skin-Splittern kaufen</span></span></button>' +
     '<button class="htile mode" style="--tc:#f3d6f0" data-act="trades"><span class="mart"><span class="hv">' + gi('arrow', 40) + '<span style="display:inline-flex;transform:scaleX(-1)">' + gi('arrow', 40) + '</span></span></span><span class="grow"><b>Tauschen</b><span class="small">Bälle mit anderen Spielern tauschen</span></span></button></div>');
+}
+function skinShopScreen() {
+  S.screen = 'skinshop'; setView(null); closeOverlay(); setScene('menu');
+  const ids = SKIN_IDS.slice().sort((a, z) => RARITY[DEFS[a].rarity].order - RARITY[DEFS[z].rarity].order);
+  show('<div class="col">' + backBar('Skin-Laden', 'handel') + '<div class="row sb" style="padding:0 4px">' + wallet() + '</div>' +
+    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Kaufe Skins mit Skin-Splittern. Gekaufte Skins landen in deiner Sammlung.</p>' +
+    '<div class="boxgrid">' + ids.map(id => { const d = DEFS[id], pr = SKIN_PRICE[d.rarity], ok = (S.me.shards || 0) >= pr; return '<div class="panel col center" style="padding:8px;gap:4px">' + ball(id, 84, .7) + '<b class="small">' + esc(d.name) + '</b>' + rarHTML(d.rarity) + '<button class="btn sm" data-act="skinbuy" data-id="' + id + '"' + (ok ? '' : ' style="opacity:.55"') + '>' + shardHTML(pr) + '</button></div>'; }).join('') + '</div></div>');
 }
 function limitedScreen() {
   S.screen = 'limited'; setView(null); closeOverlay(); setScene('menu');
@@ -974,6 +984,12 @@ const ACT = {
   roomstart() { wsSend({ t: 'room_start' }); },
   roomleave() { wsSend({ t: 'room_leave' }); },
   handel() { handelScreen(); },
+  skinshop() { skinShopScreen(); },
+  async skinbuy(d) {
+    const r = await api('/api/skinbuy', { id: d.id });
+    if (r.err) { toast(errText(r.err)); return; }
+    sfx('rare'); confetti(18); toast(DEFS[d.id].name + ' gekauft!'); skinShopScreen();
+  },
   limited() { limitedScreen(); },
   solo() { soloScreen(); },
   solopick(d) { soloPick(d.k); },
