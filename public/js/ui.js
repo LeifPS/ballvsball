@@ -1044,15 +1044,15 @@ function dirScreen(m) {
   dirDeg = Math.round((Math.atan2(en.y - my.y, en.x - my.x) * 180 / Math.PI + 360) % 360);
   const AS = arenaSize(), W = AS + 20, H = AS + 20;
   show('<div class="col">' + matchHeader() + '<h2 class="center jit" style="color:#fff;text-shadow:2px 3px 0 var(--ink)">Startrichtung</h2>' +
-    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tippe in die Arena, um die Richtung deines Balls zu wählen. Dein Gegner wählt gleichzeitig.</p><div id="cd" class="timer" style="color:#fff;text-shadow:2px 2px 0 var(--ink)"></div>' +
+    '<p class="center small" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">Tippe oder ziehe in der Arena: Dein Ball startet in Richtung des Pfeils. Dein Gegner wählt gleichzeitig.</p><div id="cd" class="timer" style="color:#fff;text-shadow:2px 2px 0 var(--ink)"></div>' +
     '<canvas id="dc" class="view"></canvas><div class="small center" style="color:#fff;text-shadow:1px 1px 0 var(--ink)">' + m.balls.map(b => { const p = M.players[b.slot]; return (b.slot === M.you ? 'Dein' : esc(p.name)) + ': <b>' + esc(ballName(b.type)) + '</b>'; }).join(' - ') + '</div>' +
     btn('Los!', 'dirgo', '', 'pri') + '</div>');
   startCountdown(m.secs);
-  const cv = $('#dc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px';
-  const k = AS / BOX, ox = 10, oy = 10;
+  const cv = $('#dc'); cv.width = W * DPR; cv.height = H * DPR; cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.touchAction = 'none';   // Ziehen darf die Seite nicht scrollen oder zoomen
+  const k = AS / BOX, ox = 10, oy = 10; let tapPt = null;
   const setDeg = ev => {
     const r = cv.getBoundingClientRect(), x = (ev.clientX - r.left - ox) / k, y = (ev.clientY - r.top - oy) / k;
-    dirDeg = Math.round((Math.atan2(y - my.y, x - my.x) * 180 / Math.PI + 360) % 360); dirTouched = true;
+    dirDeg = Math.round((Math.atan2(y - my.y, x - my.x) * 180 / Math.PI + 360) % 360); dirTouched = true; tapPt = { x: ox + x * k, y: oy + y * k, t: -1 };
   };
   let down = false;
   cv.onpointerdown = ev => { down = true; cv.setPointerCapture(ev.pointerId); setDeg(ev); sfx('tick'); };
@@ -1069,6 +1069,13 @@ function dirScreen(m) {
       const a = dirDeg * Math.PI / 180, x0 = ox + my.x * k, y0 = oy + my.y * k, L = 54 + Math.sin(tm * 5) * 4;
       const x1 = x0 + Math.cos(a) * (my.r * k + L), y1 = y0 + Math.sin(a) * (my.r * k + L), xs = x0 + Math.cos(a) * (my.r * k + 6), ys = y0 + Math.sin(a) * (my.r * k + 6);
       ctx.lineCap = ctx.lineJoin = 'round';
+      // Flugbahn-Vorschau: gestrichelt bis zur Wand, mit zwei Abprallern
+      { let px = my.x, py = my.y, dx = Math.cos(a), dy = Math.sin(a), left = 560; const r0 = my.r, lo = r0, hi = BOX - r0, pts = [[px, py]];
+        for (let n = 0; n < 3 && left > 1; n++) { let t = left; if (dx > 1e-6) t = Math.min(t, (hi - px) / dx); else if (dx < -1e-6) t = Math.min(t, (lo - px) / dx); if (dy > 1e-6) t = Math.min(t, (hi - py) / dy); else if (dy < -1e-6) t = Math.min(t, (lo - py) / dy); t = Math.max(0, t); px += dx * t; py += dy * t; left -= t; pts.push([px, py]); if (px <= lo + .01 || px >= hi - .01) dx = -dx; if (py <= lo + .01 || py >= hi - .01) dy = -dy; }
+        ctx.setLineDash([9, 9]); for (const [w, col] of [[6, 'rgba(29,39,66,.35)'], [3, 'rgba(255,255,255,.9)']]) { ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); pts.forEach((q, i) => i ? ctx.lineTo(ox + q[0] * k, oy + q[1] * k) : ctx.moveTo(ox + q[0] * k, oy + q[1] * k)); ctx.stroke(); } ctx.setLineDash([]); }
+      if (tapPt) { if (tapPt.t < 0) tapPt.t = tm; const q = (tm - tapPt.t) / .5; if (q < 1) { ctx.strokeStyle = 'rgba(244,201,66,' + (1 - q) + ')'; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(tapPt.x, tapPt.y, 6 + q * 22, 0, 7); ctx.stroke(); } }
+      // Ring um den eigenen Ball: zeigt, dass hier gewählt wird
+      ctx.strokeStyle = 'rgba(244,201,66,.9)'; ctx.lineWidth = 3; ctx.setLineDash([5, 6]); ctx.lineDashOffset = -tm * 10; ctx.beginPath(); ctx.arc(x0, y0, my.r * k + 8, 0, 7); ctx.stroke(); ctx.setLineDash([]);
       for (const [w, col] of [[9, INK], [5, '#f4c942']]) {
         ctx.strokeStyle = col; ctx.lineWidth = w; ctx.beginPath(); ctx.moveTo(xs, ys); ctx.lineTo(x1, y1);
         ctx.moveTo(x1 - Math.cos(a - .5) * 16, y1 - Math.sin(a - .5) * 16); ctx.lineTo(x1, y1); ctx.lineTo(x1 - Math.cos(a + .5) * 16, y1 - Math.sin(a + .5) * 16); ctx.stroke();
